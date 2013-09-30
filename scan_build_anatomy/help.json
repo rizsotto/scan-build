@@ -1,0 +1,49 @@
+[
+{
+  "pid": "8516",
+  "ppid": "8515",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/bin/scan-build --help"
+}
+,
+{
+  "pid": "8517",
+  "ppid": "8516",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang --analyze -x c - -###"
+}
+,
+{
+  "pid": "8518",
+  "ppid": "8516",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang --analyze -x objective-c - -###"
+}
+,
+{
+  "pid": "8519",
+  "ppid": "8516",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang --analyze -x objective-c++ - -###"
+}
+,
+{
+  "pid": "8520",
+  "ppid": "8516",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang --analyze -x c++ - -###"
+}
+,
+{
+  "pid": "8521",
+  "ppid": "8516",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -analyzer-checker-help"
+}
+]

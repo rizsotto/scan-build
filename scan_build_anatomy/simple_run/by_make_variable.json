@@ -1,0 +1,529 @@
+[
+{
+  "pid": "8357",
+  "ppid": "8356",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/bin/scan-build -v make CC=/usr/lib/clang-analyzer/scan-build/ccc-analyzer"
+}
+,
+{
+  "pid": "8358",
+  "ppid": "8357",
+  "function": "execl",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "sh -c \"\"/usr/bin/clang\" --version\""
+}
+,
+{
+  "pid": "8358",
+  "ppid": "8357",
+  "function": "execve",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang --version"
+}
+,
+{
+  "pid": "8359",
+  "ppid": "8357",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "mkdir -p /tmp/scan-build-2013-09-30-2"
+}
+,
+{
+  "pid": "8360",
+  "ppid": "8357",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "make CC=/usr/lib/clang-analyzer/scan-build/ccc-analyzer"
+}
+,
+{
+  "pid": "8361",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/stringarray.o ../src/stringarray.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8361",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/stringarray.o ../src/stringarray.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8362",
+  "ppid": "8361",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8363",
+  "ppid": "8361",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -c -o ../src/stringarray.o ../src/stringarray.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8364",
+  "ppid": "8363",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/cc1 -quiet -I . -D _GNU_SOURCE -D SERVER ../src/stringarray.c -quiet -dumpbase stringarray.c -mtune=generic -march=x86-64 -auxbase-strip ../src/stringarray.o -o /tmp/cclIoNhn.s"
+}
+,
+{
+  "pid": "8365",
+  "ppid": "8363",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "as -I . --64 -o ../src/stringarray.o /tmp/cclIoNhn.s"
+}
+,
+{
+  "pid": "8366",
+  "ppid": "8361",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### -fsyntax-only -x c -D_GNU_SOURCE -DSERVER -I. ../src/stringarray.c"
+}
+,
+{
+  "pid": "8367",
+  "ppid": "8361",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### --analyze -x c -D_GNU_SOURCE -DSERVER -I. ../src/stringarray.c -o /tmp/scan-build-2013-09-30-2 -Xclang -analyzer-output=html"
+}
+,
+{
+  "pid": "8368",
+  "ppid": "8361",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -triple x86_64-unknown-linux-gnu -analyze -disable-free -disable-llvm-verifier -main-file-name stringarray.c -analyzer-store=region -analyzer-opt-analyze-nested-blocks -analyzer-eagerly-assume -analyzer-checker=core -analyzer-checker=unix -analyzer-checker=deadcode -analyzer-checker=security.insecureAPI.UncheckedReturn -analyzer-checker=security.insecureAPI.getpw -analyzer-checker=security.insecureAPI.gets -analyzer-checker=security.insecureAPI.mktemp -analyzer-checker=security.insecureAPI.mkstemp -analyzer-checker=security.insecureAPI.vfork -analyzer-output plist -w -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -munwind-tables -fuse-init-array -target-cpu x86-64 -target-linker-version 2.23.2 -resource-dir /usr/bin/../lib/clang/3.3 -D _GNU_SOURCE -D SERVER -I . -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/clang/3.3/include -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdebug-compilation-dir /home/laszlona/Programming/Bear/build -ferror-limit 19 -fmessage-length 0 -mstackrealign -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -analyzer-output=html -o /tmp/scan-build-2013-09-30-2 -x c ../src/stringarray.c"
+}
+,
+{
+  "pid": "8369",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/protocol.o ../src/protocol.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8369",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/protocol.o ../src/protocol.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8370",
+  "ppid": "8369",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8371",
+  "ppid": "8369",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -c -o ../src/protocol.o ../src/protocol.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8372",
+  "ppid": "8371",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/cc1 -quiet -I . -D _GNU_SOURCE -D SERVER ../src/protocol.c -quiet -dumpbase protocol.c -mtune=generic -march=x86-64 -auxbase-strip ../src/protocol.o -o /tmp/ccdqwyYy.s"
+}
+,
+{
+  "pid": "8373",
+  "ppid": "8371",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "as -I . --64 -o ../src/protocol.o /tmp/ccdqwyYy.s"
+}
+,
+{
+  "pid": "8374",
+  "ppid": "8369",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### -fsyntax-only -x c -D_GNU_SOURCE -DSERVER -I. ../src/protocol.c"
+}
+,
+{
+  "pid": "8375",
+  "ppid": "8369",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### --analyze -x c -D_GNU_SOURCE -DSERVER -I. ../src/protocol.c -o /tmp/scan-build-2013-09-30-2 -Xclang -analyzer-output=html"
+}
+,
+{
+  "pid": "8376",
+  "ppid": "8369",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -triple x86_64-unknown-linux-gnu -analyze -disable-free -disable-llvm-verifier -main-file-name protocol.c -analyzer-store=region -analyzer-opt-analyze-nested-blocks -analyzer-eagerly-assume -analyzer-checker=core -analyzer-checker=unix -analyzer-checker=deadcode -analyzer-checker=security.insecureAPI.UncheckedReturn -analyzer-checker=security.insecureAPI.getpw -analyzer-checker=security.insecureAPI.gets -analyzer-checker=security.insecureAPI.mktemp -analyzer-checker=security.insecureAPI.mkstemp -analyzer-checker=security.insecureAPI.vfork -analyzer-output plist -w -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -munwind-tables -fuse-init-array -target-cpu x86-64 -target-linker-version 2.23.2 -resource-dir /usr/bin/../lib/clang/3.3 -D _GNU_SOURCE -D SERVER -I . -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/clang/3.3/include -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdebug-compilation-dir /home/laszlona/Programming/Bear/build -ferror-limit 19 -fmessage-length 0 -mstackrealign -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -analyzer-output=html -o /tmp/scan-build-2013-09-30-2 -x c ../src/protocol.c"
+}
+,
+{
+  "pid": "8377",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/main.o ../src/main.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8377",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/main.o ../src/main.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8378",
+  "ppid": "8377",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8379",
+  "ppid": "8377",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -c -o ../src/main.o ../src/main.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8380",
+  "ppid": "8379",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/cc1 -quiet -I . -D _GNU_SOURCE -D SERVER ../src/main.c -quiet -dumpbase main.c -mtune=generic -march=x86-64 -auxbase-strip ../src/main.o -o /tmp/ccciqUV7.s"
+}
+,
+{
+  "pid": "8381",
+  "ppid": "8379",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "as -I . --64 -o ../src/main.o /tmp/ccciqUV7.s"
+}
+,
+{
+  "pid": "8382",
+  "ppid": "8377",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### -fsyntax-only -x c -D_GNU_SOURCE -DSERVER -I. ../src/main.c"
+}
+,
+{
+  "pid": "8383",
+  "ppid": "8377",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### --analyze -x c -D_GNU_SOURCE -DSERVER -I. ../src/main.c -o /tmp/scan-build-2013-09-30-2 -Xclang -analyzer-output=html"
+}
+,
+{
+  "pid": "8384",
+  "ppid": "8377",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -triple x86_64-unknown-linux-gnu -analyze -disable-free -disable-llvm-verifier -main-file-name main.c -analyzer-store=region -analyzer-opt-analyze-nested-blocks -analyzer-eagerly-assume -analyzer-checker=core -analyzer-checker=unix -analyzer-checker=deadcode -analyzer-checker=security.insecureAPI.UncheckedReturn -analyzer-checker=security.insecureAPI.getpw -analyzer-checker=security.insecureAPI.gets -analyzer-checker=security.insecureAPI.mktemp -analyzer-checker=security.insecureAPI.mkstemp -analyzer-checker=security.insecureAPI.vfork -analyzer-output plist -w -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -munwind-tables -fuse-init-array -target-cpu x86-64 -target-linker-version 2.23.2 -resource-dir /usr/bin/../lib/clang/3.3 -D _GNU_SOURCE -D SERVER -I . -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/clang/3.3/include -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdebug-compilation-dir /home/laszlona/Programming/Bear/build -ferror-limit 19 -fmessage-length 0 -mstackrealign -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -analyzer-output=html -o /tmp/scan-build-2013-09-30-2 -x c ../src/main.c"
+}
+,
+{
+  "pid": "8385",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/output.o ../src/output.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8385",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/output.o ../src/output.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8386",
+  "ppid": "8385",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8387",
+  "ppid": "8385",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -c -o ../src/output.o ../src/output.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8388",
+  "ppid": "8387",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/cc1 -quiet -I . -D _GNU_SOURCE -D SERVER ../src/output.c -quiet -dumpbase output.c -mtune=generic -march=x86-64 -auxbase-strip ../src/output.o -o /tmp/cciN1cbD.s"
+}
+,
+{
+  "pid": "8389",
+  "ppid": "8387",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "as -I . --64 -o ../src/output.o /tmp/cciN1cbD.s"
+}
+,
+{
+  "pid": "8390",
+  "ppid": "8385",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### -fsyntax-only -x c -D_GNU_SOURCE -DSERVER -I. ../src/output.c"
+}
+,
+{
+  "pid": "8391",
+  "ppid": "8385",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### --analyze -x c -D_GNU_SOURCE -DSERVER -I. ../src/output.c -o /tmp/scan-build-2013-09-30-2 -Xclang -analyzer-output=html"
+}
+,
+{
+  "pid": "8392",
+  "ppid": "8385",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -triple x86_64-unknown-linux-gnu -analyze -disable-free -disable-llvm-verifier -main-file-name output.c -analyzer-store=region -analyzer-opt-analyze-nested-blocks -analyzer-eagerly-assume -analyzer-checker=core -analyzer-checker=unix -analyzer-checker=deadcode -analyzer-checker=security.insecureAPI.UncheckedReturn -analyzer-checker=security.insecureAPI.getpw -analyzer-checker=security.insecureAPI.gets -analyzer-checker=security.insecureAPI.mktemp -analyzer-checker=security.insecureAPI.mkstemp -analyzer-checker=security.insecureAPI.vfork -analyzer-output plist -w -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -munwind-tables -fuse-init-array -target-cpu x86-64 -target-linker-version 2.23.2 -resource-dir /usr/bin/../lib/clang/3.3 -D _GNU_SOURCE -D SERVER -I . -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/clang/3.3/include -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdebug-compilation-dir /home/laszlona/Programming/Bear/build -ferror-limit 19 -fmessage-length 0 -mstackrealign -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -analyzer-output=html -o /tmp/scan-build-2013-09-30-2 -x c ../src/output.c"
+}
+,
+{
+  "pid": "8393",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/filter.o ../src/filter.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8393",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/filter.o ../src/filter.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8394",
+  "ppid": "8393",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8395",
+  "ppid": "8393",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -c -o ../src/filter.o ../src/filter.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8396",
+  "ppid": "8395",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/cc1 -quiet -I . -D _GNU_SOURCE -D SERVER ../src/filter.c -quiet -dumpbase filter.c -mtune=generic -march=x86-64 -auxbase-strip ../src/filter.o -o /tmp/cc4u0WtO.s"
+}
+,
+{
+  "pid": "8397",
+  "ppid": "8395",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "as -I . --64 -o ../src/filter.o /tmp/cc4u0WtO.s"
+}
+,
+{
+  "pid": "8398",
+  "ppid": "8393",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### -fsyntax-only -x c -D_GNU_SOURCE -DSERVER -I. ../src/filter.c"
+}
+,
+{
+  "pid": "8399",
+  "ppid": "8393",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### --analyze -x c -D_GNU_SOURCE -DSERVER -I. ../src/filter.c -o /tmp/scan-build-2013-09-30-2 -Xclang -analyzer-output=html"
+}
+,
+{
+  "pid": "8400",
+  "ppid": "8393",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -triple x86_64-unknown-linux-gnu -analyze -disable-free -disable-llvm-verifier -main-file-name filter.c -analyzer-store=region -analyzer-opt-analyze-nested-blocks -analyzer-eagerly-assume -analyzer-checker=core -analyzer-checker=unix -analyzer-checker=deadcode -analyzer-checker=security.insecureAPI.UncheckedReturn -analyzer-checker=security.insecureAPI.getpw -analyzer-checker=security.insecureAPI.gets -analyzer-checker=security.insecureAPI.mktemp -analyzer-checker=security.insecureAPI.mkstemp -analyzer-checker=security.insecureAPI.vfork -analyzer-output plist -w -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -munwind-tables -fuse-init-array -target-cpu x86-64 -target-linker-version 2.23.2 -resource-dir /usr/bin/../lib/clang/3.3 -D _GNU_SOURCE -D SERVER -I . -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/clang/3.3/include -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdebug-compilation-dir /home/laszlona/Programming/Bear/build -ferror-limit 19 -fmessage-length 0 -mstackrealign -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -analyzer-output=html -o /tmp/scan-build-2013-09-30-2 -x c ../src/filter.c"
+}
+,
+{
+  "pid": "8401",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/json.o ../src/json.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8401",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -c -o ../src/json.o ../src/json.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8402",
+  "ppid": "8401",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8403",
+  "ppid": "8401",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -c -o ../src/json.o ../src/json.c -D_GNU_SOURCE -DSERVER -I."
+}
+,
+{
+  "pid": "8404",
+  "ppid": "8403",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/cc1 -quiet -I . -D _GNU_SOURCE -D SERVER ../src/json.c -quiet -dumpbase json.c -mtune=generic -march=x86-64 -auxbase-strip ../src/json.o -o /tmp/ccTBTv8d.s"
+}
+,
+{
+  "pid": "8405",
+  "ppid": "8403",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "as -I . --64 -o ../src/json.o /tmp/ccTBTv8d.s"
+}
+,
+{
+  "pid": "8406",
+  "ppid": "8401",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### -fsyntax-only -x c -D_GNU_SOURCE -DSERVER -I. ../src/json.c"
+}
+,
+{
+  "pid": "8407",
+  "ppid": "8401",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -### --analyze -x c -D_GNU_SOURCE -DSERVER -I. ../src/json.c -o /tmp/scan-build-2013-09-30-2 -Xclang -analyzer-output=html"
+}
+,
+{
+  "pid": "8408",
+  "ppid": "8401",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/clang -cc1 -triple x86_64-unknown-linux-gnu -analyze -disable-free -disable-llvm-verifier -main-file-name json.c -analyzer-store=region -analyzer-opt-analyze-nested-blocks -analyzer-eagerly-assume -analyzer-checker=core -analyzer-checker=unix -analyzer-checker=deadcode -analyzer-checker=security.insecureAPI.UncheckedReturn -analyzer-checker=security.insecureAPI.getpw -analyzer-checker=security.insecureAPI.gets -analyzer-checker=security.insecureAPI.mktemp -analyzer-checker=security.insecureAPI.mkstemp -analyzer-checker=security.insecureAPI.vfork -analyzer-output plist -w -mrelocation-model static -mdisable-fp-elim -fmath-errno -masm-verbose -mconstructor-aliases -munwind-tables -fuse-init-array -target-cpu x86-64 -target-linker-version 2.23.2 -resource-dir /usr/bin/../lib/clang/3.3 -D _GNU_SOURCE -D SERVER -I . -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/clang/3.3/include -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdebug-compilation-dir /home/laszlona/Programming/Bear/build -ferror-limit 19 -fmessage-length 0 -mstackrealign -fobjc-runtime=gcc -fobjc-default-synthesize-properties -fdiagnostics-show-option -backend-option -vectorize-loops -analyzer-output=html -o /tmp/scan-build-2013-09-30-2 -x c ../src/json.c"
+}
+,
+{
+  "pid": "8409",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/clang-analyzer/scan-build/ccc-analyzer -o bear ../src/stringarray.o ../src/protocol.o ../src/main.o ../src/output.o ../src/filter.o ../src/json.o -lconfig"
+}
+,
+{
+  "pid": "8409",
+  "ppid": "8360",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "perl /usr/lib/clang-analyzer/scan-build/ccc-analyzer -o bear ../src/stringarray.o ../src/protocol.o ../src/main.o ../src/output.o ../src/filter.o ../src/json.o -lconfig"
+}
+,
+{
+  "pid": "8410",
+  "ppid": "8409",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "uname -a"
+}
+,
+{
+  "pid": "8411",
+  "ppid": "8409",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "gcc -o bear ../src/stringarray.o ../src/protocol.o ../src/main.o ../src/output.o ../src/filter.o ../src/json.o -lconfig"
+}
+,
+{
+  "pid": "8412",
+  "ppid": "8411",
+  "function": "execv",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/collect2 --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o bear /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib/crt1.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/crtbegin.o -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1 -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../.. ../src/stringarray.o ../src/protocol.o ../src/main.o ../src/output.o ../src/filter.o ../src/json.o -lconfig -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/crtend.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib/crtn.o"
+}
+,
+{
+  "pid": "8413",
+  "ppid": "8412",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "/usr/bin/ld --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o bear /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib/crt1.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/crtbegin.o -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1 -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../.. ../src/stringarray.o ../src/protocol.o ../src/main.o ../src/output.o ../src/filter.o ../src/json.o -lconfig -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/crtend.o /usr/lib/gcc/x86_64-unknown-linux-gnu/4.8.1/../../../../lib/crtn.o"
+}
+,
+{
+  "pid": "8414",
+  "ppid": "8357",
+  "function": "execvp",
+  "directory": "/home/laszlona/Programming/Bear/build",
+  "command": "rm -fR /tmp/scan-build-2013-09-30-2"
+}
+]
