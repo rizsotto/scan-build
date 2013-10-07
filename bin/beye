@@ -1,4 +1,88 @@
 #!/bin/env python
 
+# Copyright 2013 by László Nagy
+# This file is part of Beye [see file LICENSE.txt for more]
+
+import json
+import logging
+
+import multiprocessing
+import threading
+import subprocess
+
+
+def main():
+    multiprocessing.freeze_support()
+
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("--output",
+                        metavar='DIR',
+                        default="/tmp/beye-XXXXXX",
+                        help="Specify output directory\
+                              (default generated)")
+    parser.add_argument("--input",
+                        metavar='FILE',
+                        default="compile_commands.json",
+                        help="The JSON compilation database\
+                              (default compile_commands.json)")
+    parser.add_argument('--log-level',
+                        metavar='LEVEL',
+                        choices='DEBUG INFO WARN ERROR'.split(),
+                        default='WARN',
+                        help="Choose a log level from DEBUG, INFO, WARN,\
+                              (default) or ERROR")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=args.log_level)
+
+    with open(args.input, "r") as fd:
+        results = None
+        parallel(json.load(fd), analyze, merge, results)
+
+
+def analyze(input):
+    cmd = input['command'].split(' ')
+    cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
+    compilation = subprocess.Popen(cmd)
+    compilation.wait()
+    return compilation.returncode
+
+
+def merge(results, result):
+    return
+
+
+# mini map-reduce framework
+def _produce_to_queue(func, queue, task):
+    queue.put(func(task))
+
+
+def _consume_from_queue(func, queue, result):
+    for e in iter(queue.get, 'STOP'):
+        func(result, e)
+
+
+def parallel(input_iterable, produce_func, consume_func, output):
+    queue = multiprocessing.Manager().Queue()
+
+    consumer = threading.Thread(target=_consume_from_queue,
+                                args=(consume_func, queue, output))
+    consumer.start()
+
+    pool = multiprocessing.Pool()
+    for task in input_iterable:
+        pool.apply_async(func=_produce_to_queue,
+                         args=(produce_func, queue, task))
+    pool.close()
+    pool.join()
+
+    queue.put('STOP')
+    consumer.join()
+
+    return output
+
+
+# entry symbol
 if __name__ == '__main__':
-    print('hi there')
+    main()

@@ -9,4 +9,4 @@ test: $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 clean:
-	rm -f $(OBJS) ./test
+	rm -rf $(OBJS) ./test *.plist
