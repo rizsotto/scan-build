@@ -3,12 +3,9 @@
 # Copyright 2013 by László Nagy
 # This file is part of Beye [see file LICENSE.txt for more]
 
-import json
+import os
 import logging
-
 import multiprocessing
-import threading
-import subprocess
 
 
 def main():
@@ -18,7 +15,6 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("--output",
                         metavar='DIR',
-                        default="/tmp/beye-XXXXXX",
                         help="Specify output directory\
                               (default generated)")
     parser.add_argument("--input",
@@ -36,14 +32,20 @@ def main():
 
     logging.basicConfig(level=args.log_level)
 
-    with open(args.input, "r") as fd:
-        results = None
-        parallel(json.load(fd), analyze, merge, results)
+    try:
+        out_dir = create_out_directory(args.output)
+        with open(args.input, "r") as fd:
+            import json
+            parallel(json.load(fd), analyze, merge, None)
+    finally:
+        cleanup_out_directory(out_dir)
 
 
 def analyze(input):
+    import subprocess
     cmd = input['command'].split(' ')
     cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
+    logging.debug('executing: {}'.format(cmd))
     compilation = subprocess.Popen(cmd)
     compilation.wait()
     return compilation.returncode
@@ -51,6 +53,31 @@ def analyze(input):
 
 def merge(results, result):
     return
+
+
+def create_out_directory(hint):
+    if (hint):
+        try:
+            os.mkdir(hint)
+        except OSError as ex:
+            if ex.errno != 17: # Already exists
+                raise
+
+        result = hint
+    else:
+        import tempfile
+        result = tempfile.mkdtemp(prefix='beye-')
+
+    logging.debug('output directory: {}'.format(result))
+    return result
+
+
+def cleanup_out_directory(dir):
+    try:
+        os.removedirs(dir)
+    except OSError as ex:
+        if ex.errno != 39: # Directory not empty
+            raise
 
 
 # mini map-reduce framework
@@ -64,6 +91,7 @@ def _consume_from_queue(func, queue, result):
 
 
 def parallel(input_iterable, produce_func, consume_func, output):
+    import threading
     queue = multiprocessing.Manager().Queue()
 
     consumer = threading.Thread(target=_consume_from_queue,
