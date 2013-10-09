@@ -9,8 +9,6 @@ import multiprocessing
 
 
 def main():
-    multiprocessing.freeze_support()
-
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("--output",
@@ -113,4 +111,5 @@ def parallel(input_iterable, produce_func, consume_func, output):
 
 # entry symbol
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     main()
