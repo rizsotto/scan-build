@@ -6,6 +6,7 @@
 import os
 import logging
 import multiprocessing
+import json
 
 
 def main():
@@ -28,18 +29,25 @@ def main():
                               (default) or ERROR")
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=args.log_level)
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=args.log_level)
 
     try:
         out_dir = create_out_directory(args.output)
+
         with open(args.input, "r") as fd:
-            import json
-            parallel(json.load(fd), analyze, merge, None)
+            pool = multiprocessing.Pool()
+            results = [pool.apply_async(func=analyze, args=(c, out_dir))
+                       for c in json.load(fd)]
+
+            pool.close()
+            pool.join()
+
     finally:
         cleanup_out_directory(out_dir)
 
 
-def analyze(input):
+def analyze(input, out_dir):
     import subprocess
     cmd = input['command'].split(' ')
     cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
@@ -49,16 +57,12 @@ def analyze(input):
     return compilation.returncode
 
 
-def merge(results, result):
-    return
-
-
 def create_out_directory(hint):
     if (hint):
         try:
             os.mkdir(hint)
         except OSError as ex:
-            if ex.errno != 17: # Already exists
+            if ex.errno != 17:  # Already exists
                 raise
 
         result = hint
@@ -74,39 +78,8 @@ def cleanup_out_directory(dir):
     try:
         os.removedirs(dir)
     except OSError as ex:
-        if ex.errno != 39: # Directory not empty
+        if ex.errno != 39:  # Directory not empty
             raise
-
-
-# mini map-reduce framework
-def _produce_to_queue(func, queue, task):
-    queue.put(func(task))
-
-
-def _consume_from_queue(func, queue, result):
-    for e in iter(queue.get, 'STOP'):
-        func(result, e)
-
-
-def parallel(input_iterable, produce_func, consume_func, output):
-    import threading
-    queue = multiprocessing.Manager().Queue()
-
-    consumer = threading.Thread(target=_consume_from_queue,
-                                args=(consume_func, queue, output))
-    consumer.start()
-
-    pool = multiprocessing.Pool()
-    for task in input_iterable:
-        pool.apply_async(func=_produce_to_queue,
-                         args=(produce_func, queue, task))
-    pool.close()
-    pool.join()
-
-    queue.put('STOP')
-    consumer.join()
-
-    return output
 
 
 # entry symbol
