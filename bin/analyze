@@ -1,0 +1,39 @@
+#!/bin/env python
+
+# Copyright 2013 by László Nagy
+# This file is part of Beye [see file LICENSE.txt for more]
+
+import os
+import sys
+import logging
+
+import beye.analyze
+
+
+def main():
+
+    if (os.environ.get('CCC_ANALYZER_VERBOSE')):
+        log_level = 'DEBUG'
+    elif (os.environ.get('CCC_ANALYZER_LOG')):
+        log_level = 'INFO'
+    else:
+        log_level = 'WARNING'
+
+    logging.basicConfig(format='%(message)s', level=log_level)
+    logging.info(' '.join(sys.argv))
+
+
+    analyzer = beye.analyze.Analyzer()
+    analyzer.run(
+        analyses = os.environ.get('CCC_ANALYZER_ANALYSIS'),
+        plugins = os.environ.get('CCC_ANALYZER_PLUGINS'),
+        store_model = os.environ.get('CCC_ANALYZER_STORE_MODEL'),
+        constraints_model = os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
+        internal_stats = os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
+        output_format = os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
+        html_dir = os.environ.get('CCC_ANALYZER_HTML'))
+
+
+# entry symbol
+if __name__ == '__main__':
+    main()

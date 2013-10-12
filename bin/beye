@@ -23,9 +23,9 @@ def main():
                               (default compile_commands.json)")
     parser.add_argument('--log-level',
                         metavar='LEVEL',
-                        choices='DEBUG INFO WARN ERROR'.split(),
-                        default='WARN',
-                        help="Choose a log level from DEBUG, INFO, WARN,\
+                        choices='DEBUG INFO WARNING ERROR'.split(),
+                        default='WARNING',
+                        help="Choose a log level from DEBUG, INFO, WARNING,\
                               (default) or ERROR")
     args = parser.parse_args()
 
