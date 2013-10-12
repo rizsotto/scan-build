@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright 2013 by László Nagy
 # This file is part of Beye [see file LICENSE.txt for more]
 
