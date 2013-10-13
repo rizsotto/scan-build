@@ -23,16 +23,15 @@ def main():
     logging.basicConfig(format='%(message)s', level=log_level)
     logging.info(' '.join(sys.argv))
 
-
     analyzer = beye.analyze.Analyzer()
     analyzer.run(
-        analyses = os.environ.get('CCC_ANALYZER_ANALYSIS'),
-        plugins = os.environ.get('CCC_ANALYZER_PLUGINS'),
-        store_model = os.environ.get('CCC_ANALYZER_STORE_MODEL'),
-        constraints_model = os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
-        internal_stats = os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
-        output_format = os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
-        html_dir = os.environ.get('CCC_ANALYZER_HTML'))
+        analyses=os.environ.get('CCC_ANALYZER_ANALYSIS'),
+        plugins=os.environ.get('CCC_ANALYZER_PLUGINS'),
+        store_model=os.environ.get('CCC_ANALYZER_STORE_MODEL'),
+        constraints_model=os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
+        internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
+        output_format=os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
+        html_dir=os.environ.get('CCC_ANALYZER_HTML'))
 
 
 # entry symbol
