@@ -107,9 +107,14 @@ def split_arguments(args):
 
 
 class Analyzer:
-    def __init__(self):
-        pass
-
     def run(self, **keywords):
-        pass
+        import os
+        input = keywords['task']
+        cmd = input['command'].split(' ')
+        cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
+        os.environ['CCC_ANALYZER_HTML'] = keywords.get('html_dir')
+        logging.debug('executing: {}'.format(cmd))
+        compilation = subprocess.Popen(cmd, env=os.environ)
+        compilation.wait()
+        return compilation.returncode
 

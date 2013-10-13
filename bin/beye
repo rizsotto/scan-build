@@ -9,6 +9,8 @@ import logging
 import multiprocessing
 import json
 
+import beye.analyze
+
 
 def main():
     from argparse import ArgumentParser
@@ -49,13 +51,8 @@ def main():
 
 
 def analyze(input, out_dir):
-    import subprocess
-    cmd = input['command'].split(' ')
-    cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
-    logging.debug('executing: {}'.format(cmd))
-    compilation = subprocess.Popen(cmd)
-    compilation.wait()
-    return compilation.returncode
+    analyzer = beye.analyze.Analyzer()
+    return analyzer.run(task=input, html_dir=out_dir)
 
 
 def create_out_directory(hint):
