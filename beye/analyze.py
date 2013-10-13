@@ -101,26 +101,30 @@ class Action:
     Info, Link, Compile, Preprocess = range(4)
 
     import re
-    _preprocess_regex = re.compile('^-(E|MM?)$')
-    _info_regex = re.compile('^-print-prog-name')
+    __preprocess_regex = re.compile('^-(E|MM?)$')
+    __info_regex = re.compile('^-print-prog-name')
 
-    def is_preprocess(arg):
-        return True if (Action._preprocess_regex.match(arg)) else False
+    @staticmethod
+    def __is_preprocess(arg):
+        return True if (Action.__preprocess_regex.match(arg)) else False
 
-    def is_compile(arg):
+    @staticmethod
+    def __is_compile(arg):
         return True if ('-c' == arg) else False
 
-    def is_info(arg):
-        return True if (Action._info_regex.match(arg)) else False
+    @staticmethod
+    def __is_info(arg):
+        return True if (Action.__info_regex.match(arg)) else False
 
+    @staticmethod
     def what(args):
         result = Action.Link
         for arg in args:
-            if (Action.is_info(arg)):
+            if (Action.__is_info(arg)):
                 return Action.Info
-            elif (Action.is_preprocess(arg)):
+            elif (Action.__is_preprocess(arg)):
                 return Action.Preprocess
-            elif (Action.is_compile(arg)):
+            elif (Action.__is_compile(arg)):
                 result = Action.Compile
         return result
 
