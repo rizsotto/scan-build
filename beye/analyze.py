@@ -5,6 +5,7 @@
 
 import subprocess
 import logging
+import six
 
 
 _CompileOptionMap = {
@@ -122,8 +123,8 @@ def archs_seen(args):
     try:
         it = iter(args)
         while True:
-            if '-arch' == it.next():
-                result.append(it.next())
+            if '-arch' == six.next(it):
+                result.append(six.next(it))
     except:
         return result
 
