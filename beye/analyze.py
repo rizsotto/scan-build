@@ -98,7 +98,7 @@ _DisabledArchs = {
 
 
 class Action:
-    Info, Link, Compile, Preprocess = range(4)
+    Link, Compile, Preprocess, Info = range(4)
 
     import re
     __preprocess_regex = re.compile('^-(E|MM?)$')
@@ -106,15 +106,15 @@ class Action:
 
     @staticmethod
     def parse(args):
-        result = Action.Link
+        result = [Action.Link]
         for arg in args:
             if Action.__info_regex.match(arg):
-                return Action.Info
+                result.append(Action.Info)
             elif Action.__preprocess_regex.match(arg):
-                return Action.Preprocess
+                result.append(Action.Preprocess)
             elif '-c' == arg:
-                result = Action.Compile
-        return result
+                result.append(Action.Compile)
+        return max(result)
 
 
 def archs_seen(args):
