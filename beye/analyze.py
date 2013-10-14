@@ -105,26 +105,14 @@ class Action:
     __info_regex = re.compile('^-print-prog-name')
 
     @staticmethod
-    def __is_preprocess(arg):
-        return True if (Action.__preprocess_regex.match(arg)) else False
-
-    @staticmethod
-    def __is_compile(arg):
-        return True if ('-c' == arg) else False
-
-    @staticmethod
-    def __is_info(arg):
-        return True if (Action.__info_regex.match(arg)) else False
-
-    @staticmethod
-    def what(args):
+    def parse(args):
         result = Action.Link
         for arg in args:
-            if (Action.__is_info(arg)):
+            if (Action.__info_regex.match(arg)):
                 return Action.Info
-            elif (Action.__is_preprocess(arg)):
+            elif (Action.__preprocess_regex.match(arg)):
                 return Action.Preprocess
-            elif (Action.__is_compile(arg)):
+            elif ('-c' == arg):
                 result = Action.Compile
         return result
 

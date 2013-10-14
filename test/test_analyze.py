@@ -13,7 +13,7 @@ def test_split_arguments():
 
 def test_action():
     def test(expected, cmds):
-        assert expected == sut.Action.what(cmds)
+        assert expected == sut.Action.parse(cmds)
 
     Info = sut.Action.Info
     test(Info, ['clang', 'source.c', '-print-prog-name'])
