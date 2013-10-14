@@ -5,6 +5,7 @@
 
 import beye.analyze as sut
 
+
 def test_split_arguments():
     input = ['clang', '-Wall', '-std=C99', '-v', 'file.c']
     expected = ['clang', '-Wall', '-std', 'C99', '-v', 'file.c']
@@ -30,3 +31,11 @@ def test_action():
     test(Preprocess, ['clang', '-c', '-E', 'source.c'])
     test(Preprocess, ['clang', '-c', '-M', 'source.c'])
     test(Preprocess, ['clang', '-c', '-MM', 'source.c'])
+
+
+def test_archs_seen():
+    assert [] == sut.archs_seen(['clang', '-c', 'source.c'])
+    assert ['ppc'] == sut.archs_seen(['clang', '-c', '-arch', 'ppc',
+                                      'source.c'])
+    assert ['ppc', 'i386'] == sut.archs_seen(['clang', '-c', '-arch', 'ppc',
+                                              '-arch', 'i386', 'source.c'])

@@ -108,12 +108,23 @@ class Action:
     def parse(args):
         result = Action.Link
         for arg in args:
-            if (Action.__info_regex.match(arg)):
+            if Action.__info_regex.match(arg):
                 return Action.Info
-            elif (Action.__preprocess_regex.match(arg)):
+            elif Action.__preprocess_regex.match(arg):
                 return Action.Preprocess
-            elif ('-c' == arg):
+            elif '-c' == arg:
                 result = Action.Compile
+        return result
+
+
+def archs_seen(args):
+    result = list()
+    try:
+        it = iter(args)
+        while True:
+            if '-arch' == it.next():
+                result.append(it.next())
+    except:
         return result
 
 
