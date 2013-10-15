@@ -116,9 +116,6 @@ class Parser:
             return parser
 
     def __init__(self):
-        self.__preprocess_regex = re.compile('^-(E|MM?)$')
-        self.__info_regex = re.compile('^-print-prog-name')
-
         self.actions = [Action.Link]
         self.archs_seen = []
         self.compile_options = []
@@ -130,9 +127,9 @@ class Parser:
             self.archs_seen.append(six.next(it))
             return
         # collect action related switches
-        if self.__info_regex.match(current):
+        if re.match('^-print-prog-name', current):
             self.actions.append(Action.Info)
-        elif self.__preprocess_regex.match(current):
+        elif re.match('^-(E|MM?)$', current):
             self.actions.append(Action.Preprocess)
         elif '-c' == current:
             self.actions.append(Action.Compile)
