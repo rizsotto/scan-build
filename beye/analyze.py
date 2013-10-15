@@ -103,48 +103,49 @@ class Action:
     Link, Compile, Preprocess, Info = range(4)
 
 
-class Parser:
-
-    @staticmethod
-    def run(args):
-        parser = Parser()
-        try:
-            it = iter(Parser.split_arguments(args))
-            while True:
-                parser.__loop__(it)
-        except:
-            return parser
-
+class Options:
     def __init__(self):
         self.actions = [Action.Link]
         self.archs_seen = []
         self.compile_options = []
 
-    def __loop__(self, it):
+    def get_action(self):
+        return max(self.actions)
+
+
+class Parser:
+
+    @staticmethod
+    def run(args):
+        state = Options()
+        try:
+            it = iter(Parser.split_arguments(args))
+            while True:
+                Parser.__loop__(state, it)
+        except:
+            return state
+
+    @staticmethod
+    def __loop__(state, it):
         current = six.next(it)
         # collect arch flags
         if '-arch' == current:
-            self.archs_seen.append(six.next(it))
+            state.archs_seen.append(six.next(it))
             return
         # collect action related switches
         if re.match('^-print-prog-name', current):
-            self.actions.append(Action.Info)
+            state.actions.append(Action.Info)
         elif re.match('^-(E|MM?)$', current):
-            self.actions.append(Action.Preprocess)
+            state.actions.append(Action.Preprocess)
         elif '-c' == current:
-            self.actions.append(Action.Compile)
+            state.actions.append(Action.Compile)
         # collect compile flags
         compiler_option = _CompileOptionMap.get(current)
         if compiler_option is not None:
-            self.compile_options.append(current)
+            state.compile_options.append(current)
             for i in range(compiler_option):
-                self.compile_options.append(six.next(it))
+                state.compile_options.append(six.next(it))
             return
-
-        return
-
-    def get_action(self):
-        return max(self.actions)
 
     @staticmethod
     def split_arguments(args):
