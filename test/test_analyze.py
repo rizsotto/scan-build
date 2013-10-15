@@ -43,3 +43,13 @@ def test_archs_seen():
     assert ['ppc'] == test(['clang', '-c', '-arch', 'ppc', 'source.c'])
     assert ['ppc', 'i386'] == test(['clang', '-c', '-arch', 'ppc',
                                     '-arch', 'i386', 'source.c'])
+
+
+def test_compile_flags():
+    def test(cmds):
+        parser = sut.Parser.run(cmds)
+        return parser.compile_options
+
+    assert [] == test(['clang', '--version'])
+    assert ['-nostdinc', '-include', '/tmp'] == \
+        test(['clang', '-c', '-nostdinc', 'source.c', '-include', '/tmp'])

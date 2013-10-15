@@ -121,20 +121,28 @@ class Parser:
 
         self.actions = [Action.Link]
         self.archs_seen = []
+        self.compile_options = []
 
     def __loop__(self, it):
         current = six.next(it)
-
+        # collect arch flags
         if '-arch' == current:
             self.archs_seen.append(six.next(it))
             return
-
+        # collect action related switches
         if self.__info_regex.match(current):
             self.actions.append(Action.Info)
         elif self.__preprocess_regex.match(current):
             self.actions.append(Action.Preprocess)
         elif '-c' == current:
             self.actions.append(Action.Compile)
+        # collect compile flags
+        compiler_option = _CompileOptionMap.get(current)
+        if compiler_option is not None:
+            self.compile_options.append(current)
+            for i in range(compiler_option):
+                self.compile_options.append(six.next(it))
+            return
 
         return
 
