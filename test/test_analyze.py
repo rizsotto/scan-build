@@ -9,12 +9,13 @@ import beye.analyze as sut
 def test_split_arguments():
     input = ['clang', '-Wall', '-std=C99', '-v', 'file.c']
     expected = ['clang', '-Wall', '-std', 'C99', '-v', 'file.c']
-    assert expected == sut.split_arguments(input)
+    assert expected == sut.Parser.split_arguments(input)
 
 
 def test_action():
     def test(expected, cmds):
-        assert expected == sut.Action.parse(cmds)
+        parser = sut.Parser.run(cmds)
+        assert expected == parser.get_action()
 
     Info = sut.Action.Info
     test(Info, ['clang', 'source.c', '-print-prog-name'])
@@ -34,8 +35,11 @@ def test_action():
 
 
 def test_archs_seen():
-    assert [] == sut.archs_seen(['clang', '-c', 'source.c'])
-    assert ['ppc'] == sut.archs_seen(['clang', '-c', '-arch', 'ppc',
-                                      'source.c'])
-    assert ['ppc', 'i386'] == sut.archs_seen(['clang', '-c', '-arch', 'ppc',
-                                              '-arch', 'i386', 'source.c'])
+    def test(cmds):
+        parser = sut.Parser.run(cmds)
+        return parser.archs_seen
+
+    assert [] == test(['clang', '-c', 'source.c'])
+    assert ['ppc'] == test(['clang', '-c', '-arch', 'ppc', 'source.c'])
+    assert ['ppc', 'i386'] == test(['clang', '-c', '-arch', 'ppc',
+                                    '-arch', 'i386', 'source.c'])

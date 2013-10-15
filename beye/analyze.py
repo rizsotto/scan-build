@@ -6,6 +6,7 @@
 import subprocess
 import logging
 import six
+import re
 
 
 _CompileOptionMap = {
@@ -101,39 +102,48 @@ _DisabledArchs = {
 class Action:
     Link, Compile, Preprocess, Info = range(4)
 
-    import re
-    __preprocess_regex = re.compile('^-(E|MM?)$')
-    __info_regex = re.compile('^-print-prog-name')
+
+class Parser:
 
     @staticmethod
-    def parse(args):
-        result = [Action.Link]
-        for arg in args:
-            if Action.__info_regex.match(arg):
-                result.append(Action.Info)
-            elif Action.__preprocess_regex.match(arg):
-                result.append(Action.Preprocess)
-            elif '-c' == arg:
-                result.append(Action.Compile)
-        return max(result)
+    def run(args):
+        parser = Parser()
+        try:
+            it = iter(Parser.split_arguments(args))
+            while True:
+                parser.__loop__(it)
+        except:
+            return parser
 
+    def __init__(self):
+        self.__preprocess_regex = re.compile('^-(E|MM?)$')
+        self.__info_regex = re.compile('^-print-prog-name')
 
-def archs_seen(args):
-    result = list()
-    try:
-        it = iter(args)
-        while True:
-            if '-arch' == six.next(it):
-                result.append(six.next(it))
-    except:
-        return result
+        self.actions = [Action.Link]
+        self.archs_seen = []
 
+    def __loop__(self, it):
+        current = six.next(it)
 
-def split_arguments(args):
-    def flatten(arg):
-        return [val for subl in arg for val in subl]
+        if '-arch' == current:
+            self.archs_seen.append(six.next(it))
+            return
 
-    return flatten([a.split('=') for a in args])
+        if self.__info_regex.match(current):
+            self.actions.append(Action.Info)
+        elif self.__preprocess_regex.match(current):
+            self.actions.append(Action.Preprocess)
+        elif '-c' == current:
+            self.actions.append(Action.Compile)
+
+        return
+
+    def get_action(self):
+        return max(self.actions)
+
+    @staticmethod
+    def split_arguments(args):
+        return [val for subl in [a.split('=') for a in args] for val in subl]
 
 
 class Analyzer:
