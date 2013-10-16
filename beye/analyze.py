@@ -18,7 +18,8 @@ _CompileOptionMap = {
     '-iquote': 1,
     '-isystem': 1,
     '-iwithprefix': 1,
-    '-iwithprefixbefore': 1
+    '-iwithprefixbefore': 1,
+    '-std': 1
 }
 
 _LinkerOptionMap = {
@@ -28,28 +29,21 @@ _LinkerOptionMap = {
 
 _CompilerLinkerOptionMap = {
     '-Wwrite-strings': 0,
-    # specifically call out separated -f flag
-    '-ftrapv-handler': 1,
-    # This is really a 1 argument, but always has '='
-    '-mios-simulator-version-min': 0,
+    '-ftrapv-handler': 1,  # specifically call out separated -f flag
+    '-mios-simulator-version-min': 1,
     '-isysroot': 1,
-    '-arch': 1,
     '-m32': 0,
     '-m64': 0,
-    # This is really a 1 argument, but always has '='
-    '-stdlib': 0,
+    '-stdlib': 1,
     '-target': 1,
     '-v': 0,
-    # This is really a 1 argument, but always has '='
-    '-mmacosx-version-min': 0,
-    # This is really a 1 argument, but always has '='
-    '-miphoneos-version-min': 0
+    '-mmacosx-version-min': 1,
+    '-miphoneos-version-min': 1
 }
 
 _IgnoredOptionMap = {
-    '-MT': 1,  # Ignore these preprocessor options.
+    '-MT': 1,
     '-MF': 1,
-
     '-fsyntax-only': 0,
     '-save-temps': 0,
     '-install_name': 1,
@@ -108,9 +102,17 @@ class Options:
         self.actions = [Action.Link]
         self.archs_seen = []
         self.compile_options = []
+        self.link_options = []
+        self.language = None
+        self.output = None
+        self.files = []
 
     def get_action(self):
         return max(self.actions)
+
+    def read_files_from(self, fname):
+        with open(fname) as f:
+            self.files = f.readlines()
 
 
 class Parser:
@@ -119,7 +121,7 @@ class Parser:
     def run(args):
         state = Options()
         try:
-            it = iter(Parser.split_arguments(args))
+            it = iter(Parser.split_arguments(args)[1:])
             while True:
                 Parser.__loop__(state, it)
         except:
@@ -128,10 +130,6 @@ class Parser:
     @staticmethod
     def __loop__(state, it):
         current = six.next(it)
-        # collect arch flags
-        if '-arch' == current:
-            state.archs_seen.append(six.next(it))
-            return
         # collect action related switches
         if re.match('^-print-prog-name', current):
             state.actions.append(Action.Info)
@@ -139,12 +137,99 @@ class Parser:
             state.actions.append(Action.Preprocess)
         elif '-c' == current:
             state.actions.append(Action.Compile)
+        # ignore some options
+        ignored_option = _IgnoredOptionMap.get(current)
+        if ignored_option is not None:
+            for i in range(both_option):
+                six.next(it)
+            return
+        # collect arch flags
+        if '-arch' == current:
+            state.archs_seen.append(six.next(it))
+            return
         # collect compile flags
         compiler_option = _CompileOptionMap.get(current)
         if compiler_option is not None:
             state.compile_options.append(current)
             for i in range(compiler_option):
                 state.compile_options.append(six.next(it))
+            return
+        if re.match('^-m.*', current):
+            state.compile_options.append(current)
+            return
+        if re.match('^-iquote.*', current):
+            state.compile_options.append(current)
+            return
+        # collect linker flags
+        link_option = _LinkerOptionMap.get(current)
+        if link_option is not None:
+            state.link_options.append(current)
+            for i in range(link_option):
+                state.link_options.append(six.next(it))
+            return
+        # collect compile and linker flags
+        both_option = _CompilerLinkerOptionMap.get(current)
+        if both_option is not None:
+            both_options = []
+            both_options.append(current)
+            for i in range(both_option):
+                both_options.append(six.next(it))
+            state.compile_options.extend(both_options)
+            state.link_options.extend(both_options)
+            return
+        # collect compile mode flags
+        mode_match = re.match('^-[D,I,U](.*)$', current)
+        if mode_match:
+            state.compile_options.append(current)
+            if '' == mode_match.group(1):
+                state.compile_options.append(six.next(it))
+            return
+        # collect language
+        if '-x' == current:
+            state.language = six.next(it)
+            return
+        # collect output file
+        if '-o' == current:
+            state.output = six.next(it)
+            return
+        # collect link mode
+        if re.match('^-[l,L,O]', current):
+            if '-O' == current:
+                state.link_options.append('-O1')
+            elif '-Os' == current:
+                state.link_options.append('-O2')
+            else:
+                state.link_options.append(current)
+            # optimalization must pass for __OPTIMIZE__ macro
+            if re.match('^-O', current):
+                state.compile_options.append(current)
+            return
+        # collect compiler/link mode
+        mode_match = re.match('^-F(.+)$', current)
+        if mode_match:
+            both_options = []
+            both_options.append(current)
+            if '' == mode_match.group(1):
+                both_options.append(six.next(it))
+            state.compile_options.extend(both_options)
+            state.link_options.extend(both_options)
+            return
+        # input files
+        if '-filelist' == current:
+            state.read_files_from(six.next(it))
+            return
+        # collect other control flags
+        if re.match('^-f', current):
+            state.compile_options.append(current)
+            state.link_options.append(current)
+            return
+        # collect some warning flags
+        if re.match('^-Wno-', current):
+            state.compile_options.append(current)
+            return
+        # collect input files
+        if not (re.match('^-', current)):
+            state.files.append(current)
             return
 
     @staticmethod

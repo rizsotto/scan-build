@@ -50,6 +50,28 @@ def test_compile_flags():
         parser = sut.Parser.run(cmds)
         return parser.compile_options
 
-    assert [] == test(['clang', '--version'])
+    assert [] == test(['clang', 'source.c'])
     assert ['-nostdinc', '-include', '/tmp'] == \
         test(['clang', '-c', '-nostdinc', 'source.c', '-include', '/tmp'])
+
+
+def test_complex_1():
+    cmd = 'clang -c -Wall -g -o source.o source.c -std=C99 -fpic ' \
+          '-arch=i386 -O3 -x c'
+    options = sut.Parser.run(cmd.split(' '))
+    assert options.files == ['source.c']
+    assert options.output == 'source.o'
+    assert options.language == 'c'
+    assert options.get_action() == sut.Action.Compile
+    assert options.archs_seen == ['i386']
+    assert options.compile_options == ['-std', 'C99', '-fpic', '-O3']
+
+def test_complex_2():
+    cmd = 'clang -c -o source.o source.c -I/usr/local/include'
+    options = sut.Parser.run(cmd.split(' '))
+    assert options.files == ['source.c']
+    assert options.output == 'source.o'
+    assert options.language == None
+    assert options.get_action() == sut.Action.Compile
+    assert options.archs_seen == []
+    assert options.compile_options == ['-I/usr/local/include']
