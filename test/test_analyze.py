@@ -66,6 +66,7 @@ def test_complex_1():
     assert options.archs_seen == ['i386']
     assert options.compile_options == ['-std', 'C99', '-fpic', '-O3']
 
+
 def test_complex_2():
     cmd = 'clang -c -o source.o source.c -I/usr/local/include'
     options = sut.Parser.run(cmd.split(' '))
@@ -75,3 +76,10 @@ def test_complex_2():
     assert options.get_action() == sut.Action.Compile
     assert options.archs_seen == []
     assert options.compile_options == ['-I/usr/local/include']
+
+
+def test_new():
+    cmd = 'clang -c -o source.o source.c -include /usr/local/include'
+    options = sut.parse(cmd.split(' '))
+    assert options['action'] == sut.Action.Compile
+    assert options['compile_options'] == ['-include', '/usr/local/include']

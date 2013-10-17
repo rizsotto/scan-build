@@ -97,6 +97,82 @@ class Action:
     Link, Compile, Preprocess, Info = range(4)
 
 
+class Iterator:
+    def __init__(self, args):
+        self.current = None
+        self.__it = iter(args)
+
+    def next(self):
+        self.current = six.next(self.__it)
+        return self.current
+
+
+def parse(args):
+    def extend(values, key, value):
+        if key in values:
+            values.get(key).extend(value)
+        else:
+            values[key] = value
+
+    def take_one(*keys):
+        def take(values, it, _m):
+            current = []
+            current.append(it.current)
+            for key in keys:
+                extend(values, key, current)
+        return take
+
+    def take_two(*keys):
+        def take(values, it, _m):
+            current = []
+            current.append(it.current)
+            current.append(it.next())
+            for key in keys:
+                extend(values, key, current)
+        return take
+
+    def take_joined(*keys):
+        def take(values, it, match):
+            current = []
+            current.append(it.current)
+            if '' == match.group(1):
+                current.append(it.next())
+            for key in keys:
+                extend(values, key, current)
+        return take
+
+    def take_action(action):
+        def take(values, _it, _m):
+            key = 'action'
+            current = values.get(key, Action.Link)
+            values[key] = max(current, action)
+        return take
+
+    def match(state, it):
+        task_map = [
+            (re.compile('^-nostdinc$'), take_one('compile_options')),
+            (re.compile('^-include'), take_two('compile_options')),
+            (re.compile('^-idirafter$'), take_two('compile_options')),
+            (re.compile('^-imacros$'), take_two('compile_options')),
+            (re.compile('^-c$'), take_action(Action.Compile)),
+            (re.compile('^-M[TF]$'), take_two())
+        ]
+        for pattern, task in task_map:
+            match = pattern.match(it.current)
+            if match is not None:
+                task(state, it, match)
+                return
+
+    state = dict()
+    try:
+        it = Iterator(args[1:])
+        while True:
+            it.next()
+            match(state, it)
+    except:
+        return state
+
+
 class Options:
     def __init__(self):
         self.actions = [Action.Link]
