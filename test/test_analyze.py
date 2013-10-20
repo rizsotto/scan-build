@@ -6,80 +6,75 @@
 import beye.analyze as sut
 
 
-def test_split_arguments():
-    input = ['clang', '-Wall', '-std=C99', '-v', 'file.c']
-    expected = ['clang', '-Wall', '-std', 'C99', '-v', 'file.c']
-    assert expected == sut.Parser.split_arguments(input)
-
-
 def test_action():
-    def test(expected, cmds):
-        parser = sut.Parser.run(cmds)
-        assert expected == parser.get_action()
+    def test(expected, cmd):
+        opts = sut.parse(cmd.split(' '))
+        print('test: {}'.format(cmd))
+        print('  assert {} == {}'.format(expected, opts.get('action')))
+        assert expected == opts['action']
 
     Info = sut.Action.Info
-    test(Info, ['clang', 'source.c', '-print-prog-name'])
+    test(Info, 'clang source.c -print-prog-name')
 
     Link = sut.Action.Link
-    test(Link, ['clang', 'source.c'])
+    test(Link, 'clang source.c')
 
     Compile = sut.Action.Compile
-    test(Compile, ['clang', '-c', 'source.c'])
-    test(Compile, ['clang', '-c', 'source.c', '-MF', 'source.d'])
+    test(Compile, 'clang -c source.c')
+    test(Compile, 'clang -c source.c -MF source.d')
 
     Preprocess = sut.Action.Preprocess
-    test(Preprocess, ['clang', '-E', 'source.c'])
-    test(Preprocess, ['clang', '-c', '-E', 'source.c'])
-    test(Preprocess, ['clang', '-c', '-M', 'source.c'])
-    test(Preprocess, ['clang', '-c', '-MM', 'source.c'])
+    test(Preprocess, 'clang -E source.c')
+    test(Preprocess, 'clang -c -E source.c')
+    test(Preprocess, 'clang -c -M source.c')
+    test(Preprocess, 'clang -c -MM source.c')
 
 
 def test_archs_seen():
-    def test(cmds):
-        parser = sut.Parser.run(cmds)
-        return parser.archs_seen
+    def test(cmd):
+        opts = sut.parse(cmd.split(' '))
+        return opts.get('archs_seen', [])
 
-    assert [] == test(['clang', '-c', 'source.c'])
-    assert ['ppc'] == test(['clang', '-c', '-arch', 'ppc', 'source.c'])
-    assert ['ppc', 'i386'] == test(['clang', '-c', '-arch', 'ppc',
-                                    '-arch', 'i386', 'source.c'])
+    assert set() == test('clang -c source.c')
+    assert {'ppc'} == test('clang -c -arch ppc source.c')
+    assert {'ppc', 'i386'} == test('clang -c -arch ppc -arch i386 source.c')
 
 
 def test_compile_flags():
-    def test(cmds):
-        parser = sut.Parser.run(cmds)
-        return parser.compile_options
+    def test(cmd):
+        opts = sut.parse(cmd.split(' '))
+        return opts.get('compile_options', [])
 
-    assert [] == test(['clang', 'source.c'])
+    assert [] == test('clang source.c')
     assert ['-nostdinc', '-include', '/tmp'] == \
-        test(['clang', '-c', '-nostdinc', 'source.c', '-include', '/tmp'])
+        test('clang -c -nostdinc source.c -include /tmp')
 
 
 def test_complex_1():
     cmd = 'clang -c -Wall -g -o source.o source.c -std=C99 -fpic ' \
-          '-arch=i386 -O3 -x c'
-    options = sut.Parser.run(cmd.split(' '))
-    assert options.files == ['source.c']
-    assert options.output == 'source.o'
-    assert options.language == 'c'
-    assert options.get_action() == sut.Action.Compile
-    assert options.archs_seen == ['i386']
-    assert options.compile_options == ['-std', 'C99', '-fpic', '-O3']
+          '-arch i386 -O3 -x c'
+    opts = sut.parse(cmd.split(' '))
+    assert opts['files'] == ['source.c']
+    assert opts['output'] == 'source.o'
+    assert opts['language'] == 'c'
+    assert opts['action'] == sut.Action.Compile
+    assert opts['archs_seen'] == {'i386'}
+    assert opts['compile_options'] == ['-std=C99', '-fpic', '-arch', 'i386', '-O3']
 
 
 def test_complex_2():
     cmd = 'clang -c -o source.o source.c -I/usr/local/include'
-    options = sut.Parser.run(cmd.split(' '))
-    assert options.files == ['source.c']
-    assert options.output == 'source.o'
-    assert options.language == None
-    assert options.get_action() == sut.Action.Compile
-    assert options.archs_seen == []
-    assert options.compile_options == ['-I/usr/local/include']
+    opts = sut.parse(cmd.split(' '))
+    assert opts['files'] == ['source.c']
+    assert opts['output'] == 'source.o'
+    assert opts.get('language') == None
+    assert opts['action'] == sut.Action.Compile
+    assert opts.get('archs_seen') == set()
+    assert opts['compile_options'] == ['-I/usr/local/include']
 
 
 def test_new():
     cmd = 'clang -c -o source.o source.c -include /usr/local/include'
-    options = sut.parse(cmd.split(' '))
-    assert options['action'] == sut.Action.Compile
-    assert options['compile_options'] == ['-include', '/usr/local/include']
+    opts = sut.parse(cmd.split(' '))
+    assert opts['action'] == sut.Action.Compile
+    assert opts['compile_options'] == ['-include', '/usr/local/include']
