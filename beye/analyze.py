@@ -162,7 +162,7 @@ def parse(args):
     def fix_seen_archs(d):
         key = 'archs_seen'
         if key in d:
-            filtered = {v for v in d[key] if not '-arch' == v}
+            filtered = set([v for v in d[key] if not '-arch' == v])
             d[key] = filtered
         else:
             d[key] = set()

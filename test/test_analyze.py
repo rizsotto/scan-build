@@ -9,8 +9,6 @@ import beye.analyze as sut
 def test_action():
     def test(expected, cmd):
         opts = sut.parse(cmd.split(' '))
-        print('test: {}'.format(cmd))
-        print('  assert {} == {}'.format(expected, opts.get('action')))
         assert expected == opts['action']
 
     Info = sut.Action.Info
@@ -36,8 +34,8 @@ def test_archs_seen():
         return opts.get('archs_seen', [])
 
     assert set() == test('clang -c source.c')
-    assert {'ppc'} == test('clang -c -arch ppc source.c')
-    assert {'ppc', 'i386'} == test('clang -c -arch ppc -arch i386 source.c')
+    assert set(['ppc']) == test('clang -c -arch ppc source.c')
+    assert set(['ppc', 'i386']) == test('clang -c -arch ppc -arch i386 source.c')
 
 
 def test_compile_flags():
@@ -58,7 +56,7 @@ def test_complex_1():
     assert opts['output'] == 'source.o'
     assert opts['language'] == 'c'
     assert opts['action'] == sut.Action.Compile
-    assert opts['archs_seen'] == {'i386'}
+    assert opts['archs_seen'] == set(['i386'])
     assert opts['compile_options'] == ['-std=C99', '-fpic', '-arch', 'i386', '-O3']
 
 
