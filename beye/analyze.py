@@ -186,7 +186,7 @@ class Analyzer:
     def run(self, **keywords):
         import os
         input = keywords['task']
-        cmd = input['command'].split(' ')
+        cmd = input['command'].split()
         cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
         os.environ['CCC_ANALYZER_HTML'] = keywords.get('html_dir')
         logging.debug('executing: {}'.format(cmd))
