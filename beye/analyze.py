@@ -25,74 +25,97 @@ class Iterator:
 
 def parse(args):
     def match(state, it):
-        task_map = [
+        def regex(pattern, action):
+            regexp = re.compile(pattern)
+
+            def eval(it):
+                match = regexp.match(it.current)
+                if match is not None:
+                    action(state, it, match)
+                    return True
+            return eval
+
+        def anyof(opts, action):
+            params = frozenset(opts) if six.PY3 else set(opts)
+
+            def eval(it):
+                if it.current in params:
+                    action(state, it, None)
+                    return True
+            return eval
+
+        tasks = [
             #
-            (re.compile('^-(E|MM?)$'), take_action(Action.Preprocess)),
-            (re.compile('^-c$'), take_action(Action.Compile)),
-            (re.compile('^-print-prog-name$'), take_action(Action.Info)),
+            regex('^-(E|MM?)$', take_action(Action.Preprocess)),
+            anyof(['-c'], take_action(Action.Compile)),
+            anyof(['-print-prog-name'], take_action(Action.Info)),
             #
-            (re.compile('^-arch$'), take_two('archs_seen', 'compile_options', 'link_options')),
+            anyof(['-arch'], take_two('archs_seen', 'compile_options',
+                                      'link_options')),
             #
-            (re.compile('^-filelist$'), take_from_file('files')),
-            (re.compile('^[^-].+'), take_one('files')),
+            anyof(['-filelist'], take_from_file('files')),
+            regex('^[^-].+', take_one('files')),
             #
-            (re.compile('^-x$'), take_second('language')),
+            anyof(['-x'], take_second('language')),
             #
-            (re.compile('^-o$'), take_second('output')),
+            anyof(['-o'], take_second('output')),
             #
-            (re.compile('^-write-strings$'), take_one('compile_options', 'link_options')),
-            (re.compile('^-ftrapv-handler$'), take_two('compile_options', 'link_options')),
-            (re.compile('^-mios-simulator-version-min(.*)'), take_joined('compile_options', 'link_options')),
-            (re.compile('^-isysroot'), take_two('compile_options', 'link_options')),
-            (re.compile('^-m(32|64)$'), take_one('compile_options', 'link_options')),
-            (re.compile('^-stdlib(.*)'), take_joined('compile_options', 'link_options')),
-            (re.compile('^-target$'), take_two('compile_options', 'link_options')),
-            (re.compile('^-v$'), take_one('compile_options', 'link_options')),
-            (re.compile('^-mmacosx-version-min(.*)'), take_joined('compile_options', 'link_options')),
-            (re.compile('^-miphoneos-version-min(.*)'), take_joined('compile_options', 'link_options')),
-            (re.compile('^-O[1-3]$'), take_one('compile_options', 'link_options')),
-            (re.compile('^-O$'), take_as('-O1', 'compile_options', 'link_options')),
-            (re.compile('^-Os$'), take_as('-O2', 'compile_options', 'link_options')),
+            anyof(['-write-strings',
+                   '-v'], take_one('compile_options', 'link_options')),
+            anyof(['-ftrapv-handler',
+                   '-target'], take_two('compile_options', 'link_options')),
+            regex('^-isysroot', take_two('compile_options', 'link_options')),
+            regex('^-m(32|64)$', take_one('compile_options', 'link_options')),
+            regex('^-mios-simulator-version-min(.*)',
+                  take_joined('compile_options', 'link_options')),
+            regex('^-stdlib(.*)',
+                  take_joined('compile_options', 'link_options')),
+            regex('^-mmacosx-version-min(.*)',
+                  take_joined('compile_options', 'link_options')),
+            regex('^-miphoneos-version-min(.*)',
+                  take_joined('compile_options', 'link_options')),
+            regex('^-O[1-3]$', take_one('compile_options', 'link_options')),
+            anyof(['-O'], take_as('-O1', 'compile_options', 'link_options')),
+            anyof(['-Os'], take_as('-O2', 'compile_options', 'link_options')),
             #
-            (re.compile('^-[DIU](.*)$'), take_joined('compile_options')),
-            (re.compile('^-nostdinc$'), take_one('compile_options')),
-            (re.compile('^-std='), take_one('compile_options')),
-            (re.compile('^-include'), take_two('compile_options')),
-            (re.compile('^-idirafter$'), take_two('compile_options')),
-            (re.compile('^-imacros$'), take_two('compile_options')),
-            (re.compile('^-iprefix$'), take_two('compile_options')),
-            (re.compile('^-isystem$'), take_two('compile_options')),
-            (re.compile('^-iwithprefix(before)?$'), take_two('compile_options')),
-            (re.compile('^-m.*'), take_one('compile_options')),
-            (re.compile('^-iquote(.*)'), take_joined('compile_options')),
-            (re.compile('^-Wno-'), take_one('compile_options')),
+            regex('^-[DIU](.*)$', take_joined('compile_options')),
+            anyof(['-nostdinc'], take_one('compile_options')),
+            regex('^-std=', take_one('compile_options')),
+            regex('^-include', take_two('compile_options')),
+            anyof(['-idirafter',
+                   '-imacros',
+                   '-iprefix',
+                   '-isystem',
+                   '-iwithprefix',
+                   '-iwithprefixbefore'], take_two('compile_options')),
+            regex('^-m.*', take_one('compile_options')),
+            regex('^-iquote(.*)', take_joined('compile_options')),
+            regex('^-Wno-', take_one('compile_options')),
             #
-            (re.compile('^-framework$'), take_two('link_options')),
-            (re.compile('^-fobjc-link-runtime(.*)'), take_joined('link_options')),
-            (re.compile('^-[lL]'), take_one('link_options')),
+            regex('^-framework$', take_two('link_options')),
+            regex('^-fobjc-link-runtime(.*)', take_joined('link_options')),
+            regex('^-[lL]', take_one('link_options')),
             # ignore
-            (re.compile('^-M[TF]$'), take_two()),
-            (re.compile('^-fsyntax-only$'), take_one()),
-            (re.compile('^-save-temps$'), take_one()),
-            (re.compile('^-install_name$'), take_two()),
-            (re.compile('^-exported_symbols_list$'), take_two()),
-            (re.compile('^-current_version$'), take_two()),
-            (re.compile('^-compatibility_version$'), take_two()),
-            (re.compile('^-init$'), take_two()),
-            (re.compile('^-[eu]$'), take_two()),
-            (re.compile('^-seg1addr$'), take_two()),
-            (re.compile('^-bundle_loader$'), take_two()),
-            (re.compile('^-multiply_defined$'), take_two()),
-            (re.compile('^-sectorder$'), take_four()),
-            (re.compile('^--param$'), take_two()),
-            (re.compile('^--serialize-diagnostics$'), take_two()),
+            regex('^-M[TF]$', take_two()),
+            regex('^-[eu]$', take_two()),
+            anyof(['-fsyntax-only',
+                   '-save-temps'], take_one()),
+            anyof(['-install_name',
+                   '-exported_symbols_list',
+                   '-current_version',
+                   '-compatibility_version',
+                   '-init',
+                   '-seg1addr',
+                   '-bundle_loader',
+                   '-multiply_defined',
+                   '-sectorder',
+                   '--param',
+                   '--serialize-diagnostics'], take_two()),
             #
-            (re.compile('^-[fF](.+)$'), take_one('compile_options', 'link_options'))
+            regex('^-[fF](.+)$', take_one('compile_options', 'link_options'))
         ]
-        for pattern, task in task_map:
-            match = pattern.match(it.current)
-            if match is not None:
-                task(state, it, match)
+        for task in tasks:
+            if task(it):
                 return
 
     def extend(values, key, value):
