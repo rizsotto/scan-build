@@ -7,6 +7,7 @@ import subprocess
 import logging
 import six
 import re
+import os.path
 
 
 class Action:
@@ -162,7 +163,7 @@ def parse(args):
         return take
 
     def take_as(value, *keys):
-        def take(values, it, match):
+        def take(values, it, _m):
             current = [value]
             for key in keys:
                 extend(values, key, current)
@@ -203,6 +204,33 @@ def parse(args):
         return state
     except Exception:
         logging.exception('parsing failed')
+
+
+def get_language(args):
+    def guess_by_extension(fn):
+        mapping = {
+          '.c'   : 'c',
+          '.cp'  : 'c++',
+          '.cpp' : 'c++',
+          '.cxx' : 'c++',
+          '.txx' : 'c++',
+          '.cc'  : 'c++',
+          '.C'   : 'c++',
+          '.ii'  : 'c++',
+          '.i'   : 'c-cpp-output',
+          '.m'   : 'objective-c',
+          '.mi'  : 'objective-c-cpp-output',
+          '.mm'  : 'objective-c++'
+        }
+        (_, extension) = os.path.splitext(os.path.basename(fn))
+        return mapping.get(extension)
+
+    return args.get('language', guess_by_extension(args['output']))
+
+
+def is_accepted_language(language):
+    accepteds = ['c', 'c++', 'objective-c', 'objective-c++']
+    return language in accepteds
 
 
 class Analyzer:

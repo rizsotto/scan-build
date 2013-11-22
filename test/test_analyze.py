@@ -6,6 +6,30 @@
 import beye.analyze as sut
 
 
+def test_get_language_by_spec():
+    input = {
+        'language': 'c',
+        'output': './path/file.c'
+    }
+    assert 'c' == sut.get_language(input)
+
+
+def test_get_language_by_lookup():
+    input = {
+        'output': './path/file.cpp'
+    }
+    assert 'c++' == sut.get_language(input)
+
+
+def test_is_accepted_language():
+    assert True == sut.is_accepted_language('c')
+    assert True == sut.is_accepted_language('c++')
+    assert True == sut.is_accepted_language('objective-c')
+    assert True == sut.is_accepted_language('objective-c++')
+    assert False == sut.is_accepted_language('abap')
+    assert False == sut.is_accepted_language(None)
+
+
 def test_action():
     def test(expected, cmd):
         opts = sut.parse(cmd.split(' '))
