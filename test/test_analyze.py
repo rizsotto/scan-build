@@ -6,19 +6,14 @@
 import beye.analyze as sut
 
 
-def test_get_language_by_spec():
-    input = {
-        'language': 'c',
-        'output': './path/file.c'
-    }
-    assert 'c' == sut.get_language(input)
-
-
-def test_get_language_by_lookup():
-    input = {
-        'output': './path/file.cpp'
-    }
-    assert 'c++' == sut.get_language(input)
+def test_language_from_filename():
+    assert 'c' == sut.language_from_filename('file.c')
+    assert 'c' == sut.language_from_filename('./file.c')
+    assert 'c' == sut.language_from_filename('./path/file.c')
+    assert 'c' == sut.language_from_filename('./path.cpp/file.c')
+    assert 'c' == sut.language_from_filename('/abs/path/file.c')
+    assert 'c++' == sut.language_from_filename('./file.cpp')
+    assert 'c++' == sut.language_from_filename('./file.cxx')
 
 
 def test_is_accepted_language():

@@ -206,26 +206,23 @@ def parse(args):
         logging.exception('parsing failed')
 
 
-def get_language(args):
-    def guess_by_extension(fn):
-        mapping = {
-          '.c'   : 'c',
-          '.cp'  : 'c++',
-          '.cpp' : 'c++',
-          '.cxx' : 'c++',
-          '.txx' : 'c++',
-          '.cc'  : 'c++',
-          '.C'   : 'c++',
-          '.ii'  : 'c++',
-          '.i'   : 'c-cpp-output',
-          '.m'   : 'objective-c',
-          '.mi'  : 'objective-c-cpp-output',
-          '.mm'  : 'objective-c++'
-        }
-        (_, extension) = os.path.splitext(os.path.basename(fn))
-        return mapping.get(extension)
-
-    return args.get('language', guess_by_extension(args['output']))
+def language_from_filename(fn):
+    mapping = {
+      '.c'   : 'c',
+      '.cp'  : 'c++',
+      '.cpp' : 'c++',
+      '.cxx' : 'c++',
+      '.txx' : 'c++',
+      '.cc'  : 'c++',
+      '.C'   : 'c++',
+      '.ii'  : 'c++',
+      '.i'   : 'c-cpp-output',
+      '.m'   : 'objective-c',
+      '.mi'  : 'objective-c-cpp-output',
+      '.mm'  : 'objective-c++'
+    }
+    (_, extension) = os.path.splitext(os.path.basename(fn))
+    return mapping.get(extension)
 
 
 def is_accepted_language(language):
