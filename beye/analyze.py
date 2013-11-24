@@ -7,6 +7,7 @@ import subprocess
 import logging
 import six
 import re
+import os
 import os.path
 
 
@@ -230,15 +231,50 @@ def is_accepted_language(language):
     return language in accepteds
 
 
+def is_supported_arch(arch):
+    disableds = ['ppc', 'ppc64']
+    return arch not in disableds
+
+
+def analyze(**kwargs):
+    os.chdir(kwargs['directory'])
+    opts = parse(kwargs['command'].split())
+
+    if 'archs_seen' in opts and not any([is_supported_arch(x) for x in opts['archs_seen']]):
+        logging.debug('skip analysis, found not supported arch')
+        return 0
+
+    for fn in opts['files']:
+        native_cmds = []
+        analyze_cmds = []
+        #
+        language = opts.get('language', language_from_filename(fn))
+        if language is None:
+            logging.debug('skip analysis, language not known')
+            continue
+        elif not is_accepted_language(language):
+            logging.debug('skip analysis, language not supported')
+            continue
+        else:
+            native_cmds.extend(['-x', language])
+        #
+        if 'store_model' in kwargs:
+            analyze_cmds.append('-analyzer-store={}'.format(kwargs['store_model']))
+        #
+        if 'constraints_model' in kwargs:
+            analyze_cmds.append('-analyzer-constraints={}'.format(kwargs['constraints_model']))
+        #
+        if 'internal_stats' in kwargs:
+            analyze_cmds.append('-analyzer-stats')
+
+
 class Analyzer:
-    def run(self, **keywords):
-        import os
-        input = keywords['task']
-        cmd = input['command'].split()
-        cmd[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
-        os.chdir(input['directory'])
-        os.environ['CCC_ANALYZER_HTML'] = keywords.get('html_dir')
-        logging.debug('executing: {}'.format(cmd))
-        compilation = subprocess.Popen(cmd, env=os.environ)
-        compilation.wait()
-        return compilation.returncode
+    def run(self, **kwargs):
+        os.chdir(kwargs['directory'])
+        os.environ['CCC_ANALYZER_HTML'] = kwargs.get('html_dir')
+        cmds = kwargs['command'].split()
+        cmds[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
+        logging.debug('executing: {}'.format(cmds))
+        analyze = subprocess.Popen(cmds, env=os.environ)
+        analyze.wait()
+        return analyze.returncode

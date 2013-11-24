@@ -25,6 +25,8 @@ def main():
 
     analyzer = beye.analyze.Analyzer()
     analyzer.run(
+        command=sys.argv,
+        directory=os.cwd(),
         analyses=os.environ.get('CCC_ANALYZER_ANALYSIS'),
         plugins=os.environ.get('CCC_ANALYZER_PLUGINS'),
         store_model=os.environ.get('CCC_ANALYZER_STORE_MODEL'),

@@ -50,9 +50,10 @@ def main():
         cleanup_out_directory(out_dir)
 
 
-def analyze(input, out_dir):
+def analyze(task, out_dir):
     analyzer = beye.analyze.Analyzer()
-    return analyzer.run(task=input, html_dir=out_dir)
+    task['html_dir']=out_dir
+    return analyzer.run(**task)
 
 
 def create_out_directory(hint):
