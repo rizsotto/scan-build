@@ -27,14 +27,18 @@ def main():
     analyzer.run(
         command=sys.argv,
         directory=os.cwd(),
-        analyses=os.environ.get('CCC_ANALYZER_ANALYSIS'),
-        plugins=os.environ.get('CCC_ANALYZER_PLUGINS'),
+        analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
+        plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
         store_model=os.environ.get('CCC_ANALYZER_STORE_MODEL'),
         constraints_model=os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
         internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
         output_format=os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
         html_dir=os.environ.get('CCC_ANALYZER_HTML'))
 
+
+def split_env_content(name):
+    content = os.environ.get(name)
+    return content.split() if content else []
 
 # entry symbol
 if __name__ == '__main__':

@@ -27,7 +27,7 @@ def test_is_accepted_language():
 
 def test_action():
     def test(expected, cmd):
-        opts = sut.parse(cmd.split(' '))
+        opts = sut.parse(cmd.split())
         assert expected == opts['action']
 
     Info = sut.Action.Info
@@ -49,8 +49,8 @@ def test_action():
 
 def test_archs_seen():
     def test(cmd):
-        opts = sut.parse(cmd.split(' '))
-        return opts.get('archs_seen', [])
+        opts = sut.parse(cmd.split())
+        return opts.get('archs_seen', set())
 
     assert set() == test('clang -c source.c')
     assert set(['ppc']) == test('clang -c -arch ppc source.c')
@@ -59,7 +59,7 @@ def test_archs_seen():
 
 def test_compile_flags():
     def test(cmd):
-        opts = sut.parse(cmd.split(' '))
+        opts = sut.parse(cmd.split())
         return opts.get('compile_options', [])
 
     assert [] == test('clang source.c')
@@ -70,7 +70,7 @@ def test_compile_flags():
 def test_complex_1():
     cmd = 'clang -c -Wall -g -o source.o source.c -std=C99 -fpic ' \
           '-arch i386 -O3 -x c'
-    opts = sut.parse(cmd.split(' '))
+    opts = sut.parse(cmd.split())
     assert opts['files'] == ['source.c']
     assert opts['output'] == 'source.o'
     assert opts['language'] == 'c'
@@ -81,17 +81,17 @@ def test_complex_1():
 
 def test_complex_2():
     cmd = 'clang -c -o source.o source.c -I/usr/local/include'
-    opts = sut.parse(cmd.split(' '))
+    opts = sut.parse(cmd.split())
     assert opts['files'] == ['source.c']
     assert opts['output'] == 'source.o'
     assert opts.get('language') == None
     assert opts['action'] == sut.Action.Compile
-    assert opts.get('archs_seen') == set()
+    assert opts.get('archs_seen') == None
     assert opts['compile_options'] == ['-I/usr/local/include']
 
 
 def test_new():
     cmd = 'clang -c -o source.o source.c -include /usr/local/include'
-    opts = sut.parse(cmd.split(' '))
+    opts = sut.parse(cmd.split())
     assert opts['action'] == sut.Action.Compile
     assert opts['compile_options'] == ['-include', '/usr/local/include']

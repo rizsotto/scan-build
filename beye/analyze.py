@@ -9,6 +9,7 @@ import six
 import re
 import os
 import os.path
+import tempfile
 
 
 class Action:
@@ -189,8 +190,6 @@ def parse(args):
         if key in d:
             filtered = set([v for v in d[key] if not '-arch' == v])
             d[key] = filtered
-        else:
-            d[key] = set()
 
     state = {
         'action': Action.Link
@@ -247,6 +246,9 @@ def analyze(**kwargs):
     for fn in opts['files']:
         native_cmds = []
         analyze_cmds = []
+        result_file = None
+        cleanup_file = None
+        html_dir=kwargs.get('html_dir')
         #
         language = opts.get('language', language_from_filename(fn))
         if language is None:
@@ -260,12 +262,41 @@ def analyze(**kwargs):
         #
         if 'store_model' in kwargs:
             analyze_cmds.append('-analyzer-store={}'.format(kwargs['store_model']))
-        #
         if 'constraints_model' in kwargs:
             analyze_cmds.append('-analyzer-constraints={}'.format(kwargs['constraints_model']))
-        #
         if 'internal_stats' in kwargs:
             analyze_cmds.append('-analyzer-stats')
+        if 'analyses' in kwargs:
+            analyze_cmds.extend(kwargs['analyses'])
+        if 'plugins' in kwargs:
+            analyze_cmds.extend(kwargs['plugins'])
+        #
+        if 'output_format' in kwargs:
+            output_format = kwargs['output_format']
+            analyze_cmds.append('-analyzer-output={}'.format(output_format))
+            if re.match('plist', output_format):
+                (h, result_file) = tempfile.mkstemp(suffix='.plist',
+                                                    prefix='report-',
+                                                    dir=html_dir)
+                os.close(h)
+                if html_dir:
+                    cleanup_file = result_file
+        #
+        native_cmds.extend(opts.get('compile_options'))
+        native_cmds.append(fn)
+        #
+        if 'archs_seen' in opts:
+            for arch in [a for a in opts['arch_seen'] if is_supported_arch(a)]:
+                arch_cmds = []
+                arch_cmds.extend(['-arch', arch])
+                arch_cmds.extend(native_cmds)
+                run_analysis(arch_cmds, analyze_cmds, language, html_dir, fn)
+        else:
+            run_analysis(native_cmds, analyze_cmds, language, html_dir, fn)
+
+
+def run_analysis():
+    pass
 
 
 class Analyzer:
