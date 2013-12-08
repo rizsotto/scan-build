@@ -225,16 +225,19 @@ def language_from_filename(fn):
     return mapping.get(extension)
 
 
+# shout die with analyze method
 def is_accepted_language(language):
     accepteds = ['c', 'c++', 'objective-c', 'objective-c++']
     return language in accepteds
 
 
+# shout die with analyze method
 def is_supported_arch(arch):
     disableds = ['ppc', 'ppc64']
     return arch not in disableds
 
 
+# shout die (decomposed into smaller continuations)
 def analyze(**kwargs):
     os.chdir(kwargs['directory'])
     opts = parse(kwargs['command'].split())
@@ -297,6 +300,70 @@ def analyze(**kwargs):
 
 def run_analysis():
     pass
+
+
+def filter_dict(original, removables, additions):
+    copy = original.copy()
+    for k in removables:
+        if k in copy:
+            copy.pop(k)
+    for (k, v) in additions.items():
+        copy[k] = v
+    return copy
+
+
+def arch_loop(opts, continuation):
+    disableds = ['ppc', 'ppc64']
+
+    if 'archs_seen' in opts:
+        archs = [a for a in opts['archs_seen'] if a not in disableds]
+        if archs:
+            for arch in archs:
+                logging.debug('  analysis, on arch: {}'.format(arch))
+                continuation(filter_dict(opts, ['archs_seen'], {'arch': arch}))
+        else:
+            logging.debug('skip analysis, found not supported arch')
+    else:
+        logging.debug('  analysis, on default arch')
+        continuation(opts)
+
+
+def files_loop(opts, continuation):
+    if 'files' in opts:
+        for fn in opts['files']:
+            logging.debug('  analysis, source file: {}'.format(fn))
+            continuation(filter_dict(opts, ['files'], {'file': fn}))
+    else:
+        logging.debug('skip analysis, source file not found')
+
+
+def set_language(opts, continuation):
+    accepteds = ['c', 'c++', 'objective-c', 'objective-c++']
+
+    fn = opts['file']
+    language = opts.get('language', language_from_filename(fn))
+    if language is None:
+        logging.debug('skip analysis, language not known')
+    elif language not in accepteds:
+        logging.debug('skip analysis, language not supported')
+    else:
+        logging.debug('  analysis, language: {}'.format(language))
+        continuation(filter_dict(opts, [], {'language': language}))
+
+
+def run(**kwargs):
+    def stack(conts):
+        def bind(cs, acc):
+            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
+
+        conts.reverse()
+        return bind(conts, lambda x: logging.debug('  end of analysis chain'))
+
+    opts = parse(kwargs['command'].split())
+    # move it to a separate step and make it conditional
+    os.chdir(kwargs['directory'])
+
+    stack([arch_loop, files_loop, set_language])(opts)
 
 
 class Analyzer:
