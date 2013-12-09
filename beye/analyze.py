@@ -264,9 +264,9 @@ def analyze(**kwargs):
             native_cmds.extend(['-x', language])
         #
         if 'store_model' in kwargs:
-            analyze_cmds.append('-analyzer-store={}'.format(kwargs['store_model']))
+            analyze_cmds.append('-analyzer-store={0}'.format(kwargs['store_model']))
         if 'constraints_model' in kwargs:
-            analyze_cmds.append('-analyzer-constraints={}'.format(kwargs['constraints_model']))
+            analyze_cmds.append('-analyzer-constraints={0}'.format(kwargs['constraints_model']))
         if 'internal_stats' in kwargs:
             analyze_cmds.append('-analyzer-stats')
         if 'analyses' in kwargs:
@@ -276,7 +276,7 @@ def analyze(**kwargs):
         #
         if 'output_format' in kwargs:
             output_format = kwargs['output_format']
-            analyze_cmds.append('-analyzer-output={}'.format(output_format))
+            analyze_cmds.append('-analyzer-output={0}'.format(output_format))
             if re.match('plist', output_format):
                 (h, result_file) = tempfile.mkstemp(suffix='.plist',
                                                     prefix='report-',
@@ -319,7 +319,7 @@ def arch_loop(opts, continuation):
         archs = [a for a in opts['archs_seen'] if a not in disableds]
         if archs:
             for arch in archs:
-                logging.debug('  analysis, on arch: {}'.format(arch))
+                logging.debug('  analysis, on arch: {0}'.format(arch))
                 continuation(filter_dict(opts, ['archs_seen'], {'arch': arch}))
         else:
             logging.debug('skip analysis, found not supported arch')
@@ -331,7 +331,7 @@ def arch_loop(opts, continuation):
 def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
-            logging.debug('  analysis, source file: {}'.format(fn))
+            logging.debug('  analysis, source file: {0}'.format(fn))
             continuation(filter_dict(opts, ['files'], {'file': fn}))
     else:
         logging.debug('skip analysis, source file not found')
@@ -347,7 +347,7 @@ def set_language(opts, continuation):
     elif language not in accepteds:
         logging.debug('skip analysis, language not supported')
     else:
-        logging.debug('  analysis, language: {}'.format(language))
+        logging.debug('  analysis, language: {0}'.format(language))
         continuation(filter_dict(opts, [], {'language': language}))
 
 
@@ -372,7 +372,7 @@ class Analyzer:
         os.environ['CCC_ANALYZER_HTML'] = kwargs.get('html_dir')
         cmds = kwargs['command'].split()
         cmds[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
-        logging.debug('executing: {}'.format(cmds))
+        logging.debug('executing: {0}'.format(cmds))
         analyze = subprocess.Popen(cmds, env=os.environ)
         analyze.wait()
         return analyze.returncode
