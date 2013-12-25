@@ -16,16 +16,6 @@ class Action:
     Link, Compile, Preprocess, Info = range(4)
 
 
-class Iterator:
-    def __init__(self, args):
-        self.current = None
-        self.__it = iter(args)
-
-    def next(self):
-        self.current = six.next(self.__it)
-        return self.current
-
-
 def parse(args):
     def match(state, it):
         def regex(pattern, action):
@@ -191,11 +181,20 @@ def parse(args):
             filtered = set([v for v in d[key] if not '-arch' == v])
             d[key] = filtered
 
+    class ArgumentIterator:
+        def __init__(self, args):
+            self.current = None
+            self.__it = iter(args)
+
+        def next(self):
+            self.current = six.next(self.__it)
+            return self.current
+
     state = {
         'action': Action.Link
     }
     try:
-        it = Iterator(args[1:])
+        it = ArgumentIterator(args[1:])
         while True:
             it.next()
             match(state, it)
