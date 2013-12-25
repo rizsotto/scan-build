@@ -10,6 +10,7 @@ import re
 import os
 import os.path
 import tempfile
+import copy
 
 
 class Action:
@@ -115,7 +116,7 @@ def parse(args):
         if key in values:
             values.get(key).extend(value)
         else:
-            values[key] = value.copy()
+            values[key] = copy.copy(value)
 
     def take_n(n=1, *keys):
         def take(values, it, _m):
@@ -218,13 +219,13 @@ def language_from_filename(fn):
 
 
 def filter_dict(original, removables, additions):
-    copy = original.copy()
+    new = copy.deepcopy(original)
     for k in removables:
-        if k in copy:
-            copy.pop(k)
+        if k in new:
+            new.pop(k)
     for (k, v) in additions.items():
-        copy[k] = v
-    return copy
+        new[k] = v
+    return new
 
 
 def arch_loop(opts, continuation):
