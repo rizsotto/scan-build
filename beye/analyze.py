@@ -115,7 +115,7 @@ def parse(args):
         if key in values:
             values.get(key).extend(value)
         else:
-            values[key] = value
+            values[key] = value.copy()
 
     def take_n(n=1, *keys):
         def take(values, it, _m):
