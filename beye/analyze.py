@@ -175,12 +175,6 @@ def parse(args):
             values[key] = max(current, action)
         return take
 
-    def fix_seen_archs(d):
-        key = 'archs_seen'
-        if key in d:
-            filtered = set([v for v in d[key] if not '-arch' == v])
-            d[key] = filtered
-
     class ArgumentIterator:
         def __init__(self, args):
             self.current = None
@@ -199,7 +193,6 @@ def parse(args):
             it.next()
             match(state, it)
     except StopIteration:
-        fix_seen_archs(state)
         return state
     except Exception:
         logging.exception('parsing failed')
@@ -237,12 +230,13 @@ def filter_dict(original, removables, additions):
 def arch_loop(opts, continuation):
     disableds = ['ppc', 'ppc64']
 
-    if 'archs_seen' in opts:
-        archs = [a for a in opts['archs_seen'] if a not in disableds]
+    key = 'archs_seen'
+    if key in opts:
+        archs = set([a for a in d[key] if '-arch' != a and a not in disableds])
         if archs:
             for arch in archs:
                 logging.debug('  analysis, on arch: {0}'.format(arch))
-                continuation(filter_dict(opts, ['archs_seen'], {'arch': arch}))
+                continuation(filter_dict(opts, [key], {'arch': arch}))
         else:
             logging.debug('skip analysis, found not supported arch')
     else:

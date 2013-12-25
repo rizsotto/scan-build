@@ -40,16 +40,6 @@ def test_set_language():
     test(None, {f: 'file.java'})
 
 
-def test_archs_seen():
-    def test(cmd):
-        opts = sut.parse(cmd.split())
-        return opts.get('archs_seen', set())
-
-    assert_equals(set(), test('clang -c source.c'))
-    assert_equals(set(['ppc']), test('clang -c -arch ppc source.c'))
-    assert_equals(set(['ppc', 'i386']), test('clang -c -arch ppc -arch i386 source.c'))
-
-
 def test_parse_action():
     def test(expected, cmd):
         opts = sut.parse(cmd.split())
@@ -112,8 +102,11 @@ def test_parse_language():
 
 def test_parse_arch():
     cmd = 'clang -c -o source.o source.c -arch i386 -arch mips'
+    expected = ['-arch', 'i386', '-arch', 'mips']
     opts = sut.parse(cmd.split())
-    assert_equals(opts.get('archs_seen'), set(['i386', 'mips']))
+    assert_equals(opts.get('archs_seen'), expected)
+    assert_equals(opts.get('compile_options'), expected)
+    assert_equals(opts.get('link_options'), expected)
 
 
 def test_parse_include():
