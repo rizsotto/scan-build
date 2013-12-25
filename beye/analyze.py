@@ -351,6 +351,28 @@ def set_language(opts, continuation):
         continuation(filter_dict(opts, [], {'language': language}))
 
 
+def set_analyzer_output(opts, continuation):
+    if 'output_format' in opts:
+        output_format = opts['output_format']
+        if re.match('plist', output_format):
+            html_dir = opts.get('html_dir')
+            (h, analyzer_output) = tempfile.mkstemp(suffix='.plist',
+                                                    prefix='report-',
+                                                    dir=html_dir)
+            os.close(h)
+            logging.debug('analyzer output: {0}'.format(analyzer_output))
+            continuation(filter_dict(opts, [], {'analyzer_output': analyzer_output}))
+            if html_dir is None:
+                try:
+                    os.remove(analyzer_output)
+                except:
+                    logging.warning('cleanup analyzer output file failed {0}'.format(analyzer_output))
+        else:
+            continuation(opts)
+    else:
+        continuation(opts)
+
+
 def run(**kwargs):
     def stack(conts):
         def bind(cs, acc):
@@ -363,7 +385,7 @@ def run(**kwargs):
     # move it to a separate step and make it conditional
     os.chdir(kwargs['directory'])
 
-    stack([arch_loop, files_loop, set_language])(opts)
+    stack([arch_loop, files_loop, set_language, set_analyzer_output])(opts)
 
 
 class Analyzer:
