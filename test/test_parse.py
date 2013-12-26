@@ -57,8 +57,6 @@ def test_input_file():
     opts = sut.parse(cmd.split())
     assert_equals(opts['files'], ['source.c'])
     assert_equals(opts['output'], 'source.o')
-    assert_equals(opts.get('language'), None)
-    assert_equals(opts.get('archs_seen'), None)
 
 
 def test_language():
@@ -92,3 +90,11 @@ def test_defines():
     cmd = 'clang -c -o source.o source.c -DNDEBUG -Dvariable=value'
     opts = sut.parse(cmd.split())
     assert_equals(opts['compile_options'], ['-DNDEBUG', '-Dvariable=value'])
+
+
+def test_link_flags():
+    cmd = 'clang -c source.c -m32 -target i386 -stdlib=libc++'
+    opts = sut.parse(cmd.split())
+    expected = ['-m32', '-target', 'i386', '-stdlib=libc++']
+    assert_equals(opts['compile_options'], expected)
+    assert_equals(opts['link_options'], expected)
