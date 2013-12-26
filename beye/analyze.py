@@ -195,9 +195,7 @@ def parse(args):
             self.current = six.next(self.__it)
             return self.current
 
-    state = {
-        'action': Action.Link
-    }
+    state = { 'action': Action.Link }
     try:
         it = ArgumentIterator(args[1:])
         while True:
@@ -205,7 +203,7 @@ def parse(args):
             match(state, it)
     except StopIteration:
         return state
-    except Exception:
+    except:
         logging.exception('parsing failed')
 
 
@@ -215,7 +213,7 @@ def parse(args):
     values are not isolated. But to remove and add new ones are safe.
 """
 def filter_dict(original, removables, additions):
-    new = copy.deepcopy(original)
+    new = copy.copy(original)
     for k in removables:
         if k in new:
             new.pop(k)
@@ -236,7 +234,7 @@ def run(**kwargs):
             return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
 
         conts.reverse()
-        return bind(conts, lambda x: logging.debug('  end of analysis chain'))
+        return bind(conts, lambda x: x)
 
     chain = stack([arch_loop,
                    files_loop,
@@ -244,7 +242,7 @@ def run(**kwargs):
                    set_analyzer_output])
 
     opts = parse(kwargs['command'].split())
-    return chain(filter_dict(kwargs, ['command', 'directory'], opts))
+    return chain(filter_dict(kwargs, ['command'], opts))
 
 
 def arch_loop(opts, continuation):
@@ -256,12 +254,27 @@ def arch_loop(opts, continuation):
         if archs:
             for arch in archs:
                 logging.debug('  analysis, on arch: {0}'.format(arch))
-                continuation(filter_dict(opts, [key], {'arch': arch}))
+                status = continuation(filter_dict(opts, [key], {'arch': arch}))
+                if status != 0:
+                    return status
         else:
             logging.debug('skip analysis, found not supported arch')
+            return 0
     else:
         logging.debug('  analysis, on default arch')
-        continuation(opts)
+        return continuation(opts)
+
+
+def files_loop(opts, continuation):
+    if 'files' in opts:
+        for fn in opts['files']:
+            logging.debug('  analysis, source file: {0}'.format(fn))
+            status = continuation(filter_dict(opts, ['files'], {'file': fn}))
+            if status != 0:
+                return status
+    else:
+        logging.debug('skip analysis, source file not found')
+        return 0
 
 
 def language_from_filename(fn):
@@ -283,46 +296,38 @@ def language_from_filename(fn):
     return mapping.get(extension)
 
 
-def files_loop(opts, continuation):
-    if 'files' in opts:
-        for fn in opts['files']:
-            logging.debug('  analysis, source file: {0}'.format(fn))
-            continuation(filter_dict(opts, ['files'], {'file': fn}))
-    else:
-        logging.debug('skip analysis, source file not found')
-
-
 def set_language(opts, continuation):
     accepteds = ['c', 'c++', 'objective-c', 'objective-c++']
 
-    fn = opts['file']
-    language = opts.get('language', language_from_filename(fn))
+    key = 'language'
+    language = opts.get(key, language_from_filename(opts['file']))
     if language is None:
         logging.debug('skip analysis, language not known')
     elif language not in accepteds:
         logging.debug('skip analysis, language not supported')
     else:
         logging.debug('  analysis, language: {0}'.format(language))
-        continuation(filter_dict(opts, [], {'language': language}))
+        return continuation(filter_dict(opts, [key], {key: language}))
+    return 0
 
 
 def set_analyzer_output(opts, continuation):
-    if 'output_format' in opts:
-        output_format = opts['output_format']
-        if re.match('plist', output_format):
-            html_dir = opts.get('html_dir')
-            (h, analyzer_output) = tempfile.mkstemp(suffix='.plist',
-                                                    prefix='report-',
-                                                    dir=html_dir)
-            os.close(h)
-            logging.debug('analyzer output: {0}'.format(analyzer_output))
-            continuation(filter_dict(opts, [], {'analyzer_output': analyzer_output}))
-            if html_dir is None:
-                try:
-                    os.remove(analyzer_output)
-                except:
-                    logging.warning('cleanup analyzer output file failed {0}'.format(analyzer_output))
-        else:
-            continuation(opts)
-    else:
-        continuation(opts)
+    def cleanup(fn):
+        try:
+            os.remove(fn)
+        except:
+            logging.warning('cleanup on analyzer output failed {0}'.format(fn))
+
+    key = 'output_format'
+    if key in opts and 'plist' == opts[key]:
+        html_dir = opts.get('html_dir')
+        (fd, name) = tempfile.mkstemp(suffix='.plist',
+                                      prefix='report-',
+                                      dir=html_dir)
+        os.close(fd)
+        logging.debug('analyzer output: {0}'.format(name))
+        status = continuation(filter_dict(opts, [], {'analyzer_output': name}))
+        if html_dir is None:
+            cleanup(name)
+        return status
+    return continuation(opts)

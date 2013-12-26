@@ -19,15 +19,8 @@ def test_language_from_filename():
 
 def test_set_language():
     def test(expected, input):
-        class Spy:
-            def __init__(self):
-                self.result = None
-            def catch(self, out):
-                self.result = out
-
-        spy = Spy()
-        sut.set_language(input, spy.catch)
-        assert_equals(expected, spy.result)
+        result = sut.set_language(input, lambda x: x)
+        assert_equals(expected, result)
 
     l = 'language'
     f = 'file'
@@ -35,6 +28,6 @@ def test_set_language():
     test({f: 'file.c', l: 'c++'}, {f: 'file.c', l: 'c++'})
     test({f: 'file.c', l: 'c'}, {f: 'file.c'})
     test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
-    test(None, {f: 'file.i'})
-    test(None, {f: 'file.i', l: 'c-cpp-output'})
-    test(None, {f: 'file.java'})
+    test(0, {f: 'file.i'})
+    test(0, {f: 'file.i', l: 'c-cpp-output'})
+    test(0, {f: 'file.java'})
