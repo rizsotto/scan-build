@@ -250,7 +250,7 @@ def arch_loop(opts, continuation):
 
     key = 'archs_seen'
     if key in opts:
-        archs = set([a for a in d[key] if '-arch' != a and a not in disableds])
+        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
         if archs:
             for arch in archs:
                 logging.debug('  analysis, on arch: {0}'.format(arch))
