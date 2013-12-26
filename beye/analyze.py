@@ -17,7 +17,17 @@ class Action:
     Link, Compile, Preprocess, Info = range(4)
 
 
+""" This method groups the command line arguments of the compiler.
+
+    The arguments suppose to be clang arguments. The result is a
+    dictionary, with the key of the group and the value as a list
+    of arguments which belongs to that group.
+"""
 def parse(args):
+    """ This method contains a list of pattern and action tuples.
+        The matching start from the top if the list, when the first
+        match happens the action is executed.
+    """
     def match(state, it):
         def regex(pattern, action):
             regexp = re.compile(pattern)
@@ -199,25 +209,11 @@ def parse(args):
         logging.exception('parsing failed')
 
 
-def language_from_filename(fn):
-    mapping = {
-      '.c'   : 'c',
-      '.cp'  : 'c++',
-      '.cpp' : 'c++',
-      '.cxx' : 'c++',
-      '.txx' : 'c++',
-      '.cc'  : 'c++',
-      '.C'   : 'c++',
-      '.ii'  : 'c++',
-      '.i'   : 'c-cpp-output',
-      '.m'   : 'objective-c',
-      '.mi'  : 'objective-c-cpp-output',
-      '.mm'  : 'objective-c++'
-    }
-    (_, extension) = os.path.splitext(os.path.basename(fn))
-    return mapping.get(extension)
+""" Utility function to isolate changes on dictionaries.
 
-
+    It only creates shallow copy of the input dictionary. So, modifying
+    values are not isolated. But to remove and add new ones are safe.
+"""
 def filter_dict(original, removables, additions):
     new = copy.deepcopy(original)
     for k in removables:
@@ -226,6 +222,29 @@ def filter_dict(original, removables, additions):
     for (k, v) in additions.items():
         new[k] = v
     return new
+
+
+""" Main method to run the analysis.
+
+    The analysis is written a lightweight continuation style. Each step
+    takes two arguments: the command line options grouped by the parse
+    method, and the continuation to call on success.
+"""
+def run(**kwargs):
+    def stack(conts):
+        def bind(cs, acc):
+            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
+
+        conts.reverse()
+        return bind(conts, lambda x: logging.debug('  end of analysis chain'))
+
+    chain = stack([arch_loop,
+                   files_loop,
+                   set_language,
+                   set_analyzer_output])
+
+    opts = parse(kwargs['command'].split())
+    return chain(filter_dict(kwargs, ['command', 'directory'], opts))
 
 
 def arch_loop(opts, continuation):
@@ -243,6 +262,25 @@ def arch_loop(opts, continuation):
     else:
         logging.debug('  analysis, on default arch')
         continuation(opts)
+
+
+def language_from_filename(fn):
+    mapping = {
+      '.c'   : 'c',
+      '.cp'  : 'c++',
+      '.cpp' : 'c++',
+      '.cxx' : 'c++',
+      '.txx' : 'c++',
+      '.cc'  : 'c++',
+      '.C'   : 'c++',
+      '.ii'  : 'c++',
+      '.i'   : 'c-cpp-output',
+      '.m'   : 'objective-c',
+      '.mi'  : 'objective-c-cpp-output',
+      '.mm'  : 'objective-c++'
+    }
+    (_, extension) = os.path.splitext(os.path.basename(fn))
+    return mapping.get(extension)
 
 
 def files_loop(opts, continuation):
@@ -288,30 +326,3 @@ def set_analyzer_output(opts, continuation):
             continuation(opts)
     else:
         continuation(opts)
-
-
-def run(**kwargs):
-    def stack(conts):
-        def bind(cs, acc):
-            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
-
-        conts.reverse()
-        return bind(conts, lambda x: logging.debug('  end of analysis chain'))
-
-    opts = parse(kwargs['command'].split())
-    # move it to a separate step and make it conditional
-    os.chdir(kwargs['directory'])
-
-    stack([arch_loop, files_loop, set_language, set_analyzer_output])(opts)
-
-
-class Analyzer:
-    def run(self, **kwargs):
-        os.chdir(kwargs['directory'])
-        os.environ['CCC_ANALYZER_HTML'] = kwargs.get('html_dir')
-        cmds = kwargs['command'].split()
-        cmds[0] = '/usr/lib/clang-analyzer/scan-build/ccc-analyzer'
-        logging.debug('executing: {0}'.format(cmds))
-        analyze = subprocess.Popen(cmds, env=os.environ)
-        analyze.wait()
-        return analyze.returncode

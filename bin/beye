@@ -51,9 +51,8 @@ def main():
 
 
 def analyze(task, out_dir):
-    analyzer = beye.analyze.Analyzer()
     task['html_dir']=out_dir
-    return analyzer.run(**task)
+    return beye.analyze.run(**task)
 
 
 def create_out_directory(hint):
