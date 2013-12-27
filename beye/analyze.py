@@ -340,3 +340,35 @@ def set_analyzer_output(opts, continuation):
             cleanup(name)
         return status
     return continuation(opts)
+
+
+def get_clang_arguments(cwd, clang, mode, args):
+    def lastline(stream):
+        line = None
+        while True:
+            tmp = stream.readline()
+            if '' == tmp:
+                break
+            line = tmp
+        if line is None:
+            raise Exception("empty Clang output found")
+        return line
+
+    def strip_quotes(quoted):
+        match = re.match('^\"([^\"]*)\"$', quoted)
+        return match.group(1) if match else quoted
+
+    try:
+        child = subprocess.Popen([clang, '-###', mode] + args,
+                                 cwd=cwd,
+                                 universal_newlines=True,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT)
+        child.wait()
+        if 0 == child.returncode:
+            return [strip_quotes(x) for x in lastline(child.stdout).split()]
+        else:
+            raise Exception(lastline(child.stdout))
+    except Exception as e:
+        log.error('executing Clang failed: {}'.format(str(e)))
+        return None
