@@ -372,3 +372,39 @@ def get_clang_arguments(cwd, clang, mode, args):
     except Exception as e:
         log.error('executing Clang failed: {}'.format(str(e)))
         return None
+
+
+def build_args(opts):
+    def regular_parsing_args():
+        result = []
+        if 'arch' in opts:
+            result.extend(['-arch', opts['arch']])
+        if 'compile_options' in opts:
+            result.extend(opts['compile_options'])
+        result.extend(['-x', opts['language']])
+        result.append(opts['file'])
+        return result
+
+    def static_analyzer_args():
+        result = []
+        if 'store_model' in opts:
+            result.append('-analyzer-store={0}'.format(opts['store_model']))
+        if 'constraints_model' in opts:
+            result.append('-analyzer-constraints={0}'.format(opts['constraints_model']))
+        if 'internal_stats' in opts:
+            result.append('-analyzer-stats')
+        if 'analyses' in opts:
+            result.extend(opts['analyses'])
+        if 'plugins' in opts:
+            result.extend(opts['plugins'])
+        if 'output_format' in opts:
+            result.append('-analyzer-output={0}'.format(opts['output_format']))
+        if 'analyzer_output' in opts:
+            result.extend(['-o', opts['analyzer_output']])
+        elif 'html_dir' in opts:
+            result.extend(['-o', opts['html_dir']])
+        # TODO: verbose should add '-analyzer-display-progress'
+        # TODO: 'CCC_UBI' should add '-analyzer-viz-egraph-ubigraph'
+        return result
+
+    return (regular_parsing_args(), static_analyzer_args())
