@@ -296,6 +296,15 @@ def language_from_filename(fn):
     return mapping.get(extension)
 
 
+def preprocessor_extension(language):
+    mapping = {
+        'objective-c++' : '.mii',
+        'objective-c'   : '.mi',
+        'c++'           : '.ii'
+    }
+    return mapping.get(language, '.i')
+
+
 def set_language(opts, continuation):
     accepteds = ['c', 'c++', 'objective-c', 'objective-c++']
 
