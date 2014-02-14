@@ -236,13 +236,20 @@ def run(**kwargs):
         conts.reverse()
         return bind(conts, lambda x: x)
 
-    chain = stack([arch_loop,
-                   files_loop,
-                   set_language,
-                   set_analyzer_output])
+    chain = stack([filter_action,
+                  arch_loop,
+                  files_loop,
+                  set_language,
+                  set_analyzer_output])
 
     opts = parse(kwargs['command'].split())
     return chain(filter_dict(kwargs, ['command'], opts))
+
+
+""" Continue analysis only if it compilation or link.
+"""
+def filter_action(opts, continuation):
+    return continuation(opts) if opts['action'] <= Action.Compile else 0
 
 
 def arch_loop(opts, continuation):
