@@ -321,23 +321,26 @@ def set_language(opts, continuation):
 
 
 def set_analyzer_output(opts, continuation):
-    def cleanup(fn):
+    def create_analyzer_output():
+        (fd, name) = tempfile.mkstemp(suffix='.plist',
+                                      prefix='report-',
+                                      dir=opts.get('html_dir'))
+        os.close(fd)
+        logging.debug('analyzer output: {0}'.format(name))
+        return name
+
+    def cleanup_when_needed(fn):
         try:
-            os.remove(fn)
+            if 'html_dir' not in opts or os.stat(fn).st_size == 0:
+                os.remove(fn)
         except:
             logging.warning('cleanup on analyzer output failed {0}'.format(fn))
 
     key = 'output_format'
     if key in opts and 'plist' == opts[key]:
-        html_dir = opts.get('html_dir')
-        (fd, name) = tempfile.mkstemp(suffix='.plist',
-                                      prefix='report-',
-                                      dir=html_dir)
-        os.close(fd)
-        logging.debug('analyzer output: {0}'.format(name))
-        status = continuation(filter_dict(opts, [], {'analyzer_output': name}))
-        if html_dir is None:
-            cleanup(name)
+        fn = create_analyzer_output()
+        status = continuation(filter_dict(opts, [], {'analyzer_output': fn}))
+        cleanup_when_needed(fn)
         return status
     return continuation(opts)
 
