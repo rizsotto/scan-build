@@ -151,7 +151,7 @@ def parse(args):
         def take(values, it, match):
             current = []
             current.append(it.current)
-            if '' == match.group(1):
+            if not match.group(1):
                 current.append(it.next())
             for key in keys:
                 extend(values, key, current)
@@ -350,11 +350,11 @@ def get_clang_arguments(cwd, clang, mode, args):
         line = None
         while True:
             tmp = stream.readline()
-            if '' == tmp:
+            if not tmp:  # check empty string
                 break
             line = tmp
         if line is None:
-            raise Exception("empty Clang output found")
+            raise Exception("output not found")
         return line
 
     def strip_quotes(quoted):
