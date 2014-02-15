@@ -11,6 +11,7 @@ import os
 import os.path
 import tempfile
 import copy
+import functools
 
 
 class Action:
@@ -240,7 +241,8 @@ def run(**kwargs):
                   arch_loop,
                   files_loop,
                   set_language,
-                  set_analyzer_output])
+                  set_analyzer_output,
+                  run_analyzer])
 
     opts = parse(kwargs['command'].split())
     return chain(filter_dict(kwargs, ['command'], opts))
@@ -352,6 +354,16 @@ def set_analyzer_output(opts, continuation):
     return continuation(opts)
 
 
+def run_analyzer(opts, continuation):
+    (regular_parsing_args, analysis_args) = build_args(opts)
+    cwd = opts.get('directory', os.getcwd())
+    clang = 'clang'  # TODO: fix this constant to get clang++ depend on argv[0]?
+    syntax_args = get_clang_arguments(cwd, clang, '-fsyntax-only', regular_parsing_args)
+    analysis_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
+    # TODO: finish implementation
+    return 0
+
+
 def get_clang_arguments(cwd, clang, mode, args):
     def lastline(stream):
         line = None
@@ -369,7 +381,9 @@ def get_clang_arguments(cwd, clang, mode, args):
         return match.group(1) if match else quoted
 
     try:
-        child = subprocess.Popen([clang, '-###', mode] + args,
+        cmd = [clang, '-###', mode] + args
+        logging.debug('executing command: {0}'.format(cmd))
+        child = subprocess.Popen(cmd,
                                  cwd=cwd,
                                  universal_newlines=True,
                                  stdout=subprocess.PIPE,
@@ -380,12 +394,12 @@ def get_clang_arguments(cwd, clang, mode, args):
         else:
             raise Exception(lastline(child.stdout))
     except Exception as e:
-        log.error('executing Clang failed: {}'.format(str(e)))
+        log.error('executing Clang failed: {0}'.format(str(e)))
         return None
 
 
 def build_args(opts):
-    def regular_parsing_args():
+    def regular_parsing():
         result = []
         if 'arch' in opts:
             result.extend(['-arch', opts['arch']])
@@ -395,7 +409,15 @@ def build_args(opts):
         result.append(opts['file'])
         return result
 
-    def static_analyzer_args():
+    def output():
+        result = []
+        if 'analyzer_output' in opts:
+            result.extend(['-o', opts['analyzer_output']])
+        elif 'html_dir' in opts:
+            result.extend(['-o', opts['html_dir']])
+        return result
+
+    def static_analyzer():
         result = []
         if 'store_model' in opts:
             result.append('-analyzer-store={0}'.format(opts['store_model']))
@@ -409,12 +431,10 @@ def build_args(opts):
             result.extend(opts['plugins'])
         if 'output_format' in opts:
             result.append('-analyzer-output={0}'.format(opts['output_format']))
-        if 'analyzer_output' in opts:
-            result.extend(['-o', opts['analyzer_output']])
-        elif 'html_dir' in opts:
-            result.extend(['-o', opts['html_dir']])
+        if 'config' in opts:
+            result.append(opts['config'])
         # TODO: verbose should add '-analyzer-display-progress'
         # TODO: 'CCC_UBI' should add '-analyzer-viz-egraph-ubigraph'
-        return result
+        return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
 
-    return (regular_parsing_args(), static_analyzer_args())
+    return (regular_parsing(), (regular_parsing() + output() + static_analyzer()))

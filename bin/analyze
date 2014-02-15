@@ -27,6 +27,7 @@ def main():
         command=sys.argv,
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
+        config=split_env_content('CCC_ANALYZER_CONFIG'),
         store_model=os.environ.get('CCC_ANALYZER_STORE_MODEL'),
         constraints_model=os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
         internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
