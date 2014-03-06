@@ -32,7 +32,8 @@ def main():
         constraints_model=os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
         internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
         output_format=os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
-        html_dir=os.environ.get('CCC_ANALYZER_HTML'))
+        html_dir=os.environ.get('CCC_ANALYZER_HTML'),
+        report_failures=os.environ.get('CCC_REPORT_FAILURES'))
 
 
 def split_env_content(name):

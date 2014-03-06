@@ -35,7 +35,7 @@ def parse(args):
 
             def eval(it):
                 match = regexp.match(it.current)
-                if match is not None:
+                if match:
                     action(state, it, match)
                     return True
             return eval
@@ -359,22 +359,66 @@ def run_analyzer(opts, continuation):
     cwd = opts.get('directory', os.getcwd())
     clang = 'clang'  # TODO: fix this constant to get clang++ depend on argv[0]?
     syntax_args = get_clang_arguments(cwd, clang, '-fsyntax-only', regular_parsing_args)
-    analysis_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
-    # TODO: finish implementation
+    final_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
+    exec_analyzer(cwd, final_args, opts)
     return 0
+
+
+def exec_analyzer(cwd, cmd, opts):
+    def get_output(stream):
+        return stream.readlines()
+
+    def copy_to_stderr(lines, fds):
+        import sys
+        for line in lines:
+            sys.stderr.write(line)
+
+    def process_clang_failure(lines):
+        # this gonna need the other cmds to create preprocessed file
+        pass
+
+    def report_unhandled_attributes(lines):
+        attributes_not_handled = set()
+        regexp = re.compile("warning: '([^\']+)' attribute ignored")
+        for line in lines:
+            match = regexp.match(it.current)
+            if match:
+                attributes_not_handled.add(match.group(1))
+        for attr in attributes_not_handled:
+            # FIXME
+            process_clang_failure(lines)  # attribute ignored
+
+    try:
+        logging.debug('exec command in {0}: {1}'.format(cwd, cmd))
+        child = subprocess.Popen(cmd,
+                                cwd=cwd,
+                                universal_newlines=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        child.wait()
+        output = get_output(child.stdout)
+        copy_to_stderr(output)
+        if 'report_failures' in opts:
+            if (child.returncode & 127) and 'html_dir' in opts:
+                process_clang_failure(output)  # crash
+            elif child.returncode:
+                process_clang_failure(output)  # parser reject OR other
+            else:
+                report_unhandled_attributes(output)
+    except Exception as ex:
+        log.error('exec failed: {0}'.format(str(ex)))
+        return None
+
 
 
 def get_clang_arguments(cwd, clang, mode, args):
     def lastline(stream):
-        line = None
-        while True:
-            tmp = stream.readline()
-            if not tmp:  # check empty string
-                break
-            line = tmp
-        if line is None:
+        last = None
+        for line in stream:
+            last = line
+        if last is None:
             raise Exception("output not found")
-        return line
+        return last
 
     def strip_quotes(quoted):
         match = re.match('^\"([^\"]*)\"$', quoted)
@@ -382,7 +426,7 @@ def get_clang_arguments(cwd, clang, mode, args):
 
     try:
         cmd = [clang, '-###', mode] + args
-        logging.debug('executing command: {0}'.format(cmd))
+        logging.debug('exec command in {0}: {1}'.format(cwd, cmd))
         child = subprocess.Popen(cmd,
                                  cwd=cwd,
                                  universal_newlines=True,
@@ -394,7 +438,7 @@ def get_clang_arguments(cwd, clang, mode, args):
         else:
             raise Exception(lastline(child.stdout))
     except Exception as e:
-        log.error('executing Clang failed: {0}'.format(str(e)))
+        log.error('exec failed: {0}'.format(str(e)))
         return None
 
 
