@@ -28,8 +28,8 @@ def test_set_language():
     test({f: 'file.c', l: 'c++'}, {f: 'file.c', l: 'c++'})
     test({f: 'file.c', l: 'c'}, {f: 'file.c'})
     test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
-    test(0, {f: 'file.i'})
-    test(0, {f: 'file.i', l: 'c-cpp-output'})
+    test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i'})
+    test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i', l: 'c-cpp-output'})
     test(0, {f: 'file.java'})
 
 

@@ -288,18 +288,19 @@ def files_loop(opts, continuation):
 
 def language_from_filename(fn):
     mapping = {
-      '.c'   : 'c',
+      '.c'   : 'c',  # TODO: shall check invocation: c++ or c
       '.cp'  : 'c++',
       '.cpp' : 'c++',
       '.cxx' : 'c++',
       '.txx' : 'c++',
       '.cc'  : 'c++',
       '.C'   : 'c++',
-      '.ii'  : 'c++',
-      '.i'   : 'c-cpp-output',
+      '.ii'  : 'c++-cpp-output',
+      '.i'   : 'c-cpp-output',  # TODO: shall check invocation: c++ or c
       '.m'   : 'objective-c',
       '.mi'  : 'objective-c-cpp-output',
-      '.mm'  : 'objective-c++'
+      '.mm'  : 'objective-c++',
+      '.mii' : 'objective-c++-cpp-output'
     }
     (_, extension) = os.path.splitext(os.path.basename(fn))
     return mapping.get(extension)
