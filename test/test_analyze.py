@@ -52,6 +52,12 @@ def test_filter_dict_modify_works():
     assert_equals(1, input['key'])
 
 
+def test_filter_dict_does_strip():
+    input = {'good': 'has value', 'bad': None, 'another bad': None, 'normal': 'also'}
+    expected = {'good': 'has value', 'normal': 'also'}
+    assert_equals(expected, sut.filter_dict(input, [], {}))
+
+
 def test_arch_loop_default_forwards_call():
     input = {'key': 'value'}
     assert_equals(input, sut.arch_loop(input, lambda x: x))

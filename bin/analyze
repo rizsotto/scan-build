@@ -38,7 +38,7 @@ def main():
 
 def split_env_content(name):
     content = os.environ.get(name)
-    return content.split() if content else []
+    return content.split() if content else None
 
 # entry symbol
 if __name__ == '__main__':

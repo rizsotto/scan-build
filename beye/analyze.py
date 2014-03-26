@@ -216,6 +216,9 @@ def parse(args):
 """
 def filter_dict(original, removables, additions):
     new = copy.copy(original)
+    for (k, v) in original.items():
+        if v is None:
+            new.pop(k)
     for k in removables:
         if k in new:
             new.pop(k)
