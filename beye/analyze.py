@@ -315,7 +315,7 @@ def preprocessor_extension(language):
 
 
 def set_language(opts, continuation):
-    accepteds = ['c', 'c++', 'objective-c', 'objective-c++']
+    accepteds = ['c', 'c++', 'objective-c', 'objective-c++', 'c-cpp-output', 'c++-cpp-output', 'objective-c-cpp-output']
 
     key = 'language'
     language = opts.get(key, language_from_filename(opts['file']))
