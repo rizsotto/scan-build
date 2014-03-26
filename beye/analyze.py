@@ -12,6 +12,7 @@ import os.path
 import tempfile
 import copy
 import functools
+import shlex
 
 
 class Action:
@@ -244,7 +245,7 @@ def run(**kwargs):
                   set_analyzer_output,
                   run_analyzer])
 
-    opts = parse(kwargs['command'].split())
+    opts = parse(shlex.split(kwargs['command']))
     return chain(filter_dict(kwargs, ['command'], opts))
 
 
@@ -435,7 +436,7 @@ def get_clang_arguments(cwd, clang, mode, args):
                                  stderr=subprocess.STDOUT)
         child.wait()
         if 0 == child.returncode:
-            return [strip_quotes(x) for x in lastline(child.stdout).split()]
+            return [strip_quotes(x) for x in shlex.split(lastline(child.stdout))]
         else:
             raise Exception(lastline(child.stdout))
     except Exception as e:
