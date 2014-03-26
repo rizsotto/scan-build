@@ -290,26 +290,6 @@ def files_loop(opts, continuation):
         return 0
 
 
-def language_from_filename(fn):
-    mapping = {
-      '.c'   : 'c',  # TODO: shall check invocation: c++ or c
-      '.cp'  : 'c++',
-      '.cpp' : 'c++',
-      '.cxx' : 'c++',
-      '.txx' : 'c++',
-      '.cc'  : 'c++',
-      '.C'   : 'c++',
-      '.ii'  : 'c++-cpp-output',
-      '.i'   : 'c-cpp-output',  # TODO: shall check invocation: c++ or c
-      '.m'   : 'objective-c',
-      '.mi'  : 'objective-c-cpp-output',
-      '.mm'  : 'objective-c++',
-      '.mii' : 'objective-c++-cpp-output'
-    }
-    (_, extension) = os.path.splitext(os.path.basename(fn))
-    return mapping.get(extension)
-
-
 def preprocessor_extension(language):
     mapping = {
         'objective-c++' : '.mii',
@@ -320,10 +300,37 @@ def preprocessor_extension(language):
 
 
 def set_language(opts, continuation):
-    accepteds = ['c', 'c++', 'objective-c', 'objective-c++', 'c-cpp-output', 'c++-cpp-output', 'objective-c-cpp-output']
+    def from_filename(fn, isCxx):
+        mapping = {
+          '.c'   : 'c++' if isCxx else 'c',
+          '.cp'  : 'c++',
+          '.cpp' : 'c++',
+          '.cxx' : 'c++',
+          '.txx' : 'c++',
+          '.cc'  : 'c++',
+          '.C'   : 'c++',
+          '.ii'  : 'c++-cpp-output',
+          '.i'   : 'c++-cpp-output' if isCxx else 'c-cpp-output',
+          '.m'   : 'objective-c',
+          '.mi'  : 'objective-c-cpp-output',
+          '.mm'  : 'objective-c++',
+          '.mii' : 'objective-c++-cpp-output'
+        }
+        (_, extension) = os.path.splitext(os.path.basename(fn))
+        return mapping.get(extension)
+
+    accepteds = [
+        'c',
+        'c++',
+        'objective-c',
+        'objective-c++',
+        'c-cpp-output',
+        'c++-cpp-output',
+        'objective-c-cpp-output'
+    ]
 
     key = 'language'
-    language = opts.get(key, language_from_filename(opts['file']))
+    language = opts[key] if key in opts else from_filename(opts['file'], opts.get('isCxx'))
     if language is None:
         logging.debug('skip analysis, language not known')
     elif language not in accepteds:
@@ -362,7 +369,7 @@ def set_analyzer_output(opts, continuation):
 def run_analyzer(opts, continuation):
     (regular_parsing_args, analysis_args) = build_args(opts)
     cwd = opts.get('directory', os.getcwd())
-    clang = 'clang'  # TODO: fix this constant to get clang++ depend on argv[0]?
+    clang = 'clang++' if opts.get('isCxx') else 'clang'
     syntax_args = get_clang_arguments(cwd, clang, '-fsyntax-only', regular_parsing_args)
     final_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
     exec_analyzer(cwd, final_args, opts)

@@ -25,6 +25,7 @@ def main():
 
     beye.analyze.run(
         command=sys.argv,
+        isCxx=is_called_as_cxx(),
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
         config=split_env_content('CCC_ANALYZER_CONFIG'),
@@ -36,9 +37,14 @@ def main():
         report_failures=os.environ.get('CCC_REPORT_FAILURES'))
 
 
+def is_called_as_cxx():
+    return False if sys.argv[0] == 'analyze' else True
+
+
 def split_env_content(name):
     content = os.environ.get(name)
     return content.split() if content else None
+
 
 # entry symbol
 if __name__ == '__main__':
