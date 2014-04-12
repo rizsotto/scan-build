@@ -9,6 +9,7 @@ import six
 import re
 import os
 import os.path
+import sys
 import tempfile
 import copy
 import functools
@@ -290,15 +291,6 @@ def files_loop(opts, continuation):
         return 0
 
 
-def preprocessor_extension(language):
-    mapping = {
-        'objective-c++' : '.mii',
-        'objective-c'   : '.mi',
-        'c++'           : '.ii'
-    }
-    return mapping.get(language, '.i')
-
-
 def set_language(opts, continuation):
     def from_filename(fn, isCxx):
         mapping = {
@@ -372,22 +364,82 @@ def run_analyzer(opts, continuation):
     clang = 'clang++' if opts.get('isCxx') else 'clang'
     syntax_args = get_clang_arguments(cwd, clang, '-fsyntax-only', regular_parsing_args)
     final_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
-    exec_analyzer(cwd, final_args, opts)
-    return 0
+    return exec_analyzer(cwd, final_args, opts,
+                        process_clang_failures(cwd, syntax_args, opts))
 
 
-def exec_analyzer(cwd, cmd, opts):
+class ErrorType:
+    Crash, ParserRejects, AttributeIgnored, OtherError = range(4)
+
+
+def process_clang_failure(cwd, cmd, opts):
+    def preprocessor_ext(language):
+        mapping = {
+            'objective-c++' : '.mii',
+            'objective-c'   : '.mi',
+            'c++'           : '.ii'
+        }
+        return mapping.get(language, '.i')
+
+    def failure_dir(opts):
+        name = os.path.abspath(opts.get('html_dir') + '/failures')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+        return name
+
+    def to_string(error, filename=True):
+        result = 'crash'
+        if (ParserRejects == error):
+            result = 'parser_rejects'
+        elif (AttributeIgnored == error):
+            result = 'attribute_ignored'
+        elif (OtherError == error):
+            result = 'other_error'
+        return result if filename else result.title().replace('_', ' ')
+
+    def future(error, lines, ignored_attributes=set()):
+        try:
+            (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts.get('language')),
+                                          prefix='clang_' + to_string(error),
+                                          dir=failure_dir(opts))
+            cmds = cmd + ['-E', '-o', name]
+            logging.debug('exec command in {0}: {1}'.format(cwd, cmds))
+            child = subprocess.Popen(cmds, cwd=cwd)
+            child.wait()
+
+            with open(name + '.info.txt', 'w') as ifd:
+                ifd.write(os.path.abspath(opts['file']) + os.linesep)
+                ifd.write(error_to_string(error, False) + os.linesep)
+                ifd.write(' '.join(cmd) + os.linesep)
+                ifd.write(subprocess.check_output(['uname', '-a']))
+                ifd.write(subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
+                ifd.close()
+
+            with open(name + '.stderr.txt', 'w') as efd:
+                for line in lines:
+                    efd.write(line)
+                efd.close()
+
+            for attr in ignored_attributes:
+                with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt', 'a') as fd:
+                    fd.write(os.path.basename(name))
+                    fd.close()
+        except Exception as ex:
+            log.error('reporting failed: {0}'.format(str(ex)))
+            return None
+        finally:
+            os.close(fd)
+
+    return future
+
+
+def exec_analyzer(cwd, cmd, opts, report_failure):
     def get_output(stream):
         return stream.readlines()
 
     def copy_to_stderr(lines, fds):
-        import sys
         for line in lines:
             sys.stderr.write(line)
-
-    def process_clang_failure(lines):
-        # this gonna need the other cmds to create preprocessed file
-        pass
 
     def report_unhandled_attributes(lines):
         attributes_not_handled = set()
@@ -396,9 +448,8 @@ def exec_analyzer(cwd, cmd, opts):
             match = regexp.match(it.current)
             if match:
                 attributes_not_handled.add(match.group(1))
-        for attr in attributes_not_handled:
-            # FIXME
-            process_clang_failure(lines)  # attribute ignored
+        if attributes_not_handled:
+            report_failure(ErrorType.AttributeIgnored, lines, attributes_not_handled)
 
     try:
         logging.debug('exec command in {0}: {1}'.format(cwd, cmd))
@@ -412,15 +463,18 @@ def exec_analyzer(cwd, cmd, opts):
         copy_to_stderr(output)
         if 'report_failures' in opts:
             if (child.returncode & 127) and 'html_dir' in opts:
-                process_clang_failure(output)  # crash
+                report_failure(ErrorType.Crash, output)
             elif child.returncode:
-                process_clang_failure(output)  # parser reject OR other
+                if False:  # FIXME this might be controled by argument
+                    report_failure(ErrorType.ParserRejects, output)
+                else:
+                    report_failure(ErrorType.OtherError, output)
             else:
                 report_unhandled_attributes(output)
+        return child.returncode
     except Exception as ex:
-        log.error('exec failed: {0}'.format(str(ex)))
+        log.error('analyzer failed: {0}'.format(str(ex)))
         return None
-
 
 
 def get_clang_arguments(cwd, clang, mode, args):
