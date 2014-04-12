@@ -23,7 +23,7 @@ def main():
     logging.basicConfig(format='%(message)s', level=log_level)
     logging.info(' '.join(sys.argv))
 
-    beye.analyze.run(
+    return beye.analyze.run(
         command=sys.argv,
         isCxx=is_called_as_cxx(),
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),

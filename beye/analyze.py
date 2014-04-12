@@ -216,13 +216,10 @@ def parse(args):
     values are not isolated. But to remove and add new ones are safe.
 """
 def filter_dict(original, removables, additions):
-    new = copy.copy(original)
+    new = dict()
     for (k, v) in original.items():
-        if v is None:
-            new.pop(k)
-    for k in removables:
-        if k in new:
-            new.pop(k)
+        if v and k not in removables:
+            new[k] = v
     for (k, v) in additions.items():
         new[k] = v
     return new
@@ -250,7 +247,7 @@ def run(**kwargs):
                   run_analyzer])
 
     opts = parse(shlex.split(kwargs['command']))
-    return chain(filter_dict(kwargs, ['command'], opts))
+    return chain(filter_dict(kwargs, frozenset(['command']), opts))
 
 
 """ Continue analysis only if it compilation or link.
@@ -268,7 +265,7 @@ def arch_loop(opts, continuation):
         if archs:
             for arch in archs:
                 logging.debug('  analysis, on arch: {0}'.format(arch))
-                status = continuation(filter_dict(opts, [key], {'arch': arch}))
+                status = continuation(filter_dict(opts, set([key]), {'arch': arch}))
                 if status != 0:
                     return status
         else:
@@ -283,7 +280,7 @@ def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
             logging.debug('  analysis, source file: {0}'.format(fn))
-            status = continuation(filter_dict(opts, ['files'], {'file': fn}))
+            status = continuation(filter_dict(opts, frozenset(['files']), {'file': fn}))
             if status != 0:
                 return status
     else:
@@ -329,7 +326,7 @@ def set_language(opts, continuation):
         logging.debug('skip analysis, language not supported')
     else:
         logging.debug('  analysis, language: {0}'.format(language))
-        return continuation(filter_dict(opts, [key], {key: language}))
+        return continuation(filter_dict(opts, set([key]), {key: language}))
     return 0
 
 
@@ -352,13 +349,13 @@ def set_analyzer_output(opts, continuation):
     key = 'output_format'
     if key in opts and 'plist' == opts[key]:
         fn = create_analyzer_output()
-        status = continuation(filter_dict(opts, [], {'analyzer_output': fn}))
+        status = continuation(filter_dict(opts, frozenset(), {'analyzer_output': fn}))
         cleanup_when_needed(fn)
         return status
     return continuation(opts)
 
 
-def run_analyzer(opts, continuation):
+def run_analyzer(opts, _):
     (regular_parsing_args, analysis_args) = build_args(opts)
     cwd = opts.get('directory', os.getcwd())
     clang = 'clang++' if opts.get('isCxx') else 'clang'

@@ -28,26 +28,26 @@ def test_set_language():
 def test_filter_dict_insert_works():
     input = {'key': 1}
     expected = {'key': 1, 'value': 2}
-    assert_equals(expected, sut.filter_dict(input, [], {'value': 2}))
+    assert_equals(expected, sut.filter_dict(input, frozenset(), {'value': 2}))
 
 
 def test_filter_dict_delete_works():
     input = {'key': 1, 'value': 2}
     expected = {'value': 2}
-    assert_equals(expected, sut.filter_dict(input, ['key', 'other'], dict()))
+    assert_equals(expected, sut.filter_dict(input, frozenset(['key', 'other']), dict()))
 
 
 def test_filter_dict_modify_works():
     input = {'key': 1}
     expected = {'key': 2}
-    assert_equals(expected, sut.filter_dict(input, ['key'], {'key': 2}))
+    assert_equals(expected, sut.filter_dict(input, frozenset(['key']), {'key': 2}))
     assert_equals(1, input['key'])
 
 
 def test_filter_dict_does_strip():
     input = {'good': 'has value', 'bad': None, 'another bad': None, 'normal': 'also'}
     expected = {'good': 'has value', 'normal': 'also'}
-    assert_equals(expected, sut.filter_dict(input, [], {}))
+    assert_equals(expected, sut.filter_dict(input, frozenset(), {}))
 
 
 def test_arch_loop_default_forwards_call():
