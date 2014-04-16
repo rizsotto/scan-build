@@ -250,12 +250,39 @@ def run(**kwargs):
     return chain(filter_dict(kwargs, frozenset(['command']), opts))
 
 
+""" Trace utilities to simplify debugging.
+"""
+def trace(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        logging.debug('entering {0}'.format(fn.__name__))
+        result = fn(*args, **kwargs)
+        logging.debug('leaving {0}'.format(fn.__name__))
+        return result
+
+    return wrapper
+
+
+def continuation(fn):
+    @functools.wraps(fn)
+    def wrapper(opts, cont):
+        logging.debug('opts {0}'.format(opts))
+        result = fn(opts, cont)
+        return result
+
+    return wrapper
+
+
 """ Continue analysis only if it compilation or link.
 """
+@trace
+@continuation
 def filter_action(opts, continuation):
     return continuation(opts) if opts['action'] <= Action.Compile else 0
 
 
+@trace
+@continuation
 def arch_loop(opts, continuation):
     disableds = ['ppc', 'ppc64']
 
@@ -276,6 +303,8 @@ def arch_loop(opts, continuation):
         return continuation(opts)
 
 
+@trace
+@continuation
 def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
@@ -288,6 +317,8 @@ def files_loop(opts, continuation):
         return 0
 
 
+@trace
+@continuation
 def set_language(opts, continuation):
     def from_filename(fn, isCxx):
         mapping = {
@@ -330,7 +361,10 @@ def set_language(opts, continuation):
     return 0
 
 
+@trace
+@continuation
 def set_analyzer_output(opts, continuation):
+    @trace
     def create_analyzer_output():
         (fd, name) = tempfile.mkstemp(suffix='.plist',
                                       prefix='report-',
@@ -339,6 +373,7 @@ def set_analyzer_output(opts, continuation):
         logging.debug('analyzer output: {0}'.format(name))
         return name
 
+    @trace
     def cleanup_when_needed(fn):
         try:
             if 'html_dir' not in opts or os.stat(fn).st_size == 0:
@@ -355,14 +390,16 @@ def set_analyzer_output(opts, continuation):
     return continuation(opts)
 
 
-def run_analyzer(opts, _):
+@trace
+@continuation
+def run_analyzer(opts, continuation):
     (regular_parsing_args, analysis_args) = build_args(opts)
     cwd = opts.get('directory', os.getcwd())
     clang = 'clang++' if opts.get('isCxx') else 'clang'
     syntax_args = get_clang_arguments(cwd, clang, '-fsyntax-only', regular_parsing_args)
     final_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
-    return exec_analyzer(cwd, final_args, opts,
-                        process_clang_failures(cwd, syntax_args, opts))
+    report = process_clang_failure(cwd, syntax_args, opts)
+    continuation(exec_analyzer(cwd, final_args, opts, report))
 
 
 class ErrorType:
@@ -394,13 +431,14 @@ def process_clang_failure(cwd, cmd, opts):
             result = 'other_error'
         return result if filename else result.title().replace('_', ' ')
 
-    def future(error, lines, ignored_attributes=set()):
+    @trace
+    def _process_clang_failure(error, lines, ignored_attributes=set()):
         try:
             (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts.get('language')),
                                           prefix='clang_' + to_string(error),
                                           dir=failure_dir(opts))
             cmds = cmd + ['-E', '-o', name]
-            logging.debug('exec command in {0}: {1}'.format(cwd, cmds))
+            logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
             child = subprocess.Popen(cmds, cwd=cwd)
             child.wait()
 
@@ -427,9 +465,10 @@ def process_clang_failure(cwd, cmd, opts):
         finally:
             os.close(fd)
 
-    return future
+    return _process_clang_failure
 
 
+@trace
 def exec_analyzer(cwd, cmd, opts, report_failure):
     def get_output(stream):
         return stream.readlines()
@@ -449,7 +488,7 @@ def exec_analyzer(cwd, cmd, opts, report_failure):
             report_failure(ErrorType.AttributeIgnored, lines, attributes_not_handled)
 
     try:
-        logging.debug('exec command in {0}: {1}'.format(cwd, cmd))
+        logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
                                 cwd=cwd,
                                 universal_newlines=True,
@@ -474,6 +513,7 @@ def exec_analyzer(cwd, cmd, opts, report_failure):
         return None
 
 
+@trace
 def get_clang_arguments(cwd, clang, mode, args):
     def lastline(stream):
         last = None
@@ -489,7 +529,7 @@ def get_clang_arguments(cwd, clang, mode, args):
 
     try:
         cmd = [clang, '-###', mode] + args
-        logging.debug('exec command in {0}: {1}'.format(cwd, cmd))
+        logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
                                  cwd=cwd,
                                  universal_newlines=True,
