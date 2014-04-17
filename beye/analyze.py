@@ -460,7 +460,7 @@ def process_clang_failure(cwd, cmd, opts):
                     fd.write(os.path.basename(name))
                     fd.close()
         except Exception as ex:
-            log.error('reporting failed: {0}'.format(str(ex)))
+            logging.error('reporting failed: {0}'.format(str(ex)))
             return None
         finally:
             os.close(fd)
@@ -509,7 +509,7 @@ def exec_analyzer(cwd, cmd, opts, report_failure):
                 report_unhandled_attributes(output)
         return child.returncode
     except Exception as ex:
-        log.error('analyzer failed: {0}'.format(str(ex)))
+        logging.error('analyzer failed: {0}'.format(str(ex)))
         return None
 
 
@@ -541,7 +541,7 @@ def get_clang_arguments(cwd, clang, mode, args):
         else:
             raise Exception(lastline(child.stdout))
     except Exception as e:
-        log.error('exec failed: {0}'.format(str(e)))
+        logging.error('exec failed: {0}'.format(str(e)))
         return None
 
 
