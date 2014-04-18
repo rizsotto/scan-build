@@ -291,15 +291,15 @@ def arch_loop(opts, continuation):
         archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
         if archs:
             for arch in archs:
-                logging.debug('analysis, on arch: {0}'.format(arch))
+                logging.info('analysis, on arch: {0}'.format(arch))
                 status = continuation(filter_dict(opts, frozenset([key]), {'arch': arch}))
                 if status != 0:
                     return status
         else:
-            logging.debug('skip analysis, found not supported arch')
+            logging.info('skip analysis, found not supported arch')
             return 0
     else:
-        logging.debug('analysis, on default arch')
+        logging.info('analysis, on default arch')
         return continuation(opts)
 
 
@@ -308,12 +308,12 @@ def arch_loop(opts, continuation):
 def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
-            logging.debug('analysis, source file: {0}'.format(fn))
+            logging.info('analysis, source file: {0}'.format(fn))
             status = continuation(filter_dict(opts, frozenset(['files']), {'file': fn}))
             if status != 0:
                 return status
     else:
-        logging.debug('skip analysis, source file not found')
+        logging.info('skip analysis, source file not found')
         return 0
 
 
@@ -352,11 +352,11 @@ def set_language(opts, continuation):
     key = 'language'
     language = opts[key] if key in opts else from_filename(opts['file'], opts.get('isCxx'))
     if language is None:
-        logging.debug('skip analysis, language not known')
+        logging.info('skip analysis, language not known')
     elif language not in accepteds:
-        logging.debug('skip analysis, language not supported')
+        logging.info('skip analysis, language not supported')
     else:
-        logging.debug('analysis, language: {0}'.format(language))
+        logging.info('analysis, language: {0}'.format(language))
         return continuation(filter_dict(opts, frozenset([key]), {key: language}))
     return 0
 
@@ -377,7 +377,7 @@ def set_analyzer_output(opts, continuation):
                                       prefix='report-',
                                       dir=opts.get('html_dir'))
         os.close(fd)
-        logging.debug('analyzer output: {0}'.format(name))
+        logging.info('analyzer output: {0}'.format(name))
         return name
 
     @trace
