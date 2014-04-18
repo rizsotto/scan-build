@@ -399,18 +399,15 @@ def set_analyzer_output(opts, continuation):
 @trace
 @continuation
 def run_analyzer(opts, continuation):
-    cwd = opts.get('directory', os.getcwd())
-    syntax_args = get_clang_arguments(cwd, build_args(opts, True))
-    final_args = get_clang_arguments(cwd, build_args(opts))
-    report = process_clang_failure(cwd, syntax_args, opts)
-    continuation(exec_analyzer(cwd, final_args, opts, report))
+    report = process_clang_failure(opts)
+    continuation(exec_analyzer(opts, report))
 
 
 class ErrorType:
     Crash, ParserRejects, AttributeIgnored, OtherError = range(4)
 
 
-def process_clang_failure(cwd, cmd, opts):
+def process_clang_failure(opts):
     def preprocessor_ext(language):
         mapping = {
             'objective-c++' : '.mii',
@@ -441,9 +438,10 @@ def process_clang_failure(cwd, cmd, opts):
             (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts.get('language')),
                                           prefix='clang_' + to_string(error),
                                           dir=failure_dir(opts))
-            cmds = cmd + ['-E', '-o', name]
+            cwd = opts.get('directory', os.getcwd())
+            cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
             logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-            child = subprocess.Popen(cmds, cwd=cwd)
+            child = subprocess.Popen(cmd, cwd=cwd)
             child.wait()
 
             with open(name + '.info.txt', 'w') as ifd:
@@ -473,7 +471,7 @@ def process_clang_failure(cwd, cmd, opts):
 
 
 @trace
-def exec_analyzer(cwd, cmd, opts, report_failure):
+def exec_analyzer(opts, report_failure):
     def get_output(stream):
         return stream.readlines()
 
@@ -492,6 +490,8 @@ def exec_analyzer(cwd, cmd, opts, report_failure):
             report_failure(ErrorType.AttributeIgnored, lines, attributes_not_handled)
 
     try:
+        cwd = opts.get('directory', os.getcwd())
+        cmd = get_clang_arguments(cwd, build_args(opts))
         logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
                                 cwd=cwd,
