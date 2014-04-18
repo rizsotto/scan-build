@@ -43,10 +43,8 @@ def parse(args):
             return eval
 
         def anyof(opts, action):
-            params = frozenset(opts) if six.PY3 else set(opts)
-
             def eval(it):
-                if it.current in params:
+                if it.current in frozenset(opts):
                     action(state, it, None)
                     return True
             return eval
@@ -292,7 +290,7 @@ def arch_loop(opts, continuation):
         if archs:
             for arch in archs:
                 logging.debug('analysis, on arch: {0}'.format(arch))
-                status = continuation(filter_dict(opts, set([key]), {'arch': arch}))
+                status = continuation(filter_dict(opts, frozenset([key]), {'arch': arch}))
                 if status != 0:
                     return status
         else:
@@ -357,7 +355,7 @@ def set_language(opts, continuation):
         logging.debug('skip analysis, language not supported')
     else:
         logging.debug('analysis, language: {0}'.format(language))
-        return continuation(filter_dict(opts, set([key]), {key: language}))
+        return continuation(filter_dict(opts, frozenset([key]), {key: language}))
     return 0
 
 
