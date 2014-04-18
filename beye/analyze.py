@@ -291,7 +291,7 @@ def arch_loop(opts, continuation):
         archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
         if archs:
             for arch in archs:
-                logging.debug('  analysis, on arch: {0}'.format(arch))
+                logging.debug('analysis, on arch: {0}'.format(arch))
                 status = continuation(filter_dict(opts, set([key]), {'arch': arch}))
                 if status != 0:
                     return status
@@ -299,7 +299,7 @@ def arch_loop(opts, continuation):
             logging.debug('skip analysis, found not supported arch')
             return 0
     else:
-        logging.debug('  analysis, on default arch')
+        logging.debug('analysis, on default arch')
         return continuation(opts)
 
 
@@ -308,7 +308,7 @@ def arch_loop(opts, continuation):
 def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
-            logging.debug('  analysis, source file: {0}'.format(fn))
+            logging.debug('analysis, source file: {0}'.format(fn))
             status = continuation(filter_dict(opts, frozenset(['files']), {'file': fn}))
             if status != 0:
                 return status
@@ -356,7 +356,7 @@ def set_language(opts, continuation):
     elif language not in accepteds:
         logging.debug('skip analysis, language not supported')
     else:
-        logging.debug('  analysis, language: {0}'.format(language))
+        logging.debug('analysis, language: {0}'.format(language))
         return continuation(filter_dict(opts, set([key]), {key: language}))
     return 0
 
@@ -473,7 +473,7 @@ def exec_analyzer(cwd, cmd, opts, report_failure):
     def get_output(stream):
         return stream.readlines()
 
-    def copy_to_stderr(lines, fds):
+    def copy_to_stderr(lines):
         for line in lines:
             sys.stderr.write(line)
 

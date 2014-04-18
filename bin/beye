@@ -59,6 +59,7 @@ def main():
 
 def analyze(task, out_dir):
     task['html_dir']=out_dir
+    task['output_format']='html'
     return beye.analyze.run(**task)
 
 
