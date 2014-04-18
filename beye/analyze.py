@@ -243,7 +243,8 @@ def run(**kwargs):
                   set_language,
                   set_compiler,
                   set_analyzer_output,
-                  run_analyzer])
+                  run_analyzer,
+                  report_failure])
 
     opts = parse(shlex.split(kwargs['command']))
     return chain(filter_dict(kwargs, frozenset(['command']), opts))
@@ -399,96 +400,6 @@ def set_analyzer_output(opts, continuation):
 @trace
 @continuation
 def run_analyzer(opts, continuation):
-    report = process_clang_failure(opts)
-    continuation(exec_analyzer(opts, report))
-
-
-class ErrorType:
-    Crash, ParserRejects, AttributeIgnored, OtherError = range(4)
-
-
-def process_clang_failure(opts):
-    def preprocessor_ext(language):
-        mapping = {
-            'objective-c++' : '.mii',
-            'objective-c'   : '.mi',
-            'c++'           : '.ii'
-        }
-        return mapping.get(language, '.i')
-
-    def failure_dir(opts):
-        name = os.path.abspath(opts.get('html_dir') + '/failures')
-        if not os.path.isdir(name):
-            os.makedirs(name)
-        return name
-
-    def to_string(error, filename=True):
-        result = 'crash'
-        if (ParserRejects == error):
-            result = 'parser_rejects'
-        elif (AttributeIgnored == error):
-            result = 'attribute_ignored'
-        elif (OtherError == error):
-            result = 'other_error'
-        return result if filename else result.title().replace('_', ' ')
-
-    @trace
-    def _process_clang_failure(error, lines, ignored_attributes=set()):
-        try:
-            (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts.get('language')),
-                                          prefix='clang_' + to_string(error),
-                                          dir=failure_dir(opts))
-            cwd = opts.get('directory', os.getcwd())
-            cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
-            logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-            child = subprocess.Popen(cmd, cwd=cwd)
-            child.wait()
-
-            with open(name + '.info.txt', 'w') as ifd:
-                ifd.write(os.path.abspath(opts['file']) + os.linesep)
-                ifd.write(error_to_string(error, False) + os.linesep)
-                ifd.write(' '.join(cmd) + os.linesep)
-                ifd.write(subprocess.check_output(['uname', '-a']))
-                ifd.write(subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
-                ifd.close()
-
-            with open(name + '.stderr.txt', 'w') as efd:
-                for line in lines:
-                    efd.write(line)
-                efd.close()
-
-            for attr in ignored_attributes:
-                with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt', 'a') as fd:
-                    fd.write(os.path.basename(name))
-                    fd.close()
-        except Exception as ex:
-            logging.error('reporting failed: {0}'.format(str(ex)))
-            return None
-        finally:
-            os.close(fd)
-
-    return _process_clang_failure
-
-
-@trace
-def exec_analyzer(opts, report_failure):
-    def get_output(stream):
-        return stream.readlines()
-
-    def copy_to_stderr(lines):
-        for line in lines:
-            sys.stderr.write(line)
-
-    def report_unhandled_attributes(lines):
-        attributes_not_handled = set()
-        regexp = re.compile("warning: '([^\']+)' attribute ignored")
-        for line in lines:
-            match = regexp.match(it.current)
-            if match:
-                attributes_not_handled.add(match.group(1))
-        if attributes_not_handled:
-            report_failure(ErrorType.AttributeIgnored, lines, attributes_not_handled)
-
     try:
         cwd = opts.get('directory', os.getcwd())
         cmd = get_clang_arguments(cwd, build_args(opts))
@@ -499,22 +410,94 @@ def exec_analyzer(opts, report_failure):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
         child.wait()
-        output = get_output(child.stdout)
-        copy_to_stderr(output)
+        output = child.stdout.readlines()
+        # copy to stderr
+        for line in output:
+            sys.stderr.write(line)
+        # do report details if it were asked
         if 'report_failures' in opts:
+            error_type = None
+            attributes_not_handled = set()
+
             if (child.returncode & 127) and 'html_dir' in opts:
-                report_failure(ErrorType.Crash, output)
+                error_type = 'crash'
             elif child.returncode:
-                if False:  # FIXME this might be controled by argument
-                    report_failure(ErrorType.ParserRejects, output)
-                else:
-                    report_failure(ErrorType.OtherError, output)
+                # FIXME this might be controled by argument
+                error_type = 'parser_rejects' if False else 'attribute_ignored'
             else:
-                report_unhandled_attributes(output)
+                regexp = re.compile("warning: '([^\']+)' attribute ignored")
+                for line in output:
+                    match = regexp.match(it.current)
+                    if match:
+                        error_type = 'attribute_ignored'
+                        attributes_not_handled.add(match.group(1))
+
+            if error_type:
+                return continuation(filter_dict(opts, frozenset(),
+                    {'error_type': error_type,
+                     'error_output': output,
+                     'not_handled_attributes': attributes_not_handled,
+                     'exit_code': child.returncode}))
+
         return child.returncode
     except Exception as ex:
         logging.error('analyzer failed: {0}'.format(str(ex)))
         return None
+
+
+@trace
+@continuation
+def report_failure(opts, continuation):
+    def preprocessor_ext(language):
+        mapping = {
+            'objective-c++' : '.mii',
+            'objective-c'   : '.mi',
+            'c++'           : '.ii'
+        }
+        return mapping.get(language, '.i')
+
+    def failure_dir(opts):
+        # FIXME what happen if html_dir is not given?
+        name = os.path.abspath(opts.get('html_dir') + '/failures')
+        if not os.path.isdir(name):
+            os.makedirs(name)
+        return name
+
+    try:
+        error = opts['error_type']
+        (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts.get('language')),
+                                      prefix='clang_' + error,
+                                      dir=failure_dir(opts))
+        cwd = opts.get('directory', os.getcwd())
+        cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
+        logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+        child = subprocess.Popen(cmd, cwd=cwd)
+        child.wait()
+
+        with open(name + '.info.txt', 'w') as ifd:
+            ifd.write(os.path.abspath(opts['file']) + os.linesep)
+            ifd.write(error.title().replace('_', ' ') + os.linesep)
+            ifd.write(' '.join(cmd) + os.linesep)
+            ifd.write(subprocess.check_output(['uname', '-a']))
+            ifd.write(subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
+            ifd.close()
+
+        with open(name + '.stderr.txt', 'w') as efd:
+            for line in opts['error_output']:
+                efd.write(line)
+            efd.close()
+
+        for attr in opts['not_handled_attributes']:
+            with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt', 'a') as fd:
+                fd.write(os.path.basename(name))
+                fd.close()
+
+        return opts['exit_code']
+    except Exception as ex:
+        logging.error('reporting failed: {0}'.format(str(ex)))
+        return None
+    finally:
+        os.close(fd)
 
 
 @trace
