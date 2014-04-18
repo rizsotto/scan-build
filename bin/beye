@@ -24,6 +24,9 @@ def main():
                         default="compile_commands.json",
                         help="The JSON compilation database\
                               (default compile_commands.json)")
+    parser.add_argument("--sequential",
+                        action='store_true',
+                        help="execute analyzer sequentialy (default false)")
     parser.add_argument('--log-level',
                         metavar='LEVEL',
                         choices='DEBUG INFO WARNING ERROR'.split(),
@@ -39,12 +42,16 @@ def main():
         out_dir = create_out_directory(args.output)
 
         with open(args.input, "r") as fd:
-            pool = multiprocessing.Pool()
-            results = [pool.apply_async(func=analyze, args=(c, out_dir))
-                       for c in json.load(fd)]
+            if args.sequential:
+                for c in json.load(fd):
+                    analyze(c, out_dir)
+            else:
+                pool = multiprocessing.Pool()
+                results = [pool.apply_async(func=analyze, args=(c, out_dir))
+                           for c in json.load(fd)]
 
-            pool.close()
-            pool.join()
+                pool.close()
+                pool.join()
 
     finally:
         cleanup_out_directory(out_dir)
