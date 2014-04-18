@@ -241,6 +241,7 @@ def run(**kwargs):
                   arch_loop,
                   files_loop,
                   set_language,
+                  set_compiler,
                   set_analyzer_output,
                   run_analyzer])
 
@@ -361,6 +362,13 @@ def set_language(opts, continuation):
 
 @trace
 @continuation
+def set_compiler(opts, continuation):
+    clang = 'clang++' if opts.get('isCxx') or 'c++' == opts['language'] else 'clang'
+    return continuation(filter_dict(opts, frozenset('isCxx'), {'clang': clang}))
+
+
+@trace
+@continuation
 def set_analyzer_output(opts, continuation):
     @trace
     def create_analyzer_output():
@@ -391,11 +399,9 @@ def set_analyzer_output(opts, continuation):
 @trace
 @continuation
 def run_analyzer(opts, continuation):
-    (regular_parsing_args, analysis_args) = build_args(opts)
     cwd = opts.get('directory', os.getcwd())
-    clang = 'clang++' if opts.get('isCxx') else 'clang'
-    syntax_args = get_clang_arguments(cwd, clang, '-fsyntax-only', regular_parsing_args)
-    final_args = get_clang_arguments(cwd, clang, '--analyze', analysis_args)
+    syntax_args = get_clang_arguments(cwd, build_args(opts, True))
+    final_args = get_clang_arguments(cwd, build_args(opts))
     report = process_clang_failure(cwd, syntax_args, opts)
     continuation(exec_analyzer(cwd, final_args, opts, report))
 
@@ -512,7 +518,7 @@ def exec_analyzer(cwd, cmd, opts, report_failure):
 
 
 @trace
-def get_clang_arguments(cwd, clang, mode, args):
+def get_clang_arguments(cwd, cmd):
     def lastline(stream):
         last = None
         for line in stream:
@@ -526,7 +532,6 @@ def get_clang_arguments(cwd, clang, mode, args):
         return match.group(1) if match else quoted
 
     try:
-        cmd = [clang, '-###', mode] + args
         logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
                                  cwd=cwd,
@@ -543,8 +548,8 @@ def get_clang_arguments(cwd, clang, mode, args):
         return None
 
 
-def build_args(opts):
-    def regular_parsing():
+def build_args(opts, syntax_only=False):
+    def syntax_check():
         result = []
         if 'arch' in opts:
             result.extend(['-arch', opts['arch']])
@@ -582,4 +587,7 @@ def build_args(opts):
         # TODO: 'CCC_UBI' should add '-analyzer-viz-egraph-ubigraph'
         return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
 
-    return (regular_parsing(), (regular_parsing() + output() + static_analyzer()))
+    if syntax_only:
+        return [opts['clang'], '-###', '-fsyntax-only'] + syntax_check()
+    else:
+        return [opts['clang'], '-###', '--analyze'] + syntax_check() + output() + static_analyzer()
