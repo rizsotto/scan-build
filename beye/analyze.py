@@ -268,11 +268,15 @@ def continuation(expecteds=[]):
         @functools.wraps(fn)
         def wrapper(opts, cont):
             logging.debug('opts {0}'.format(opts))
-            for expected in expecteds:
-                if expected not in opts:
-                    logging.error('{0} not passed to {1}'.format(expected, fn.__name__))
-            result = fn(opts, cont)
-            return result
+            try:
+                for expected in expecteds:
+                    if expected not in opts:
+                        raise KeyError('{0} not passed to {1}'.format(expected, fn.__name__))
+
+                return fn(opts, cont)
+            except Exception as e:
+                logging.error(str(e))
+                return None
 
         return wrapper
 
@@ -406,49 +410,45 @@ def set_analyzer_output(opts, continuation):
 @trace
 @continuation(['language', 'file'])
 def run_analyzer(opts, continuation):
-    try:
-        cwd = opts.get('directory', os.getcwd())
-        cmd = get_clang_arguments(cwd, build_args(opts))
-        logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-        child = subprocess.Popen(cmd,
-                                cwd=cwd,
-                                universal_newlines=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-        child.wait()
-        output = child.stdout.readlines()
-        # copy to stderr
-        for line in output:
-            sys.stderr.write(line)
-        # do report details if it were asked
-        if 'report_failures' in opts:
-            error_type = None
-            attributes_not_handled = set()
+    cwd = opts.get('directory', os.getcwd())
+    cmd = get_clang_arguments(cwd, build_args(opts))
+    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    child = subprocess.Popen(cmd,
+                            cwd=cwd,
+                            universal_newlines=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    child.wait()
+    output = child.stdout.readlines()
+    # copy to stderr
+    for line in output:
+        sys.stderr.write(line)
+    # do report details if it were asked
+    if 'report_failures' in opts:
+        error_type = None
+        attributes_not_handled = set()
 
-            if (child.returncode & 127) and 'html_dir' in opts:
-                error_type = 'crash'
-            elif child.returncode:
-                # FIXME this might be controled by argument
-                error_type = 'parser_rejects' if False else 'attribute_ignored'
-            else:
-                regexp = re.compile("warning: '([^\']+)' attribute ignored")
-                for line in output:
-                    match = regexp.match(it.current)
-                    if match:
-                        error_type = 'attribute_ignored'
-                        attributes_not_handled.add(match.group(1))
+        if (child.returncode & 127) and 'html_dir' in opts:
+            error_type = 'crash'
+        elif child.returncode:
+            # FIXME this might be controled by argument
+            error_type = 'parser_rejects' if False else 'attribute_ignored'
+        else:
+            regexp = re.compile("warning: '([^\']+)' attribute ignored")
+            for line in output:
+                match = regexp.match(it.current)
+                if match:
+                    error_type = 'attribute_ignored'
+                    attributes_not_handled.add(match.group(1))
 
-            if error_type:
-                return continuation(filter_dict(opts, frozenset(),
-                    {'error_type': error_type,
-                     'error_output': output,
-                     'not_handled_attributes': attributes_not_handled,
-                     'exit_code': child.returncode}))
+        if error_type:
+            return continuation(filter_dict(opts, frozenset(),
+                {'error_type': error_type,
+                 'error_output': output,
+                 'not_handled_attributes': attributes_not_handled,
+                 'exit_code': child.returncode}))
 
-        return child.returncode
-    except Exception as ex:
-        logging.error('analyzer failed: {0}'.format(str(ex)))
-        return None
+    return child.returncode
 
 
 @trace
@@ -469,41 +469,36 @@ def report_failure(opts, continuation):
             os.makedirs(name)
         return name
 
-    try:
-        error = opts['error_type']
-        (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts['language']),
-                                      prefix='clang_' + error,
-                                      dir=failure_dir(opts))
-        cwd = opts.get('directory', os.getcwd())
-        cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
-        logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-        child = subprocess.Popen(cmd, cwd=cwd)
-        child.wait()
+    error = opts['error_type']
+    (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts['language']),
+                                  prefix='clang_' + error,
+                                  dir=failure_dir(opts))
+    os.close(fd)
+    cwd = opts.get('directory', os.getcwd())
+    cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
+    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    child = subprocess.Popen(cmd, cwd=cwd)
+    child.wait()
 
-        with open(name + '.info.txt', 'w') as ifd:
-            ifd.write(os.path.abspath(opts['file']) + os.linesep)
-            ifd.write(error.title().replace('_', ' ') + os.linesep)
-            ifd.write(' '.join(cmd) + os.linesep)
-            ifd.write(subprocess.check_output(['uname', '-a']))
-            ifd.write(subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
-            ifd.close()
+    with open(name + '.info.txt', 'w') as ifd:
+        ifd.write(os.path.abspath(opts['file']) + os.linesep)
+        ifd.write(error.title().replace('_', ' ') + os.linesep)
+        ifd.write(' '.join(cmd) + os.linesep)
+        ifd.write(subprocess.check_output(['uname', '-a']))
+        ifd.write(subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
+        ifd.close()
 
-        with open(name + '.stderr.txt', 'w') as efd:
-            for line in opts['error_output']:
-                efd.write(line)
-            efd.close()
+    with open(name + '.stderr.txt', 'w') as efd:
+        for line in opts['error_output']:
+            efd.write(line)
+        efd.close()
 
-        for attr in opts['not_handled_attributes']:
-            with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt', 'a') as fd:
-                fd.write(os.path.basename(name))
-                fd.close()
+    for attr in opts['not_handled_attributes']:
+        with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt', 'a') as fd:
+            fd.write(os.path.basename(name))
+            fd.close()
 
-        return opts['exit_code']
-    except Exception as ex:
-        logging.error('reporting failed: {0}'.format(str(ex)))
-        return None
-    finally:
-        os.close(fd)
+    return opts['exit_code']
 
 
 @trace
