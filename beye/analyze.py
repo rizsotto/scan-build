@@ -16,17 +16,94 @@ import functools
 import shlex
 
 
+""" Main method to run the analysis.
+
+    The analysis is written continuation-passing style. Each step takes
+    two arguments: the current analysis state, and the continuation to
+    call on success.
+"""
+def run(**kwargs):
+    def stack(conts):
+        def bind(cs, acc):
+            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
+
+        conts.reverse()
+        return bind(conts, lambda x: x)
+
+    chain = stack([parse,
+                  filter_action,
+                  arch_loop,
+                  files_loop,
+                  set_language,
+                  set_compiler,
+                  set_analyzer_output,
+                  run_analyzer,
+                  report_failure])
+
+    return chain(kwargs)
+
+
+""" Decorator to simplify debugging.
+"""
+def trace(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        logging.debug('entering {0}'.format(fn.__name__))
+        result = fn(*args, **kwargs)
+        logging.debug('leaving {0}'.format(fn.__name__))
+        return result
+
+    return wrapper
+
+
+""" Decorator to simplify debugging.
+"""
+def continuation(expecteds=[]):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(opts, cont):
+            logging.debug('opts {0}'.format(opts))
+            try:
+                for expected in expecteds:
+                    if expected not in opts:
+                        raise KeyError('{0} not passed to {1}'.format(expected, fn.__name__))
+
+                return fn(opts, cont)
+            except Exception as e:
+                logging.error(str(e))
+                return None
+
+        return wrapper
+
+    return decorator
+
+
+""" Utility function to isolate changes on dictionaries.
+
+    It only creates shallow copy of the input dictionary. So, modifying
+    values are not isolated. But to remove and add new ones are safe.
+"""
+def filter_dict(original, removables, additions):
+    new = dict()
+    for (k, v) in original.items():
+        if v and k not in removables:
+            new[k] = v
+    for (k, v) in additions.items():
+        new[k] = v
+    return new
+
+
+""" Enumeration class for compiler action.
+"""
 class Action:
     Link, Compile, Preprocess, Info = range(4)
 
 
-""" This method groups the command line arguments of the compiler.
-
-    The arguments suppose to be clang arguments. The result is a
-    dictionary, with the key of the group and the value as a list
-    of arguments which belongs to that group.
+""" This method parses the command line arguments of the current invocation.
 """
-def parse(args):
+@trace
+@continuation(['command'])
+def parse(opts, continuation):
     """ This method contains a list of pattern and action tuples.
         The matching start from the top if the list, when the first
         match happens the action is executed.
@@ -198,89 +275,15 @@ def parse(args):
 
     state = { 'action': Action.Link }
     try:
-        it = ArgumentIterator(args[1:])
+        cmd = shlex.split(opts['command'])
+        it = ArgumentIterator(cmd[1:])
         while True:
             it.next()
             match(state, it)
     except StopIteration:
-        return state
+        return continuation(filter_dict(opts, frozenset(['command']), state))
     except:
         logging.exception('parsing failed')
-
-
-""" Utility function to isolate changes on dictionaries.
-
-    It only creates shallow copy of the input dictionary. So, modifying
-    values are not isolated. But to remove and add new ones are safe.
-"""
-def filter_dict(original, removables, additions):
-    new = dict()
-    for (k, v) in original.items():
-        if v and k not in removables:
-            new[k] = v
-    for (k, v) in additions.items():
-        new[k] = v
-    return new
-
-
-""" Main method to run the analysis.
-
-    The analysis is written a lightweight continuation style. Each step
-    takes two arguments: the command line options grouped by the parse
-    method, and the continuation to call on success.
-"""
-def run(**kwargs):
-    def stack(conts):
-        def bind(cs, acc):
-            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
-
-        conts.reverse()
-        return bind(conts, lambda x: x)
-
-    chain = stack([filter_action,
-                  arch_loop,
-                  files_loop,
-                  set_language,
-                  set_compiler,
-                  set_analyzer_output,
-                  run_analyzer,
-                  report_failure])
-
-    opts = parse(shlex.split(kwargs['command']))
-    return chain(filter_dict(kwargs, frozenset(['command']), opts))
-
-
-""" Trace utilities to simplify debugging.
-"""
-def trace(fn):
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        logging.debug('entering {0}'.format(fn.__name__))
-        result = fn(*args, **kwargs)
-        logging.debug('leaving {0}'.format(fn.__name__))
-        return result
-
-    return wrapper
-
-
-def continuation(expecteds=[]):
-    def decorator(fn):
-        @functools.wraps(fn)
-        def wrapper(opts, cont):
-            logging.debug('opts {0}'.format(opts))
-            try:
-                for expected in expecteds:
-                    if expected not in opts:
-                        raise KeyError('{0} not passed to {1}'.format(expected, fn.__name__))
-
-                return fn(opts, cont)
-            except Exception as e:
-                logging.error(str(e))
-                return None
-
-        return wrapper
-
-    return decorator
 
 
 """ Continue analysis only if it compilation or link.
