@@ -3,11 +3,12 @@ language: python
 python:
   - 2.6
   - 2.7
+  - 3.2
   - 3.3
 
 install:
-  - "pip install . --use-mirrors"
-  - "pip install -r requirements.txt --use-mirrors"
+  - "pip install ."
+  - "pip install -r requirements.txt"
 
 script:
   - nosetests -v

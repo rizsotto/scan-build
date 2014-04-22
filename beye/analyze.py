@@ -5,7 +5,6 @@
 
 import subprocess
 import logging
-import six
 import re
 import os
 import os.path
@@ -270,7 +269,7 @@ def parse(opts, continuation):
             self.__it = iter(args)
 
         def next(self):
-            self.current = six.next(self.__it)
+            self.current = next(self.__it) if 3 == sys.version_info[0] else self.__it.next()
             return self.current
 
     state = { 'action': Action.Link }
