@@ -263,26 +263,32 @@ def trace(fn):
     return wrapper
 
 
-def continuation(fn):
-    @functools.wraps(fn)
-    def wrapper(opts, cont):
-        logging.debug('opts {0}'.format(opts))
-        result = fn(opts, cont)
-        return result
+def continuation(expecteds=[]):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(opts, cont):
+            logging.debug('opts {0}'.format(opts))
+            for expected in expecteds:
+                if expected not in opts:
+                    logging.error('{0} not passed to {1}'.format(expected, fn.__name__))
+            result = fn(opts, cont)
+            return result
 
-    return wrapper
+        return wrapper
+
+    return decorator
 
 
 """ Continue analysis only if it compilation or link.
 """
 @trace
-@continuation
+@continuation(['action'])
 def filter_action(opts, continuation):
     return continuation(opts) if opts['action'] <= Action.Compile else 0
 
 
 @trace
-@continuation
+@continuation()
 def arch_loop(opts, continuation):
     disableds = ['ppc', 'ppc64']
 
@@ -304,7 +310,7 @@ def arch_loop(opts, continuation):
 
 
 @trace
-@continuation
+@continuation()
 def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
@@ -318,7 +324,7 @@ def files_loop(opts, continuation):
 
 
 @trace
-@continuation
+@continuation(['file'])
 def set_language(opts, continuation):
     def from_filename(fn, isCxx):
         mapping = {
@@ -362,14 +368,14 @@ def set_language(opts, continuation):
 
 
 @trace
-@continuation
+@continuation(['language'])
 def set_compiler(opts, continuation):
     clang = 'clang++' if opts.get('isCxx') or 'c++' == opts['language'] else 'clang'
     return continuation(filter_dict(opts, frozenset('isCxx'), {'clang': clang}))
 
 
 @trace
-@continuation
+@continuation()
 def set_analyzer_output(opts, continuation):
     @trace
     def create_analyzer_output():
@@ -398,7 +404,7 @@ def set_analyzer_output(opts, continuation):
 
 
 @trace
-@continuation
+@continuation(['language', 'file'])
 def run_analyzer(opts, continuation):
     try:
         cwd = opts.get('directory', os.getcwd())
@@ -446,7 +452,7 @@ def run_analyzer(opts, continuation):
 
 
 @trace
-@continuation
+@continuation(['language', 'file', 'error_type', 'error_output', 'exit_code'])
 def report_failure(opts, continuation):
     def preprocessor_ext(language):
         mapping = {
@@ -465,7 +471,7 @@ def report_failure(opts, continuation):
 
     try:
         error = opts['error_type']
-        (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts.get('language')),
+        (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts['language']),
                                       prefix='clang_' + error,
                                       dir=failure_dir(opts))
         cwd = opts.get('directory', os.getcwd())
