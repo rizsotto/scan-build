@@ -390,13 +390,13 @@ def set_compiler(opts, continuation):
 
 
 @trace
-@continuation()
+@continuation(['html_dir'])
 def set_analyzer_output(opts, continuation):
     @trace
     def create_analyzer_output():
         (fd, name) = tempfile.mkstemp(suffix='.plist',
                                       prefix='report-',
-                                      dir=opts.get('html_dir'))
+                                      dir=opts['html_dir'])
         os.close(fd)
         logging.info('analyzer output: {0}'.format(name))
         return name
@@ -404,13 +404,12 @@ def set_analyzer_output(opts, continuation):
     @trace
     def cleanup_when_needed(fn):
         try:
-            if 'html_dir' not in opts or os.stat(fn).st_size == 0:
+            if 0 == os.stat(fn).st_size:
                 os.remove(fn)
         except:
             logging.warning('cleanup on analyzer output failed {0}'.format(fn))
 
-    key = 'output_format'
-    if key in opts and 'plist' == opts[key]:
+    if 'plist' == opts.get('output_format'):
         fn = create_analyzer_output()
         status = continuation(filter_dict(opts, frozenset(), {'analyzer_output': fn}))
         cleanup_when_needed(fn)
@@ -439,7 +438,7 @@ def run_analyzer(opts, continuation):
         error_type = None
         attributes_not_handled = set()
 
-        if (child.returncode & 127) and 'html_dir' in opts:
+        if (child.returncode & 127):
             error_type = 'crash'
         elif child.returncode:
             # FIXME this might be controled by argument
@@ -463,7 +462,7 @@ def run_analyzer(opts, continuation):
 
 
 @trace
-@continuation(['language', 'directory', 'file', 'error_type', 'error_output', 'exit_code'])
+@continuation(['language', 'directory', 'file', 'html_dir', 'error_type', 'error_output', 'exit_code'])
 def report_failure(opts, continuation):
     def preprocessor_ext(language):
         mapping = {
@@ -474,8 +473,7 @@ def report_failure(opts, continuation):
         return mapping.get(language, '.i')
 
     def failure_dir(opts):
-        # FIXME what happen if html_dir is not given?
-        name = os.path.abspath(opts.get('html_dir') + '/failures')
+        name = os.path.abspath(opts['html_dir'] + '/failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
