@@ -34,6 +34,7 @@ def run(**kwargs):
                   arch_loop,
                   files_loop,
                   set_language,
+                  set_directory,
                   set_compiler,
                   set_analyzer_output,
                   run_analyzer,
@@ -374,6 +375,14 @@ def set_language(opts, continuation):
 
 
 @trace
+@continuation()
+def set_directory(opts, continuation):
+    if 'directory' not in opts:
+        opts['directory'] = os.getcwd()
+    return continuation(opts)
+
+
+@trace
 @continuation(['language'])
 def set_compiler(opts, continuation):
     clang = 'clang++' if opts.get('isCxx') or 'c++' == opts['language'] else 'clang'
@@ -410,9 +419,9 @@ def set_analyzer_output(opts, continuation):
 
 
 @trace
-@continuation(['language', 'file'])
+@continuation(['language', 'directory', 'file'])
 def run_analyzer(opts, continuation):
-    cwd = opts.get('directory', os.getcwd())
+    cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts))
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     child = subprocess.Popen(cmd,
@@ -454,7 +463,7 @@ def run_analyzer(opts, continuation):
 
 
 @trace
-@continuation(['language', 'file', 'error_type', 'error_output', 'exit_code'])
+@continuation(['language', 'directory', 'file', 'error_type', 'error_output', 'exit_code'])
 def report_failure(opts, continuation):
     def preprocessor_ext(language):
         mapping = {
@@ -476,7 +485,7 @@ def report_failure(opts, continuation):
                                   prefix='clang_' + error,
                                   dir=failure_dir(opts))
     os.close(fd)
-    cwd = opts.get('directory', os.getcwd())
+    cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     child = subprocess.Popen(cmd, cwd=cwd)
