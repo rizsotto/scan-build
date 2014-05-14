@@ -3,7 +3,7 @@
 # Copyright 2013 by László Nagy
 # This file is part of Beye [see file LICENSE.txt for more]
 
-import beye.analyze as sut
+import analyzer as sut
 from nose.tools import assert_equals
 
 

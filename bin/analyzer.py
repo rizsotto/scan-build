@@ -15,6 +15,38 @@ import functools
 import shlex
 
 
+def main():
+    def is_called_as_cxx():
+        return False if sys.argv[0] == 'ccc-analyzer' else True
+
+    def split_env_content(name):
+        content = os.environ.get(name)
+        return content.split() if content else None
+
+    if (os.environ.get('CCC_ANALYZER_VERBOSE')):
+        log_level = 'DEBUG'
+    elif (os.environ.get('CCC_ANALYZER_LOG')):
+        log_level = 'INFO'
+    else:
+        log_level = 'WARNING'
+
+    logging.basicConfig(format='%(message)s', level=log_level)
+    logging.info(' '.join(sys.argv))
+
+    return run(
+        command=sys.argv,
+        isCxx=is_called_as_cxx(),
+        analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
+        plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
+        config=split_env_content('CCC_ANALYZER_CONFIG'),
+        store_model=os.environ.get('CCC_ANALYZER_STORE_MODEL'),
+        constraints_model=os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
+        internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
+        output_format=os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
+        html_dir=os.environ.get('CCC_ANALYZER_HTML'),
+        report_failures=os.environ.get('CCC_REPORT_FAILURES'))
+
+
 """ Main method to run the analysis.
 
     The analysis is written continuation-passing style. Each step takes

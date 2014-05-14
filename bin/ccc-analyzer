@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Copyright 2013 by László Nagy
+# This file is part of Beye [see file LICENSE.txt for more]
+
+import analyzer
+
+# entry symbol
+if __name__ == '__main__':
+    analyzer.main()
