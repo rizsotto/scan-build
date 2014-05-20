@@ -16,26 +16,24 @@ import shlex
 
 
 def main():
-    def is_called_as_cxx():
-        return False if sys.argv[0] == 'ccc-analyzer' else True
-
     def split_env_content(name):
         content = os.environ.get(name)
         return content.split() if content else None
 
     if (os.environ.get('CCC_ANALYZER_VERBOSE')):
-        log_level = 'DEBUG'
+        log_level = loggin.DEBUG
     elif (os.environ.get('CCC_ANALYZER_LOG')):
-        log_level = 'INFO'
+        log_level = loggin.INFO
     else:
-        log_level = 'WARNING'
+        log_level = logging.WARNING
 
     logging.basicConfig(format='%(message)s', level=log_level)
     logging.info(' '.join(sys.argv))
 
     return run(
         command=sys.argv,
-        isCxx=is_called_as_cxx(),
+        isCxx=('c++-analyzer' == sys.argv[0])
+        verbose=True if log_level < loggin.WARNING else None
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
         config=split_env_content('CCC_ANALYZER_CONFIG'),
@@ -44,6 +42,7 @@ def main():
         internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
         output_format=os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
         html_dir=os.environ.get('CCC_ANALYZER_HTML'),
+        ubiviz=os.environ.get('CCC_UBI'),
         report_failures=os.environ.get('CCC_REPORT_FAILURES'))
 
 
@@ -608,8 +607,10 @@ def build_args(opts, syntax_only=False):
             result.append('-analyzer-output={0}'.format(opts['output_format']))
         if 'config' in opts:
             result.append(opts['config'])
-        # TODO: verbose should add '-analyzer-display-progress'
-        # TODO: 'CCC_UBI' should add '-analyzer-viz-egraph-ubigraph'
+        if 'verbose' in opts:
+            result.append('-analyzer-display-progress')
+        if 'ubiviz' in opts:
+            result.append('-analyzer-viz-egraph-ubigraph')
         return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
 
     if syntax_only:
