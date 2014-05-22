@@ -176,6 +176,7 @@ def parse(opts, continuation):
             anyof(['-write-strings',
                    '-v'], take_one('compile_options', 'link_options')),
             anyof(['-ftrapv-handler',
+                   '--sysroot',
                    '-target'], take_two('compile_options', 'link_options')),
             regex('^-isysroot', take_two('compile_options', 'link_options')),
             regex('^-m(32|64)$', take_one('compile_options', 'link_options')),
