@@ -473,8 +473,7 @@ def run_analyzer(opts, continuation):
         if (child.returncode & 127):
             error_type = 'crash'
         elif child.returncode:
-            # FIXME this might be controled by argument
-            error_type = 'parser_rejects' if False else 'attribute_ignored'
+            error_type = 'other_error'
         else:
             regexp = re.compile("warning: '([^\']+)' attribute ignored")
             for line in output:
