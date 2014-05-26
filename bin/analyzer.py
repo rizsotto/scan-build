@@ -52,6 +52,8 @@ def main():
     two arguments: the current analysis state, and the continuation to
     call on success.
 """
+
+
 def run(**kwargs):
     def stack(conts):
         def bind(cs, acc):
@@ -61,21 +63,23 @@ def run(**kwargs):
         return bind(conts, lambda x: x)
 
     chain = stack([parse,
-                  filter_action,
-                  arch_loop,
-                  files_loop,
-                  set_language,
-                  set_directory,
-                  set_compiler,
-                  set_analyzer_output,
-                  run_analyzer,
-                  report_failure])
+                   filter_action,
+                   arch_loop,
+                   files_loop,
+                   set_language,
+                   set_directory,
+                   set_compiler,
+                   set_analyzer_output,
+                   run_analyzer,
+                   report_failure])
 
     return chain(kwargs)
 
 
 """ Decorator to simplify debugging.
 """
+
+
 def trace(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
@@ -89,6 +93,8 @@ def trace(fn):
 
 """ Decorator to simplify debugging.
 """
+
+
 def continuation(expecteds=[]):
     def decorator(fn):
         @functools.wraps(fn)
@@ -97,7 +103,10 @@ def continuation(expecteds=[]):
             try:
                 for expected in expecteds:
                     if expected not in opts:
-                        raise KeyError('{0} not passed to {1}'.format(expected, fn.__name__))
+                        raise KeyError(
+                            '{0} not passed to {1}'.format(
+                                expected,
+                                fn.__name__))
 
                 return fn(opts, cont)
             except Exception as e:
@@ -114,6 +123,8 @@ def continuation(expecteds=[]):
     It only creates shallow copy of the input dictionary. So, modifying
     values are not isolated. But to remove and add new ones are safe.
 """
+
+
 def filter_dict(original, removables, additions):
     new = dict()
     for (k, v) in original.items():
@@ -126,12 +137,16 @@ def filter_dict(original, removables, additions):
 
 """ Enumeration class for compiler action.
 """
+
+
 class Action:
     Link, Compile, Preprocess, Info = range(4)
 
 
 """ This method parses the command line arguments of the current invocation.
 """
+
+
 @trace
 @continuation(['command'])
 def parse(opts, continuation):
@@ -297,15 +312,17 @@ def parse(opts, continuation):
         return take
 
     class ArgumentIterator:
+
         def __init__(self, args):
             self.current = None
             self.__it = iter(args)
 
         def next(self):
-            self.current = next(self.__it) if 3 == sys.version_info[0] else self.__it.next()
+            self.current = next(self.__it) if 3 == sys.version_info[0] \
+                else self.__it.next()
             return self.current
 
-    state = { 'action': Action.Link }
+    state = {'action': Action.Link}
     try:
         cmd = shlex.split(opts['command'])
         it = ArgumentIterator(cmd[1:])
@@ -320,6 +337,8 @@ def parse(opts, continuation):
 
 """ Continue analysis only if it compilation or link.
 """
+
+
 @trace
 @continuation(['action'])
 def filter_action(opts, continuation):
@@ -337,7 +356,8 @@ def arch_loop(opts, continuation):
         if archs:
             for arch in archs:
                 logging.info('analysis, on arch: {0}'.format(arch))
-                status = continuation(filter_dict(opts, frozenset([key]), {'arch': arch}))
+                status = continuation(
+                    filter_dict(opts, frozenset([key]), {'arch': arch}))
                 if status != 0:
                     return status
         else:
@@ -354,7 +374,8 @@ def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
             logging.info('analysis, source file: {0}'.format(fn))
-            status = continuation(filter_dict(opts, frozenset(['files']), {'file': fn}))
+            status = continuation(
+                filter_dict(opts, frozenset(['files']), {'file': fn}))
             if status != 0:
                 return status
     else:
@@ -367,19 +388,19 @@ def files_loop(opts, continuation):
 def set_language(opts, continuation):
     def from_filename(fn, isCxx):
         mapping = {
-          '.c'   : 'c++' if isCxx else 'c',
-          '.cp'  : 'c++',
-          '.cpp' : 'c++',
-          '.cxx' : 'c++',
-          '.txx' : 'c++',
-          '.cc'  : 'c++',
-          '.C'   : 'c++',
-          '.ii'  : 'c++-cpp-output',
-          '.i'   : 'c++-cpp-output' if isCxx else 'c-cpp-output',
-          '.m'   : 'objective-c',
-          '.mi'  : 'objective-c-cpp-output',
-          '.mm'  : 'objective-c++',
-          '.mii' : 'objective-c++-cpp-output'
+            '.c': 'c++' if isCxx else 'c',
+            '.cp': 'c++',
+            '.cpp': 'c++',
+            '.cxx': 'c++',
+            '.txx': 'c++',
+            '.cc': 'c++',
+            '.C': 'c++',
+            '.ii': 'c++-cpp-output',
+            '.i': 'c++-cpp-output' if isCxx else 'c-cpp-output',
+            '.m': 'objective-c',
+            '.mi': 'objective-c-cpp-output',
+            '.mm': 'objective-c++',
+            '.mii': 'objective-c++-cpp-output'
         }
         (_, extension) = os.path.splitext(os.path.basename(fn))
         return mapping.get(extension)
@@ -395,14 +416,16 @@ def set_language(opts, continuation):
     ]
 
     key = 'language'
-    language = opts[key] if key in opts else from_filename(opts['file'], opts.get('isCxx'))
+    language = opts[key] if key in opts else \
+        from_filename(opts['file'], opts.get('isCxx'))
     if language is None:
         logging.info('skip analysis, language not known')
     elif language not in accepteds:
         logging.info('skip analysis, language not supported')
     else:
         logging.info('analysis, language: {0}'.format(language))
-        return continuation(filter_dict(opts, frozenset([key]), {key: language}))
+        return continuation(
+            filter_dict(opts, frozenset([key]), {key: language}))
     return 0
 
 
@@ -417,8 +440,10 @@ def set_directory(opts, continuation):
 @trace
 @continuation(['language'])
 def set_compiler(opts, continuation):
-    clang = 'clang++' if opts.get('isCxx') or 'c++' == opts['language'] else 'clang'
-    return continuation(filter_dict(opts, frozenset('isCxx'), {'clang': clang}))
+    clang = 'clang++' \
+        if opts.get('isCxx') or 'c++' == opts['language'] else 'clang'
+    return continuation(
+        filter_dict(opts, frozenset('isCxx'), {'clang': clang}))
 
 
 @trace
@@ -443,7 +468,8 @@ def set_analyzer_output(opts, continuation):
 
     if 'plist' == opts.get('output_format'):
         fn = create_analyzer_output()
-        status = continuation(filter_dict(opts, frozenset(), {'analyzer_output': fn}))
+        status = continuation(
+            filter_dict(opts, frozenset(), {'analyzer_output': fn}))
         cleanup_when_needed(fn)
         return status
     return continuation(opts)
@@ -456,10 +482,10 @@ def run_analyzer(opts, continuation):
     cmd = get_clang_arguments(cwd, build_args(opts))
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     child = subprocess.Popen(cmd,
-                            cwd=cwd,
-                            universal_newlines=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
+                             cwd=cwd,
+                             universal_newlines=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
     child.wait()
     output = child.stdout.readlines()
     # copy to stderr
@@ -483,23 +509,31 @@ def run_analyzer(opts, continuation):
                     attributes_not_handled.add(match.group(1))
 
         if error_type:
-            return continuation(filter_dict(opts, frozenset(),
-                {'error_type': error_type,
-                 'error_output': output,
-                 'not_handled_attributes': attributes_not_handled,
-                 'exit_code': child.returncode}))
+            return continuation(
+                filter_dict(opts,
+                            frozenset(),
+                            {'error_type': error_type,
+                             'error_output': output,
+                             'not_handled_attributes': attributes_not_handled,
+                             'exit_code': child.returncode}))
 
     return child.returncode
 
 
 @trace
-@continuation(['language', 'directory', 'file', 'html_dir', 'error_type', 'error_output', 'exit_code'])
+@continuation(['language',
+               'directory',
+               'file',
+               'html_dir',
+               'error_type',
+               'error_output',
+               'exit_code'])
 def report_failure(opts, continuation):
     def preprocessor_ext(language):
         mapping = {
-            'objective-c++' : '.mii',
-            'objective-c'   : '.mi',
-            'c++'           : '.ii'
+            'objective-c++': '.mii',
+            'objective-c': '.mi',
+            'c++': '.ii'
         }
         return mapping.get(language, '.i')
 
@@ -525,7 +559,8 @@ def report_failure(opts, continuation):
         ifd.write(error.title().replace('_', ' ') + os.linesep)
         ifd.write(' '.join(cmd) + os.linesep)
         ifd.write(subprocess.check_output(['uname', '-a']))
-        ifd.write(subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
+        ifd.write(
+            subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
         ifd.close()
 
     with open(name + '.stderr.txt', 'w') as efd:
@@ -534,7 +569,8 @@ def report_failure(opts, continuation):
         efd.close()
 
     for attr in opts['not_handled_attributes']:
-        with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt', 'a') as fd:
+        with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt',
+                  'a') as fd:
             fd.write(os.path.basename(name))
             fd.close()
 
@@ -564,7 +600,8 @@ def get_clang_arguments(cwd, cmd):
                                  stderr=subprocess.STDOUT)
         child.wait()
         if 0 == child.returncode:
-            return [strip_quotes(x) for x in shlex.split(lastline(child.stdout))]
+            return [
+                strip_quotes(x) for x in shlex.split(lastline(child.stdout))]
         else:
             raise Exception(lastline(child.stdout))
     except Exception as e:
@@ -596,7 +633,8 @@ def build_args(opts, syntax_only=False):
         if 'store_model' in opts:
             result.append('-analyzer-store={0}'.format(opts['store_model']))
         if 'constraints_model' in opts:
-            result.append('-analyzer-constraints={0}'.format(opts['constraints_model']))
+            result.append(
+                '-analyzer-constraints={0}'.format(opts['constraints_model']))
         if 'internal_stats' in opts:
             result.append('-analyzer-stats')
         if 'analyses' in opts:
@@ -611,9 +649,11 @@ def build_args(opts, syntax_only=False):
             result.append('-analyzer-display-progress')
         if 'ubiviz' in opts:
             result.append('-analyzer-viz-egraph-ubigraph')
-        return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
+        return functools.reduce(
+            lambda acc, x: acc + ['-Xclang', x], result, [])
 
     if syntax_only:
         return [opts['clang'], '-###', '-fsyntax-only'] + syntax_check()
     else:
-        return [opts['clang'], '-###', '--analyze'] + syntax_check() + output() + static_analyzer()
+        return [opts['clang'], '-###', '--analyze'] + syntax_check() + \
+            output() + static_analyzer()

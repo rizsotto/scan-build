@@ -34,18 +34,24 @@ def test_filter_dict_insert_works():
 def test_filter_dict_delete_works():
     input = {'key': 1, 'value': 2}
     expected = {'value': 2}
-    assert_equals(expected, sut.filter_dict(input, frozenset(['key', 'other']), dict()))
+    assert_equals(
+        expected, sut.filter_dict(input, frozenset(['key', 'other']), dict()))
 
 
 def test_filter_dict_modify_works():
     input = {'key': 1}
     expected = {'key': 2}
-    assert_equals(expected, sut.filter_dict(input, frozenset(['key']), {'key': 2}))
+    assert_equals(
+        expected, sut.filter_dict(input, frozenset(['key']), {'key': 2}))
     assert_equals(1, input['key'])
 
 
 def test_filter_dict_does_strip():
-    input = {'good': 'has value', 'bad': None, 'another bad': None, 'normal': 'also'}
+    input = {
+        'good': 'has value',
+        'bad': None,
+        'another bad': None,
+        'normal': 'also'}
     expected = {'good': 'has value', 'normal': 'also'}
     assert_equals(expected, sut.filter_dict(input, frozenset(), {}))
 
@@ -62,11 +68,13 @@ def test_arch_loop_specified_forwards_call():
 
 
 class Spy:
+
     def __init__(self, attribute_name):
         self.attribute = attribute_name
         self.calls = []
         self.error_status = 500
         self.error_trigger = 'broken'
+
     def register(self, arg):
         self.calls.append(arg[self.attribute])
         if arg[self.attribute] == self.error_trigger:
