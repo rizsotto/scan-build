@@ -32,8 +32,8 @@ def main():
 
     return run(
         command=sys.argv,
-        isCxx=('c++-analyzer' == sys.argv[0])
-        verbose=True if log_level < loggin.WARNING else None
+        isCxx=('c++-analyzer' == sys.argv[0]),
+        verbose=True if log_level < loggin.WARNING else None,
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
         config=split_env_content('CCC_ANALYZER_CONFIG'),
