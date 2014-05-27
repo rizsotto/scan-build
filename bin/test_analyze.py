@@ -14,7 +14,7 @@ def test_set_language():
 
     l = 'language'
     f = 'file'
-    i = 'isCxx'
+    i = 'is_cxx'
     test({f: 'file.c', l: 'c'}, {f: 'file.c', l: 'c'})
     test({f: 'file.c', l: 'c++'}, {f: 'file.c', l: 'c++'})
     test({f: 'file.c', l: 'c++', i: True}, {f: 'file.c', i: True})

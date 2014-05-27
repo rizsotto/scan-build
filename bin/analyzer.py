@@ -32,7 +32,7 @@ def main():
 
     return run(
         command=sys.argv,
-        isCxx=('c++-analyzer' == sys.argv[0]),
+        is_cxx=('c++-analyzer' == sys.argv[0]),
         verbose=True if log_level < loggin.WARNING else None,
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
@@ -62,13 +62,14 @@ def run(**kwargs):
         conts.reverse()
         return bind(conts, lambda x: x)
 
-    chain = stack([parse,
+    chain = stack([set_compiler,
+                   execute,
+                   parse,
                    filter_action,
                    arch_loop,
                    files_loop,
                    set_language,
                    set_directory,
-                   set_compiler,
                    set_analyzer_output,
                    run_analyzer,
                    report_failure])
@@ -133,6 +134,42 @@ def filter_dict(original, removables, additions):
     for (k, v) in additions.items():
         new[k] = v
     return new
+
+
+""" Detect compilers from environment/architecture.
+"""
+
+
+@trace
+@continuation(['is_cxx'])
+def set_compiler(opts, continuation):
+    match = re.match('Darwin', subprocess.check_output(['uname', '-a']))
+    cc_compiler = 'clang' if match else 'gcc'
+    cxx_compiler = 'clang++' if match else 'g++'
+
+    if opts['is_cxx']:
+        compiler = os.environ.get('CCC_CXX', cxx_compiler)
+        clang = os.environ.get('CLANG_CXX', 'clang++')
+    else:
+        compiler = os.environ.get('CCC_CC', cc_compiler)
+        clang = os.environ.get('CLANG_CXX', 'clang')
+
+    return continuation(
+        filter_dict(opts, frozenset(), {'clang': clang, 'compiler': compiler}))
+
+
+""" This method execute the original compiler call as it was given,
+    to create those artifacts which is required by the build sysyem.
+    And the exit code also comming from this step.
+"""
+
+
+@trace
+@continuation(['command', 'compiler'])
+def execute(opts, continuation):
+    result = subprocess.call(compiler + opts['command'][1:])
+    continuation(filter_dict(opts, frozenset(['compiler']), dict()))
+    return result
 
 
 """ Enumeration class for compiler action.
@@ -386,9 +423,9 @@ def files_loop(opts, continuation):
 @trace
 @continuation(['file'])
 def set_language(opts, continuation):
-    def from_filename(fn, isCxx):
+    def from_filename(fn, is_cxx):
         mapping = {
-            '.c': 'c++' if isCxx else 'c',
+            '.c': 'c++' if is_cxx else 'c',
             '.cp': 'c++',
             '.cpp': 'c++',
             '.cxx': 'c++',
@@ -396,7 +433,7 @@ def set_language(opts, continuation):
             '.cc': 'c++',
             '.C': 'c++',
             '.ii': 'c++-cpp-output',
-            '.i': 'c++-cpp-output' if isCxx else 'c-cpp-output',
+            '.i': 'c++-cpp-output' if is_cxx else 'c-cpp-output',
             '.m': 'objective-c',
             '.mi': 'objective-c-cpp-output',
             '.mm': 'objective-c++',
@@ -417,7 +454,7 @@ def set_language(opts, continuation):
 
     key = 'language'
     language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts.get('isCxx'))
+        from_filename(opts['file'], opts.get('is_cxx'))
     if language is None:
         logging.info('skip analysis, language not known')
     elif language not in accepteds:
@@ -435,15 +472,6 @@ def set_directory(opts, continuation):
     if 'directory' not in opts:
         opts['directory'] = os.getcwd()
     return continuation(opts)
-
-
-@trace
-@continuation(['language'])
-def set_compiler(opts, continuation):
-    clang = 'clang++' \
-        if opts.get('isCxx') or 'c++' == opts['language'] else 'clang'
-    return continuation(
-        filter_dict(opts, frozenset('isCxx'), {'clang': clang}))
 
 
 @trace
@@ -476,7 +504,7 @@ def set_analyzer_output(opts, continuation):
 
 
 @trace
-@continuation(['language', 'directory', 'file'])
+@continuation(['language', 'directory', 'file', 'clang'])
 def run_analyzer(opts, continuation):
     cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts))
@@ -524,6 +552,7 @@ def run_analyzer(opts, continuation):
 @continuation(['language',
                'directory',
                'file',
+               'clang',
                'html_dir',
                'error_type',
                'error_output',
