@@ -16,6 +16,7 @@ import shlex
 
 
 def main():
+    """ Entry point for executables like 'ccc-analyzer' and 'c++-analyzer'. """
     def split_env_content(name):
         content = os.environ.get(name)
         return content.split() if content else None
@@ -46,16 +47,15 @@ def main():
         report_failures=os.environ.get('CCC_REPORT_FAILURES'))
 
 
-""" Main method to run the analysis.
+def run(**kwargs):
+    """ Main method to run the analysis.
 
     The analysis is written continuation-passing style. Each step takes
     two arguments: the current analysis state, and the continuation to
     call on success.
-"""
-
-
-def run(**kwargs):
+    """
     def stack(conts):
+        """ Creates a single method from multiple continuations. """
         def bind(cs, acc):
             return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
 
@@ -77,11 +77,8 @@ def run(**kwargs):
     return chain(kwargs)
 
 
-""" Decorator to simplify debugging.
-"""
-
-
 def trace(function):
+    """ Decorator to simplify debugging. """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
         logging.debug('entering {0}'.format(function.__name__))
@@ -92,11 +89,12 @@ def trace(function):
     return wrapper
 
 
-""" Decorator to simplify debugging.
-"""
-
-
 def cps(expecteds=[]):
+    """ Decorator to simplify debugging.
+
+    It checks the required attributes in the passed state and stop when
+    any of those is missing.
+    """
     def decorator(function):
         @functools.wraps(function)
         def wrapper(opts, cont):
@@ -119,14 +117,12 @@ def cps(expecteds=[]):
     return decorator
 
 
-""" Utility function to isolate changes on dictionaries.
+def filter_dict(original, removables, additions):
+    """ Utility function to isolate changes on dictionaries.
 
     It only creates shallow copy of the input dictionary. So, modifying
     values are not isolated. But to remove and add new ones are safe.
-"""
-
-
-def filter_dict(original, removables, additions):
+    """
     new = dict()
     for (k, v) in original.items():
         if v and k not in removables:
@@ -136,13 +132,10 @@ def filter_dict(original, removables, additions):
     return new
 
 
-""" Detect compilers from environment/architecture.
-"""
-
-
 @trace
 @cps(['is_cxx'])
 def set_compiler(opts, continuation):
+    """ Detect compilers from environment/architecture. """
     match = re.match('Darwin', subprocess.check_output(['uname', '-a']))
     cc_compiler = 'clang' if match else 'gcc'
     cxx_compiler = 'clang++' if match else 'g++'
@@ -158,40 +151,32 @@ def set_compiler(opts, continuation):
         filter_dict(opts, frozenset(), {'clang': clang, 'compiler': compiler}))
 
 
-""" This method execute the original compiler call as it was given,
-    to create those artifacts which is required by the build sysyem.
-    And the exit code also comming from this step.
-"""
-
-
 @trace
 @cps(['command', 'compiler'])
 def execute(opts, continuation):
+    """ This method execute the original compiler call as it was given,
+    to create those artifacts which is required by the build sysyem.
+    And the exit code also comming from this step.
+    """
     result = subprocess.call(opts['compiler'] + opts['command'][1:])
     continuation(filter_dict(opts, frozenset(['compiler']), dict()))
     return result
 
 
-""" Enumeration class for compiler action.
-"""
-
-
 class Action:
+    """ Enumeration class for compiler action. """
     Link, Compile, Preprocess, Info = range(4)
-
-
-""" This method parses the command line arguments of the current invocation.
-"""
 
 
 @trace
 @cps(['command'])
 def parse(opts, continuation):
-    """ This method contains a list of pattern and action tuples.
-        The matching start from the top if the list, when the first
-        match happens the action is executed.
-    """
+    """ Parses the command line arguments of the current invocation. """
     def match(state, it):
+        """ This method contains a list of pattern and action tuples.
+            The matching start from the top if the list, when the first
+            match happens the action is executed.
+        """
         def regex(pattern, action):
             regexp = re.compile(pattern)
 
@@ -372,13 +357,10 @@ def parse(opts, continuation):
         logging.exception('parsing failed')
 
 
-""" Continue analysis only if it compilation or link.
-"""
-
-
 @trace
 @cps(['action'])
 def filter_action(opts, continuation):
+    """ Continue analysis only if it compilation or link. """
     return continuation(opts) if opts['action'] <= Action.Compile else 0
 
 
