@@ -20,10 +20,10 @@ def main():
         content = os.environ.get(name)
         return content.split() if content else None
 
-    if (os.environ.get('CCC_ANALYZER_VERBOSE')):
-        log_level = loggin.DEBUG
-    elif (os.environ.get('CCC_ANALYZER_LOG')):
-        log_level = loggin.INFO
+    if os.environ.get('CCC_ANALYZER_VERBOSE'):
+        log_level = logging.DEBUG
+    elif os.environ.get('CCC_ANALYZER_LOG'):
+        log_level = logging.INFO
     else:
         log_level = logging.WARNING
 
@@ -33,7 +33,7 @@ def main():
     return run(
         command=sys.argv,
         is_cxx=('c++-analyzer' == sys.argv[0]),
-        verbose=True if log_level < loggin.WARNING else None,
+        verbose=True if log_level < logging.WARNING else None,
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
         config=split_env_content('CCC_ANALYZER_CONFIG'),
@@ -81,12 +81,12 @@ def run(**kwargs):
 """
 
 
-def trace(fn):
-    @functools.wraps(fn)
+def trace(function):
+    @functools.wraps(function)
     def wrapper(*args, **kwargs):
-        logging.debug('entering {0}'.format(fn.__name__))
-        result = fn(*args, **kwargs)
-        logging.debug('leaving {0}'.format(fn.__name__))
+        logging.debug('entering {0}'.format(function.__name__))
+        result = function(*args, **kwargs)
+        logging.debug('leaving {0}'.format(function.__name__))
         return result
 
     return wrapper
@@ -96,9 +96,9 @@ def trace(fn):
 """
 
 
-def continuation(expecteds=[]):
-    def decorator(fn):
-        @functools.wraps(fn)
+def cps(expecteds=[]):
+    def decorator(function):
+        @functools.wraps(function)
         def wrapper(opts, cont):
             logging.debug('opts {0}'.format(opts))
             try:
@@ -107,9 +107,9 @@ def continuation(expecteds=[]):
                         raise KeyError(
                             '{0} not passed to {1}'.format(
                                 expected,
-                                fn.__name__))
+                                function.__name__))
 
-                return fn(opts, cont)
+                return function(opts, cont)
             except Exception as e:
                 logging.error(str(e))
                 return None
@@ -141,7 +141,7 @@ def filter_dict(original, removables, additions):
 
 
 @trace
-@continuation(['is_cxx'])
+@cps(['is_cxx'])
 def set_compiler(opts, continuation):
     match = re.match('Darwin', subprocess.check_output(['uname', '-a']))
     cc_compiler = 'clang' if match else 'gcc'
@@ -165,9 +165,9 @@ def set_compiler(opts, continuation):
 
 
 @trace
-@continuation(['command', 'compiler'])
+@cps(['command', 'compiler'])
 def execute(opts, continuation):
-    result = subprocess.call(compiler + opts['command'][1:])
+    result = subprocess.call(opts['compiler'] + opts['command'][1:])
     continuation(filter_dict(opts, frozenset(['compiler']), dict()))
     return result
 
@@ -185,7 +185,7 @@ class Action:
 
 
 @trace
-@continuation(['command'])
+@cps(['command'])
 def parse(opts, continuation):
     """ This method contains a list of pattern and action tuples.
         The matching start from the top if the list, when the first
@@ -274,9 +274,9 @@ def parse(opts, continuation):
                    '-seg1addr',
                    '-bundle_loader',
                    '-multiply_defined',
-                   '-sectorder',
                    '--param',
                    '--serialize-diagnostics'], take_two()),
+            anyof(['-sectorder'], take_four()),
             #
             regex('^-[fF](.+)$', take_one('compile_options', 'link_options'))
         ]
@@ -291,7 +291,7 @@ def parse(opts, continuation):
             values[key] = copy.copy(value)
 
     def take_n(n=1, *keys):
-        def take(values, it, _m):
+        def take(values, it, _match):
             current = []
             current.append(it.current)
             for _ in range(n - 1):
@@ -320,7 +320,7 @@ def parse(opts, continuation):
         return take
 
     def take_from_file(*keys):
-        def take(values, it, _m):
+        def take(values, it, _match):
             with open(it.next()) as f:
                 current = [l.strip() for l in f.readlines()]
                 for key in keys:
@@ -328,21 +328,21 @@ def parse(opts, continuation):
         return take
 
     def take_as(value, *keys):
-        def take(values, it, _m):
+        def take(values, _it, _match):
             current = [value]
             for key in keys:
                 extend(values, key, current)
         return take
 
     def take_second(*keys):
-        def take(values, it, _m):
+        def take(values, it, _match):
             current = it.next()
             for key in keys:
                 values[key] = current
         return take
 
     def take_action(action):
-        def take(values, _it, _m):
+        def take(values, _it, _match):
             key = 'action'
             current = values[key]
             values[key] = max(current, action)
@@ -377,13 +377,13 @@ def parse(opts, continuation):
 
 
 @trace
-@continuation(['action'])
+@cps(['action'])
 def filter_action(opts, continuation):
     return continuation(opts) if opts['action'] <= Action.Compile else 0
 
 
 @trace
-@continuation()
+@cps()
 def arch_loop(opts, continuation):
     disableds = ['ppc', 'ppc64']
 
@@ -406,7 +406,7 @@ def arch_loop(opts, continuation):
 
 
 @trace
-@continuation()
+@cps()
 def files_loop(opts, continuation):
     if 'files' in opts:
         for fn in opts['files']:
@@ -421,7 +421,7 @@ def files_loop(opts, continuation):
 
 
 @trace
-@continuation(['file'])
+@cps(['file'])
 def set_language(opts, continuation):
     def from_filename(fn, is_cxx):
         mapping = {
@@ -467,7 +467,7 @@ def set_language(opts, continuation):
 
 
 @trace
-@continuation()
+@cps()
 def set_directory(opts, continuation):
     if 'directory' not in opts:
         opts['directory'] = os.getcwd()
@@ -475,7 +475,7 @@ def set_directory(opts, continuation):
 
 
 @trace
-@continuation(['html_dir'])
+@cps(['html_dir'])
 def set_analyzer_output(opts, continuation):
     @trace
     def create_analyzer_output():
@@ -504,7 +504,7 @@ def set_analyzer_output(opts, continuation):
 
 
 @trace
-@continuation(['language', 'directory', 'file', 'clang'])
+@cps(['language', 'directory', 'file', 'clang'])
 def run_analyzer(opts, continuation):
     cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts))
@@ -524,14 +524,14 @@ def run_analyzer(opts, continuation):
         error_type = None
         attributes_not_handled = set()
 
-        if (child.returncode & 127):
+        if child.returncode & 127:
             error_type = 'crash'
         elif child.returncode:
             error_type = 'other_error'
         else:
             regexp = re.compile("warning: '([^\']+)' attribute ignored")
             for line in output:
-                match = regexp.match(it.current)
+                match = regexp.match(line)
                 if match:
                     error_type = 'attribute_ignored'
                     attributes_not_handled.add(match.group(1))
@@ -549,15 +549,15 @@ def run_analyzer(opts, continuation):
 
 
 @trace
-@continuation(['language',
-               'directory',
-               'file',
-               'clang',
-               'html_dir',
-               'error_type',
-               'error_output',
-               'exit_code'])
-def report_failure(opts, continuation):
+@cps(['language',
+      'directory',
+      'file',
+      'clang',
+      'html_dir',
+      'error_type',
+      'error_output',
+      'exit_code'])
+def report_failure(opts, _):
     def preprocessor_ext(language):
         mapping = {
             'objective-c++': '.mii',
