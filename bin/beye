@@ -8,6 +8,7 @@ import os
 import logging
 import multiprocessing
 import json
+import shlex
 
 import analyzer
 
@@ -60,6 +61,8 @@ def main():
 def analyze(task, out_dir):
     task['html_dir']=out_dir
     task['output_format']='html'
+    cmds=shlex.split(task['command'])
+    task['command']=cmds
     return analyzer.run(**task)
 
 

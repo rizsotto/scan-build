@@ -346,8 +346,7 @@ def parse(opts, continuation):
 
     state = {'action': Action.Link}
     try:
-        cmd = shlex.split(opts['command'])
-        it = ArgumentIterator(cmd[1:])
+        it = ArgumentIterator(opts['command'][1:])
         while True:
             it.next()
             match(state, it)
