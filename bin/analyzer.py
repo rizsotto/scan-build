@@ -158,7 +158,7 @@ def execute(opts, continuation):
     to create those artifacts which is required by the build sysyem.
     And the exit code also comming from this step.
     """
-    result = subprocess.call(opts['compiler'] + opts['command'][1:])
+    result = subprocess.call([opts['compiler']] + opts['command'][1:])
     continuation(filter_dict(opts, frozenset(['compiler']), dict()))
     return result
 
