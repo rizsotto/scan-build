@@ -136,7 +136,8 @@ def filter_dict(original, removables, additions):
 @cps(['is_cxx'])
 def set_compiler(opts, continuation):
     """ Detect compilers from environment/architecture. """
-    match = re.match('Darwin', subprocess.check_output(['uname', '-a']))
+    uname = subprocess.check_output(['uname', '-a']).decode('ascii')
+    match = re.match('Darwin', uname)
     cc_compiler = 'clang' if match else 'gcc'
     cxx_compiler = 'clang++' if match else 'g++'
 
@@ -148,7 +149,10 @@ def set_compiler(opts, continuation):
         clang = os.environ.get('CLANG_CXX', 'clang')
 
     return continuation(
-        filter_dict(opts, frozenset(), {'clang': clang, 'compiler': compiler}))
+        filter_dict(opts, frozenset(),
+                    {'clang': clang,
+                     'compiler': compiler,
+                     'uname': uname}))
 
 
 @trace
@@ -534,6 +538,7 @@ def run_analyzer(opts, continuation):
       'directory',
       'file',
       'clang',
+      'uname',
       'html_dir',
       'error_type',
       'error_output',
@@ -568,7 +573,7 @@ def report_failure(opts, _):
         ifd.write(os.path.abspath(opts['file']) + os.linesep)
         ifd.write(error.title().replace('_', ' ') + os.linesep)
         ifd.write(' '.join(cmd) + os.linesep)
-        ifd.write(subprocess.check_output(['uname', '-a']))
+        ifd.write(opts['uname'])
         ifd.write(
             subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
         ifd.close()
