@@ -460,7 +460,7 @@ def set_directory(opts, continuation):
 
 
 @trace
-@cps(['html_dir'])
+@cps()
 def set_analyzer_output(opts, continuation):
     @trace
     def create_analyzer_output():
@@ -479,7 +479,7 @@ def set_analyzer_output(opts, continuation):
         except:
             logging.warning('cleanup on analyzer output failed {0}'.format(fn))
 
-    if 'plist' == opts.get('output_format'):
+    if 'plist' == opts.get('output_format') and 'html_dir' in opts:
         fn = create_analyzer_output()
         status = continuation(
             filter_dict(opts, frozenset(), {'analyzer_output': fn}))
