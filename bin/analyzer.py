@@ -89,8 +89,8 @@ def trace(function):
     return wrapper
 
 
-def cps(expecteds=[]):
-    """ Decorator to simplify debugging.
+def cps(required=[]):
+    """ Decorator for continuation-passing style.
 
     It checks the required attributes in the passed state and stop when
     any of those is missing.
@@ -98,19 +98,18 @@ def cps(expecteds=[]):
     def decorator(function):
         @functools.wraps(function)
         def wrapper(opts, cont):
-            logging.debug('opts {0}'.format(opts))
             try:
-                for expected in expecteds:
-                    if expected not in opts:
-                        raise KeyError(
-                            '{0} not passed to {1}'.format(
-                                expected,
-                                function.__name__))
-
+                precondition(opts)
                 return function(opts, cont)
             except Exception as e:
                 logging.error(str(e))
                 return None
+
+        def precondition(opts):
+            for key in required:
+                if key not in opts:
+                    raise KeyError(
+                        '{0} not passed to {1}'.format(key, function.__name__))
 
         return wrapper
 
@@ -162,7 +161,9 @@ def execute(opts, continuation):
     to create those artifacts which is required by the build sysyem.
     And the exit code also comming from this step.
     """
-    result = subprocess.call([opts['compiler']] + opts['command'][1:])
+    cmd = [opts['compiler']] + opts['command'][1:]
+    logging.debug('exec command: {0}'.format(' '.join(cmd)))
+    result = subprocess.call(cmd)
     continuation(filter_dict(opts, frozenset(['compiler']), dict()))
     return result
 
