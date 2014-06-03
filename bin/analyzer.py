@@ -374,36 +374,33 @@ def arch_loop(opts, continuation):
     disableds = ['ppc', 'ppc64']
 
     key = 'archs_seen'
+    result = 0
     if key in opts:
         archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
-        if archs:
-            for arch in archs:
-                logging.info('analysis, on arch: {0}'.format(arch))
-                status = continuation(
-                    filter_dict(opts, frozenset([key]), {'arch': arch}))
-                if status != 0:
-                    return status
+        for arch in archs:
+            logging.info('analysis, on arch: {0}'.format(arch))
+            result += continuation(
+                filter_dict(opts, frozenset([key]), {'arch': arch}))
         else:
             logging.info('skip analysis, found not supported arch')
-            return 0
     else:
         logging.info('analysis, on default arch')
-        return continuation(opts)
+        result = continuation(opts)
+    return result
 
 
 @trace
 @cps()
 def files_loop(opts, continuation):
-    if 'files' in opts:
-        for fn in opts['files']:
-            logging.info('analysis, source file: {0}'.format(fn))
-            status = continuation(
-                filter_dict(opts, frozenset(['files']), {'file': fn}))
-            if status != 0:
-                return status
+    key = 'files'
+    result = 0
+    for fn in opts.get(key, []):
+        logging.info('analysis, source file: {0}'.format(fn))
+        result += continuation(
+            filter_dict(opts, frozenset([key]), {'file': fn}))
     else:
         logging.info('skip analysis, source file not found')
-        return 0
+    return result
 
 
 @trace

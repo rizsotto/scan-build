@@ -56,17 +56,6 @@ def test_filter_dict_does_strip():
     assert_equals(expected, sut.filter_dict(input, frozenset(), {}))
 
 
-def test_arch_loop_default_forwards_call():
-    input = {'key': 'value'}
-    assert_equals(input, sut.arch_loop(input, lambda x: x))
-
-
-def test_arch_loop_specified_forwards_call():
-    input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
-    expected = {'arch': 'i386'}
-    assert_equals(expected, sut.arch_loop(input, lambda x: x))
-
-
 class Spy:
 
     def __init__(self, attribute_name):
@@ -83,28 +72,46 @@ class Spy:
             return 0
 
 
+def test_arch_loop_default_forwards_call():
+    spy = Spy('key')
+    input = {'key': 'value'}
+    assert_equals(0, sut.arch_loop(input, spy.register))
+    assert_equals(['value'], spy.calls)
+
+
+def test_arch_loop_specified_forwards_call():
+    spy = Spy('arch')
+    input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
+    assert_equals(0, sut.arch_loop(input, spy.register))
+    assert_equals(['i386'], spy.calls)
+
+
 def test_arch_loop_stops_on_failure():
     spy = Spy('arch')
     input = {'archs_seen': ['-arch', spy.error_trigger, '-arch', 'i386']}
     assert_equals(spy.error_status, sut.arch_loop(input, spy.register))
-    assert_equals([spy.error_trigger], spy.calls)
+    assert_equals([spy.error_trigger, 'i386'], spy.calls)
 
 
 def test_files_loop_on_empty_forwards_call():
+    spy = Spy('file')
     input = {'key': 'value'}
-    assert_equals(0, sut.files_loop(input, lambda x: x))
+    assert_equals(0, sut.files_loop(input, spy.register))
+    assert_equals([], spy.calls)
 
 
 def test_files_loop_set_file_on_continuation():
+    spy = Spy('file')
     input = {'files': ['a']}
-    assert_equals({'file': 'a'}, sut.files_loop(input, lambda x: x))
+    assert_equals(0, sut.files_loop(input, spy.register))
+    assert_equals(['a'], spy.calls)
 
 
 def test_files_loop_on_failure():
     spy = Spy('file')
     input = {'files': ['a', spy.error_trigger, 'b']}
     assert_equals(spy.error_status, sut.files_loop(input, spy.register))
-    assert_equals(['a', spy.error_trigger], spy.calls)
+    assert_equals(['a', spy.error_trigger, 'b'], spy.calls)
 
 
 def test_set_analyzer_output_on_not_specified_forwards_call():
