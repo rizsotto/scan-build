@@ -9,9 +9,11 @@ python:
 
 install:
   - pip install .
-  - pip install -r requirements.txt
+  - pip install nose
   - pip install pep8
 
 script:
-  - nosetests -v bin/test_*
+  - nosetests -v bin
   - pep8 bin
+  - python setup.py build
+  - python setup.py install
