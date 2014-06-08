@@ -1,3 +1,3 @@
 void explode(void) __attribute__((deprecated("extremely unsafe, use 'combust' instead!!!")));
 
-void fixme(void) __attribute__((my_unknown_attr));
+typedef int __attribute__((visibility("default"))) bar;
