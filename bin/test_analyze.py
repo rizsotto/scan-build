@@ -112,15 +112,3 @@ def test_files_loop_on_failure():
     input = {'files': ['a', spy.error_trigger, 'b']}
     assert_equals(spy.error_status, sut.files_loop(input, spy.register))
     assert_equals(['a', spy.error_trigger, 'b'], spy.calls)
-
-
-def test_set_analyzer_output_on_not_specified_forwards_call():
-    input = {'key': 'value', 'html_dir': '/tmp'}
-    assert_equals(input, sut.set_analyzer_output(input, lambda x: x))
-
-
-def test_set_analyzer_output_create_temporary_file():
-    spy = Spy('analyzer_output')
-    input = {'output_format': 'plist', 'html_dir': '/tmp'}
-    status = sut.set_analyzer_output(input, spy.register)
-    assert_equals(1, len(spy.calls))
