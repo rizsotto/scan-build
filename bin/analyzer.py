@@ -613,12 +613,14 @@ def get_clang_arguments(cwd, cmd):
                                  stderr=subprocess.STDOUT)
         child.wait()
         if 0 == child.returncode:
-            return [
-                strip_quotes(x) for x in shlex.split(lastline(child.stdout))]
+            line = lastline(child.stdout)
+            if re.match('^clang: error:', line):
+                raise Exception(line)
+            return [strip_quotes(x) for x in shlex.split(line)]
         else:
             raise Exception(lastline(child.stdout))
     except Exception as e:
-        logging.error('exec failed: {0}'.format(str(e)))
+        logging.error('failed to get clang arguments: {0}'.format(str(e)))
         return None
 
 
