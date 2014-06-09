@@ -551,14 +551,14 @@ def report_failure(opts, _):
         return mapping.get(language, '.i')
 
     def failure_dir(opts):
-        name = os.path.abspath(opts['html_dir'] + '/failures')
+        name = os.path.abspath(opts['html_dir'] + os.sep + 'failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
 
     error = opts['error_type']
     (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts['language']),
-                                  prefix='clang_' + error,
+                                  prefix='clang_' + error + '_',
                                   dir=failure_dir(opts))
     os.close(fd)
     cwd = opts['directory']
@@ -567,25 +567,23 @@ def report_failure(opts, _):
     child = subprocess.Popen(cmd, cwd=cwd)
     child.wait()
 
-    with open(name + '.info.txt', 'w') as ifd:
-        ifd.write(os.path.abspath(opts['file']) + os.linesep)
-        ifd.write(error.title().replace('_', ' ') + os.linesep)
-        ifd.write(' '.join(cmd) + os.linesep)
-        ifd.write(opts['uname'])
-        ifd.write(
-            subprocess.check_output([cmd[0], '-v'], stderr=subprocess.STDOUT))
-        ifd.close()
+    with open(name + '.info.txt', 'w') as fd:
+        fd.write(os.path.abspath(opts['file']) + os.linesep)
+        fd.write(error.title().replace('_', ' ') + os.linesep)
+        fd.write(' '.join(cmd) + os.linesep)
+        fd.write(opts['uname'])
+        fd.write(
+            subprocess.check_output([cmd[0], '-v'],
+                                    stderr=subprocess.STDOUT).decode('ascii'))
 
-    with open(name + '.stderr.txt', 'w') as efd:
+    with open(name + '.stderr.txt', 'w') as fd:
         for line in opts['error_output']:
-            efd.write(line)
-        efd.close()
+            fd.write(line)
 
     for attr in opts['not_handled_attributes']:
-        with open(failure_dir(opts) + 'attribute_ignored_' + attr + '.txt',
-                  'a') as fd:
+        filename = 'attribute_ignored_' + attr + '.txt'
+        with open(failure_dir(opts) + os.sep + filename, 'a') as fd:
             fd.write(os.path.basename(name))
-            fd.close()
 
     return opts['exit_code']
 
