@@ -5,26 +5,19 @@
 
 import analyzer as sut
 from nose.tools import assert_equals
-import tempfile
+import fixtures
 import os
 
 
 def run_analyzer(content, opts):
-    class Spy:
-        def __init__(self):
-            self.arg = None
-
-        def call(self, params):
-            self.arg = params
-
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with fixtures.TempDir() as tmpdir:
         with open(tmpdir + os.sep + 'test.cpp', 'w') as fd:
             fd.write(content)
         adds = {'language': 'c++',
                 'directory': tmpdir,
                 'file': 'test.cpp',
                 'clang': 'clang'}
-        spy = Spy()
+        spy = fixtures.Spy()
         result = sut.run_analyzer(
             sut.filter_dict(opts, frozenset(), adds), spy.call)
         return (result, spy.arg)

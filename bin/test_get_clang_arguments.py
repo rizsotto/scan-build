@@ -5,12 +5,12 @@
 
 import analyzer as sut
 import nose.tools
-import tempfile
+import fixtures
 import os
 
 
 def get_clang_arguments(opts):
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with fixtures.TempDir() as tmpdir:
         with open(tmpdir + os.sep + 'test.c', 'w') as fd:
             fd.write('')
 

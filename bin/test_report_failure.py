@@ -5,7 +5,7 @@
 
 import analyzer as sut
 from nose.tools import assert_in, assert_equals
-import tempfile
+import fixtures
 import os
 
 
@@ -15,7 +15,7 @@ def assert_under_failures(arg):
 
 
 def test_report_failure_create_files():
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with fixtures.TempDir() as tmpdir:
         # create input file
         with open(tmpdir + os.sep + 'test.c', 'w') as fd:
             fd.write('int main() { return 0; }')
