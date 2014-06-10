@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-
-# Copyright 2013 by László Nagy
-# This file is part of Beye [see file LICENSE.txt for more]
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
 
 import analyzer as sut
 from nose.tools import assert_in, assert_equals
