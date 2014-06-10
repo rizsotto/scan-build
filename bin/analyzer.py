@@ -542,24 +542,24 @@ def run_analyzer(opts, continuation):
       'error_output',
       'exit_code'])
 def report_failure(opts, _):
-    def preprocessor_ext(language):
+    def extension(opts):
         mapping = {
             'objective-c++': '.mii',
             'objective-c': '.mi',
             'c++': '.ii'
         }
-        return mapping.get(language, '.i')
+        return mapping.get(opts['language'], '.i')
 
-    def failure_dir(opts):
+    def destination(opts):
         name = os.path.abspath(opts['html_dir'] + os.sep + 'failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
 
     error = opts['error_type']
-    (fd, name) = tempfile.mkstemp(suffix=preprocessor_ext(opts['language']),
+    (fd, name) = tempfile.mkstemp(suffix=extension(opts),
                                   prefix='clang_' + error + '_',
-                                  dir=failure_dir(opts))
+                                  dir=destination(opts))
     os.close(fd)
     cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
@@ -582,7 +582,7 @@ def report_failure(opts, _):
 
     for attr in opts['not_handled_attributes']:
         filename = 'attribute_ignored_' + attr + '.txt'
-        with open(failure_dir(opts) + os.sep + filename, 'a') as fd:
+        with open(os.path.dirname(name) + os.sep + filename, 'a') as fd:
             fd.write(os.path.basename(name))
 
     return opts['exit_code']
