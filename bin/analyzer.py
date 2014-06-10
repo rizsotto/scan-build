@@ -461,29 +461,28 @@ def set_directory(opts, continuation):
 @trace
 @cps()
 def set_analyzer_output(opts, continuation):
-    @trace
-    def create_analyzer_output():
-        (fd, name) = tempfile.mkstemp(suffix='.plist',
-                                      prefix='report-',
-                                      dir=opts['html_dir'])
-        os.close(fd)
-        logging.info('analyzer output: {0}'.format(name))
-        return name
+    class TempFile:
+        def __init__(self, html_dir):
+            (self.fd, self.name) = tempfile.mkstemp(suffix='.plist',
+                                                    prefix='report-',
+                                                    dir=html_dir)
+            logging.info('analyzer output: {0}'.format(self.name))
 
-    @trace
-    def cleanup_when_needed(fn):
-        try:
-            if 0 == os.stat(fn).st_size:
-                os.remove(fn)
-        except:
-            logging.warning('cleanup on analyzer output failed {0}'.format(fn))
+        def __enter__(self):
+            return self.name
+
+        def __exit__(self, exc, value, tb):
+            try:
+                os.close(self.fd)
+                if 0 == os.stat(self.name).st_size:
+                    os.remove(self.name)
+            except:
+                logging.warning('cleanup failed on {0}'.format(self.name))
 
     if 'plist' == opts.get('output_format') and 'html_dir' in opts:
-        fn = create_analyzer_output()
-        status = continuation(
-            filter_dict(opts, frozenset(), {'analyzer_output': fn}))
-        cleanup_when_needed(fn)
-        return status
+        with TempFile(opts['html_dir']) as output:
+            return continuation(
+                filter_dict(opts, frozenset(), {'analyzer_output': output}))
     return continuation(opts)
 
 
