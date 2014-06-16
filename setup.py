@@ -13,7 +13,7 @@ setup(
     url='https://github.com/rizsotto/Beye',
     license='LICENSE.txt',
     description='static code analyzer wrapper for Clang.',
-    long_description=open('README.txt').read(),
+    long_description=open('README.rst').read(),
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
