@@ -18,7 +18,6 @@ install:
   - pip install pep8
 
 script:
-  - nosetests -v bin
   - pep8 bin
-  - python setup.py build
+  - python setup.py test
   - python setup.py install

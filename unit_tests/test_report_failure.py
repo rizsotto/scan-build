@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer as sut
+from bin import analyzer as sut
 from nose.tools import assert_in, assert_equals
 import fixtures
 import os

@@ -25,5 +25,7 @@ setup(
         "Programming Language :: Objective C",
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Quality Assurance"
-    ]
+    ],
+    test_suite="nose.collector",
+    tests_require="nose"
 )
