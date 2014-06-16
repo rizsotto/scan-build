@@ -8,10 +8,22 @@ setup(
     version='0.1',
     author='László Nagy',
     author_email='rizsotto@gmail.com',
-    keywords=['clang', 'scan-build', 'checker', 'analyzer', 'static analyzer'],
+    keywords=['clang', 'scan-build', 'analyzer', 'static analyzer'],
     scripts=['bin/beye', 'bin/analyzer.py', 'bin/ccc-analyzer', 'bin/c++-analyzer'],
     url='https://github.com/rizsotto/Beye',
     license='LICENSE.txt',
     description='static code analyzer wrapper for Clang.',
-    long_description=open('README.txt').read()
+    long_description=open('README.txt').read(),
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
+        "Environment :: Console",
+        "Operating System :: POSIX",
+        "Intended Audience :: Developers",
+        "Programming Language :: C",
+        "Programming Language :: C++",
+        "Programming Language :: Objective C",
+        "Topic :: Software Development :: Compilers",
+        "Topic :: Software Development :: Quality Assurance"
+    ]
 )
