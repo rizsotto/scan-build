@@ -42,17 +42,5 @@ def test_run_analyzer_crash_and_forwarded():
     content = "int div(int n, int d) { return n / d }"
     (result, fwds) = run_analyzer(content, {'report_failures': True})
     assert_equals('crash', fwds['error_type'])
-    assert_equals(set(), fwds['not_handled_attributes'])
     assert_equals(1, fwds['exit_code'])
-    assert(len(fwds['error_output']) > 0)
-
-
-# this test is disabled, because analyzer does not produce the expected
-# warning, while the compiler does.
-def run_analyzer_unknown_attribute_and_forwarded():
-    content = 'typedef int __attribute__((visibility("default"))) bar;'
-    (result, fwds) = run_analyzer(content, {'report_failures': True})
-    assert_equals('attribute_ignored', fwds['error_type'])
-    assert_equals(set(['visibility']), fwds['not_handled_attributes'])
-    assert_equals(0, fwds['exit_code'])
     assert(len(fwds['error_output']) > 0)

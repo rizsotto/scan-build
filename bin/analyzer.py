@@ -505,31 +505,14 @@ def run_analyzer(opts, continuation):
     for line in output:
         sys.stderr.write(line)
     # do report details if it were asked
-    if 'report_failures' in opts:
-        error_type = None
-        attributes_not_handled = set()
-
-        if child.returncode & 127:
-            error_type = 'crash'
-        elif child.returncode:
-            error_type = 'other_error'
-        else:
-            regexp = re.compile("warning: '([^\']+)' attribute ignored")
-            for line in output:
-                match = regexp.match(line)
-                if match:
-                    error_type = 'attribute_ignored'
-                    attributes_not_handled.add(match.group(1))
-
-        if error_type:
-            return continuation(
-                filter_dict(opts,
-                            frozenset(),
-                            {'error_type': error_type,
-                             'error_output': output,
-                             'not_handled_attributes': attributes_not_handled,
-                             'exit_code': child.returncode}))
-
+    if 'report_failures' in opts and child.returncode:
+        error_type = 'crash' if child.returncode & 127 else 'other_error'
+        return continuation(
+            filter_dict(opts,
+                        frozenset(),
+                        {'error_type': error_type,
+                         'error_output': output,
+                         'exit_code': child.returncode}))
     return child.returncode
 
 
@@ -581,11 +564,6 @@ def report_failure(opts, _):
     with open(name + '.stderr.txt', 'w') as fd:
         for line in opts['error_output']:
             fd.write(line)
-
-    for attr in opts['not_handled_attributes']:
-        filename = 'attribute_ignored_' + attr + '.txt'
-        with open(os.path.dirname(name) + os.sep + filename, 'a') as fd:
-            fd.write(os.path.basename(name))
 
     return opts['exit_code']
 
