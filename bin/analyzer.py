@@ -378,12 +378,13 @@ def arch_loop(opts, continuation):
     result = 0
     if key in opts:
         archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
-        for arch in archs:
-            logging.info('analysis, on arch: {0}'.format(arch))
-            result += continuation(
-                filter_dict(opts, frozenset([key]), {'arch': arch}))
-        else:
+        if not archs:
             logging.info('skip analysis, found not supported arch')
+        else:
+            for arch in archs:
+                logging.info('analysis, on arch: {0}'.format(arch))
+                result += continuation(
+                    filter_dict(opts, frozenset([key]), {'arch': arch}))
     else:
         logging.info('analysis, on default arch')
         result = continuation(opts)
@@ -395,10 +396,11 @@ def arch_loop(opts, continuation):
 def files_loop(opts, continuation):
     key = 'files'
     result = 0
-    for fn in opts.get(key, []):
-        logging.info('analysis, source file: {0}'.format(fn))
-        result += continuation(
-            filter_dict(opts, frozenset([key]), {'file': fn}))
+    if key in opts:
+        for fn in opts[key]:
+            logging.info('analysis, source file: {0}'.format(fn))
+            result += continuation(
+                filter_dict(opts, frozenset([key]), {'file': fn}))
     else:
         logging.info('skip analysis, source file not found')
     return result
