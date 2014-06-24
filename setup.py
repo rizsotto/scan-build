@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='beye',
@@ -9,11 +9,19 @@ setup(
     author='László Nagy',
     author_email='rizsotto@gmail.com',
     keywords=['clang', 'scan-build', 'analyzer', 'static analyzer'],
-    scripts=['bin/beye', 'bin/analyzer.py', 'bin/ccc-analyzer', 'bin/c++-analyzer'],
     url='https://github.com/rizsotto/Beye',
     license='LICENSE.txt',
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.rst').read(),
+    zip_safe=False,
+    packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'ccc-analyzer = analyzer.core:run_cc',
+            'c++-analyzer = analyzer.core:run_cxx'
+        ]
+    },
+    scripts=['bin/beye'],
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",

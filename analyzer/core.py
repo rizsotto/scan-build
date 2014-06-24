@@ -16,8 +16,17 @@ import functools
 import shlex
 
 
-def main():
-    """ Entry point for executables like 'ccc-analyzer' and 'c++-analyzer'. """
+def run_cc():
+    """ Entry point for executables 'ccc-analyzer'. """
+    return main(False)
+
+
+def run_cxx():
+    """ Entry point for executables 'c++-analyzer'. """
+    return main(True)
+
+
+def main(is_cxx):
     def split_env_content(name):
         content = os.environ.get(name)
         return content.split() if content else None
@@ -34,7 +43,7 @@ def main():
 
     return run(
         command=sys.argv,
-        is_cxx=('c++-analyzer' == sys.argv[0]),
+        is_cxx=is_cxx,
         verbose=True if log_level < logging.WARNING else None,
         analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
         plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
