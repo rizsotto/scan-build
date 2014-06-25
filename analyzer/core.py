@@ -215,8 +215,7 @@ def parse(opts, continuation):
             anyof(['-c'], take_action(Action.Compile)),
             anyof(['-print-prog-name'], take_action(Action.Info)),
             #
-            anyof(['-arch'], take_two('archs_seen', 'compile_options',
-                                      'link_options')),
+            anyof(['-arch'], take_two('archs_seen')),
             #
             anyof(['-filelist'], take_from_file('files')),
             regex('^[^-].+', take_one('files')),
@@ -226,24 +225,21 @@ def parse(opts, continuation):
             anyof(['-o'], take_second('output')),
             #
             anyof(['-write-strings',
-                   '-v'], take_one('compile_options', 'link_options')),
+                   '-v'], take_one('compile_options')),
             anyof(['-ftrapv-handler',
                    '--sysroot',
-                   '-target'], take_two('compile_options', 'link_options')),
-            regex('^-isysroot', take_two('compile_options', 'link_options')),
-            regex('^-m(32|64)$', take_one('compile_options', 'link_options')),
+                   '-target'], take_two('compile_options')),
+            regex('^-isysroot', take_two('compile_options')),
+            regex('^-m(32|64)$', take_one('compile_options')),
             regex('^-mios-simulator-version-min(.*)',
-                  take_joined('compile_options', 'link_options')),
-            regex('^-stdlib(.*)',
-                  take_joined('compile_options', 'link_options')),
-            regex('^-mmacosx-version-min(.*)',
-                  take_joined('compile_options', 'link_options')),
+                  take_joined('compile_options')),
+            regex('^-stdlib(.*)', take_joined('compile_options')),
+            regex('^-mmacosx-version-min(.*)', take_joined('compile_options')),
             regex('^-miphoneos-version-min(.*)',
-                  take_joined('compile_options', 'link_options')),
-            regex('^-O[1-3]$', take_one('compile_options', 'link_options')),
-            anyof(['-O'], take_as('-O1', 'compile_options', 'link_options')),
-            anyof(['-Os'], take_as('-O2', 'compile_options', 'link_options')),
-            #
+                  take_joined('compile_options')),
+            regex('^-O[1-3]$', take_one('compile_options')),
+            anyof(['-O'], take_as('-O1', 'compile_options')),
+            anyof(['-Os'], take_as('-O2', 'compile_options')),
             regex('^-[DIU](.*)$', take_joined('compile_options')),
             anyof(['-nostdinc'], take_one('compile_options')),
             regex('^-std=', take_one('compile_options')),
@@ -257,11 +253,10 @@ def parse(opts, continuation):
             regex('^-m.*', take_one('compile_options')),
             regex('^-iquote(.*)', take_joined('compile_options')),
             regex('^-Wno-', take_one('compile_options')),
-            #
-            regex('^-framework$', take_two('link_options')),
-            regex('^-fobjc-link-runtime(.*)', take_joined('link_options')),
-            regex('^-[lL]', take_one('link_options')),
             # ignore
+            regex('^-framework$', take_two()),
+            regex('^-fobjc-link-runtime(.*)', take_joined()),
+            regex('^-[lL]', take_one()),
             regex('^-M[TF]$', take_two()),
             regex('^-[eu]$', take_two()),
             anyof(['-fsyntax-only',
@@ -278,7 +273,7 @@ def parse(opts, continuation):
                    '--serialize-diagnostics'], take_two()),
             anyof(['-sectorder'], take_four()),
             #
-            regex('^-[fF](.+)$', take_one('compile_options', 'link_options'))
+            regex('^-[fF](.+)$', take_one('compile_options'))
         ]
         for task in tasks:
             if task(it):

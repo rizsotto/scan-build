@@ -55,8 +55,6 @@ def test_language():
 def test_arch():
     def test(cmd):
         opts = sut.parse({'command': cmd}, lambda x: x)
-        assert_equals(opts.get('archs_seen'), opts.get('compile_options'))
-        assert_equals(opts.get('archs_seen'), opts.get('link_options'))
         return opts.get('archs_seen', [])
 
     eq = assert_equals
@@ -130,19 +128,20 @@ def test_define():
        test(['clang', '-c', 'src.c', '-Dvar="val ues"']))
 
 
-def test_link_only_flags():
+def test_ignored_flags():
     def test(cmd):
-        opts = sut.parse({'command': cmd}, lambda x: x)
-        assert_equals(None, opts.get('compile_options'))
+        salt = ['-I.', '-D_THIS']
+        opts = sut.parse({'command': cmd + salt}, lambda x: x)
+        assert_equals(salt, opts.get('compile_options'))
         return opts.get('link_options', [])
 
     eq = assert_equals
 
     eq([],
        test(['clang', 'src.o']))
-    eq(['-lrt', '-L/opt/company/lib'],
+    eq([],
        test(['clang', 'src.o', '-lrt', '-L/opt/company/lib']))
-    eq(['-framework', 'foo'],
+    eq([],
        test(['clang', 'src.o', '-framework', 'foo']))
 
 
@@ -180,7 +179,6 @@ def test_compile_only_flags():
 def test_compile_and_link_flags():
     def test(cmd):
         opts = sut.parse({'command': cmd}, lambda x: x)
-        assert_equals(opts.get('compile_options'), opts.get('link_options'))
         return opts.get('compile_options', [])
 
     eq = assert_equals
