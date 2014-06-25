@@ -17,12 +17,12 @@ import shlex
 
 
 def run_cc():
-    """ Entry point for executables 'ccc-analyzer'. """
+    """ Entry point for executable 'ccc-analyzer'. """
     return main(False)
 
 
 def run_cxx():
-    """ Entry point for executables 'c++-analyzer'. """
+    """ Entry point for executable 'c++-analyzer'. """
     return main(True)
 
 
@@ -60,9 +60,9 @@ def main(is_cxx):
 def run(**kwargs):
     """ Main method to run the analysis.
 
-    The analysis is written continuation-passing style. Each step takes
-    two arguments: the current analysis state, and the continuation to
-    call on success.
+    The analysis is written continuation-passing like style.
+    Each step takes two arguments: the current analysis state, and a
+    method to call as next thing to do.
     """
     def stack(conts):
         """ Creates a single method from multiple continuations. """
@@ -99,8 +99,8 @@ def trace(function):
     return wrapper
 
 
-def cps(required=[]):
-    """ Decorator for continuation-passing style.
+def require(required=[]):
+    """ Decorator for checking the required values in state.
 
     It checks the required attributes in the passed state and stop when
     any of those is missing.
@@ -142,7 +142,7 @@ def filter_dict(original, removables, additions):
 
 
 @trace
-@cps(['is_cxx'])
+@require(['is_cxx'])
 def set_compiler(opts, continuation):
     """ Detect compilers from environment/architecture. """
     uname = subprocess.check_output(['uname', '-a']).decode('ascii')
@@ -165,7 +165,7 @@ def set_compiler(opts, continuation):
 
 
 @trace
-@cps(['command', 'compiler'])
+@require(['command', 'compiler'])
 def execute(opts, continuation):
     """ This method execute the original compiler call as it was given,
     to create those artifacts which is required by the build sysyem.
@@ -184,7 +184,7 @@ class Action:
 
 
 @trace
-@cps(['command'])
+@require(['command'])
 def parse(opts, continuation):
     """ Parses the command line arguments of the current invocation. """
     def match(state, it):
@@ -372,14 +372,14 @@ def parse(opts, continuation):
 
 
 @trace
-@cps(['action'])
+@require(['action'])
 def filter_action(opts, continuation):
     """ Continue analysis only if it compilation or link. """
     return continuation(opts) if opts['action'] <= Action.Compile else 0
 
 
 @trace
-@cps()
+@require()
 def arch_loop(opts, continuation):
     disableds = ['ppc', 'ppc64']
 
@@ -401,7 +401,7 @@ def arch_loop(opts, continuation):
 
 
 @trace
-@cps()
+@require()
 def files_loop(opts, continuation):
     key = 'files'
     result = 0
@@ -416,7 +416,7 @@ def files_loop(opts, continuation):
 
 
 @trace
-@cps(['file'])
+@require(['file'])
 def set_language(opts, continuation):
     def from_filename(fn, is_cxx):
         mapping = {
@@ -462,7 +462,7 @@ def set_language(opts, continuation):
 
 
 @trace
-@cps()
+@require()
 def set_directory(opts, continuation):
     if 'directory' not in opts:
         opts['directory'] = os.getcwd()
@@ -470,7 +470,7 @@ def set_directory(opts, continuation):
 
 
 @trace
-@cps()
+@require()
 def set_analyzer_output(opts, continuation):
     class TempFile:
         def __init__(self, html_dir):
@@ -498,7 +498,7 @@ def set_analyzer_output(opts, continuation):
 
 
 @trace
-@cps(['language', 'directory', 'file', 'clang'])
+@require(['language', 'directory', 'file', 'clang'])
 def run_analyzer(opts, continuation):
     cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts))
@@ -526,15 +526,15 @@ def run_analyzer(opts, continuation):
 
 
 @trace
-@cps(['language',
-      'directory',
-      'file',
-      'clang',
-      'uname',
-      'html_dir',
-      'error_type',
-      'error_output',
-      'exit_code'])
+@require(['language',
+          'directory',
+          'file',
+          'clang',
+          'uname',
+          'html_dir',
+          'error_type',
+          'error_output',
+          'exit_code'])
 def report_failure(opts, _):
     def extension(opts):
         mapping = {
