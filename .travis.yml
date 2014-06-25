@@ -14,10 +14,9 @@ before_install:
 
 install:
   - pip install .
-  - pip install nose
   - pip install pep8
 
 script:
-  - pep8 bin
+  - pep8 analyzer test
   - python setup.py test
   - python setup.py install
