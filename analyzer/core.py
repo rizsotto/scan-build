@@ -141,11 +141,27 @@ def filter_dict(original, removables, additions):
     return new
 
 
+def check_output(*popenargs, **kwargs):
+    """ python 2.6 does not have subprocess.check_output method. """
+    if 'stdout' in kwargs:
+        raise ValueError('stdout argument will be overridden.')
+
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    output, _ = process.communicate()
+    retcode = process.poll()
+    if retcode:
+        cmd = kwargs.get("args")
+        if cmd is None:
+            cmd = popenargs[0]
+        raise subprocess.CalledProcessError(retcode, cmd)
+    return output
+
+
 @trace
 @require(['is_cxx'])
 def set_compiler(opts, continuation):
     """ Detect compilers from environment/architecture. """
-    uname = subprocess.check_output(['uname', '-a']).decode('ascii')
+    uname = check_output(['uname', '-a']).decode('ascii')
     match = re.match('Darwin', uname)
     cc_compiler = 'clang' if match else 'gcc'
     cxx_compiler = 'clang++' if match else 'g++'
@@ -553,8 +569,7 @@ def report_failure(opts, _):
     cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-    child = subprocess.Popen(cmd, cwd=cwd)
-    child.wait()
+    subprocess.call(cmd, cwd=cwd)
 
     with open(name + '.info.txt', 'w') as fd:
         fd.write(os.path.abspath(opts['file']) + os.linesep)
@@ -562,8 +577,8 @@ def report_failure(opts, _):
         fd.write(' '.join(cmd) + os.linesep)
         fd.write(opts['uname'])
         fd.write(
-            subprocess.check_output([cmd[0], '-v'],
-                                    stderr=subprocess.STDOUT).decode('ascii'))
+            check_output([cmd[0], '-v'],
+                         stderr=subprocess.STDOUT).decode('ascii'))
         fd.close()
 
     with open(name + '.stderr.txt', 'w') as fd:
@@ -654,4 +669,4 @@ def build_args(opts, syntax_only=False):
         return [opts['clang'], '-###', '-fsyntax-only'] + syntax_check()
     else:
         return [opts['clang'], '-###', '--analyze'] + syntax_check() + \
-            output() + static_analyzer()
+            static_analyzer()
