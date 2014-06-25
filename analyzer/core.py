@@ -567,8 +567,7 @@ def report_failure(opts, _):
         fd.close()
 
     with open(name + '.stderr.txt', 'w') as fd:
-        for line in opts['error_output']:
-            fd.write(line)
+        fd.writelines(opts['error_output'])
         fd.close()
 
     return opts['exit_code']
