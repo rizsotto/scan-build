@@ -564,10 +564,12 @@ def report_failure(opts, _):
         fd.write(
             subprocess.check_output([cmd[0], '-v'],
                                     stderr=subprocess.STDOUT).decode('ascii'))
+        fd.close()
 
     with open(name + '.stderr.txt', 'w') as fd:
         for line in opts['error_output']:
             fd.write(line)
+        fd.close()
 
     return opts['exit_code']
 

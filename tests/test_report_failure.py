@@ -49,12 +49,10 @@ class ReportFailureTest(fixtures.TestCase):
             self.assertUnderFailures(pp_file)
             # error file generated and content dumped
             error_file = pp_file + '.stderr.txt'
-            self.assertIn(error_file, result)
             self.assertUnderFailures(error_file)
             self.assertEquals([error_msg], result[error_file])
             # info file generated and content dumped
             info_file = pp_file + '.info.txt'
-            self.assertIn(info_file, result)
             self.assertUnderFailures(info_file)
             self.assertEquals('Other Error\n', result[info_file][1])
             self.assertEquals(uname_msg, result[info_file][3])
