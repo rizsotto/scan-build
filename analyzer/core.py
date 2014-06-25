@@ -567,7 +567,7 @@ def report_failure(opts, _):
                                   dir=destination(opts))
     os.close(fd)
     cwd = opts['directory']
-    cmd = get_clang_arguments(cwd, build_args(opts, True)) + ['-E', '-o', name]
+    cmd = get_clang_arguments(cwd, build_args(opts, name))
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     subprocess.call(cmd, cwd=cwd)
 
@@ -622,7 +622,7 @@ def get_clang_arguments(cwd, cmd):
         return None
 
 
-def build_args(opts, syntax_only=False):
+def build_args(opts, output=None):
     def syntax_check():
         result = []
         if 'arch' in opts:
@@ -633,7 +633,7 @@ def build_args(opts, syntax_only=False):
         result.append(opts['file'])
         return result
 
-    def output():
+    def implicit_output():
         result = []
         if 'analyzer_output' in opts:
             result.extend(['-o', opts['analyzer_output']])
@@ -665,8 +665,9 @@ def build_args(opts, syntax_only=False):
         return functools.reduce(
             lambda acc, x: acc + ['-Xclang', x], result, [])
 
-    if syntax_only:
-        return [opts['clang'], '-###', '-fsyntax-only'] + syntax_check()
+    if output:
+        return [opts['clang'], '-###', '-fsyntax-only', '-E', '-o', output] + \
+            syntax_check()
     else:
-        return [opts['clang'], '-###', '--analyze'] + syntax_check() + \
-            static_analyzer()
+        return [opts['clang'], '-###', '--analyze'] + \
+            syntax_check() + static_analyzer() + implicit_output()
