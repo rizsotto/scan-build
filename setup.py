@@ -34,6 +34,5 @@ setup(
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Quality Assurance"
     ],
-    test_suite="nose.collector",
-    tests_require="nose"
+    test_suite="tests.suite"
 )

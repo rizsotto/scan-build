@@ -6,9 +6,11 @@
 
 import tempfile
 import shutil
+import unittest
 
 
 class Spy:
+
     def __init__(self):
         self.arg = None
         self.success = 0
@@ -37,3 +39,15 @@ class TempDir:
     def cleanup(self):
         if self.name is not None:
             shutil.rmtree(self.name)
+
+
+class TestCase(unittest.TestCase):
+
+    def assertIn(self, element, collection):
+        found = False
+        for it in collection:
+            if element == it:
+                found = True
+
+        self.assertTrue(found, '{0} does not have {1}'.format(collection,
+                                                              element))
