@@ -41,7 +41,7 @@ def main(is_cxx):
     logging.basicConfig(format='%(message)s', level=log_level)
     logging.info(' '.join(sys.argv))
 
-    return build_and_analyze()(
+    return build_and_analyze(
         command=sys.argv,
         is_cxx=is_cxx,
         verbose=True if log_level < logging.WARNING else None,
@@ -57,9 +57,9 @@ def main(is_cxx):
         report_failures=os.environ.get('CCC_REPORT_FAILURES'))
 
 
-def build_and_analyze():
+def build_and_analyze(**kwargs):
     """ Creates a method to run the command and the analyzer. """
-    return stack([set_compiler,
+    chain = stack([set_compiler,
                   execute,
                   parse,
                   filter_action,
@@ -70,6 +70,8 @@ def build_and_analyze():
                   set_analyzer_output,
                   run_analyzer,
                   report_failure])
+
+    return chain(kwargs)
 
 
 def stack(conts):
