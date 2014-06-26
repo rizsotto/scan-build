@@ -143,9 +143,11 @@ def filter_dict(original, removables, additions):
 
 def check_output(*popenargs, **kwargs):
     """ python 2.6 does not have subprocess.check_output method. """
+    if "check_output" in dir(subprocess):
+        return subprocess.check_output(*popenargs, **kwargs)
+
     if 'stdout' in kwargs:
         raise ValueError('stdout argument will be overridden.')
-
     process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
     output, _ = process.communicate()
     retcode = process.poll()
