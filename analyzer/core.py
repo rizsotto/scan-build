@@ -41,7 +41,7 @@ def main(is_cxx):
     logging.basicConfig(format='%(message)s', level=log_level)
     logging.info(' '.join(sys.argv))
 
-    return run(
+    return build_and_analyze(
         command=sys.argv,
         is_cxx=is_cxx,
         verbose=True if log_level < logging.WARNING else None,
@@ -57,34 +57,35 @@ def main(is_cxx):
         report_failures=os.environ.get('CCC_REPORT_FAILURES'))
 
 
-def run(**kwargs):
-    """ Main method to run the analysis.
+def build_and_analyze():
+    """ Creates a method to run the command and the analyzer. """
+    return stack([set_compiler,
+                  execute,
+                  parse,
+                  filter_action,
+                  arch_loop,
+                  files_loop,
+                  set_language,
+                  set_directory,
+                  set_analyzer_output,
+                  run_analyzer,
+                  report_failure])
+
+
+def stack(conts):
+    """ Creates a single method from multiple continuations.
 
     The analysis is written continuation-passing like style.
-    Each step takes two arguments: the current analysis state, and a
-    method to call as next thing to do.
-    """
-    def stack(conts):
-        """ Creates a single method from multiple continuations. """
-        def bind(cs, acc):
-            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
+    Each step takes two arguments: the current analysis state,
+    and a method to call as next thing to do.
 
-        conts.reverse()
-        return bind(conts, lambda x: x)
+    This method takes an array of those functions and build
+    a single method wich takes only one argument, the state. """
+    def bind(cs, acc):
+        return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
 
-    chain = stack([set_compiler,
-                   execute,
-                   parse,
-                   filter_action,
-                   arch_loop,
-                   files_loop,
-                   set_language,
-                   set_directory,
-                   set_analyzer_output,
-                   run_analyzer,
-                   report_failure])
-
-    return chain(kwargs)
+    conts.reverse()
+    return bind(conts, lambda x: x)
 
 
 def trace(function):
