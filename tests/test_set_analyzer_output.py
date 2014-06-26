@@ -6,7 +6,6 @@
 
 import analyzer.core as sut
 import tests.fixtures as fixtures
-import unittest
 import os
 
 

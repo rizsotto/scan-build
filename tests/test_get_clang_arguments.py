@@ -5,7 +5,6 @@
 # License. See LICENSE.TXT for details.
 
 import analyzer.core as sut
-import unittest
 import tests.fixtures as fixtures
 import os
 

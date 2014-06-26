@@ -41,7 +41,7 @@ def main(is_cxx):
     logging.basicConfig(format='%(message)s', level=log_level)
     logging.info(' '.join(sys.argv))
 
-    return build_and_analyze(
+    return build_and_analyze()(
         command=sys.argv,
         is_cxx=is_cxx,
         verbose=True if log_level < logging.WARNING else None,
@@ -197,7 +197,7 @@ def execute(opts, continuation):
     return result
 
 
-class Action:
+class Action(object):
     """ Enumeration class for compiler action. """
     Link, Compile, Preprocess, Info = range(4)
 
@@ -362,8 +362,8 @@ def parse(opts, continuation):
             values[key] = max(current, action)
         return take
 
-    class ArgumentIterator:
-
+    class ArgumentIterator(object):
+        """ Iterator from the current value can be queried. """
         def __init__(self, args):
             self.current = None
             self.__it = iter(args)
@@ -432,7 +432,7 @@ def files_loop(opts, continuation):
 @trace
 @require(['file'])
 def set_language(opts, continuation):
-    def from_filename(fn, is_cxx):
+    def from_filename(name, is_cxx):
         mapping = {
             '.c': 'c++' if is_cxx else 'c',
             '.cp': 'c++',
@@ -448,7 +448,7 @@ def set_language(opts, continuation):
             '.mm': 'objective-c++',
             '.mii': 'objective-c++-cpp-output'
         }
-        (_, extension) = os.path.splitext(os.path.basename(fn))
+        (_, extension) = os.path.splitext(os.path.basename(name))
         return mapping.get(extension)
 
     accepteds = [
@@ -486,11 +486,13 @@ def set_directory(opts, continuation):
 @trace
 @require()
 def set_analyzer_output(opts, continuation):
-    class TempFile:
+    """ Create output file if was requested. """
+    class TempFile(object):
+        """ Temporary file destroyed on exit, when it's empty. """
         def __init__(self, html_dir):
-            (self.fd, self.name) = tempfile.mkstemp(suffix='.plist',
-                                                    prefix='report-',
-                                                    dir=html_dir)
+            (self.handle, self.name) = tempfile.mkstemp(suffix='.plist',
+                                                        prefix='report-',
+                                                        dir=html_dir)
             logging.info('analyzer output: {0}'.format(self.name))
 
         def __enter__(self):
@@ -498,7 +500,7 @@ def set_analyzer_output(opts, continuation):
 
         def __exit__(self, exc, value, tb):
             try:
-                os.close(self.fd)
+                os.close(self.handle)
                 if 0 == os.stat(self.name).st_size:
                     os.remove(self.name)
             except:
@@ -549,7 +551,14 @@ def run_analyzer(opts, continuation):
           'error_output',
           'exit_code'])
 def report_failure(opts, _):
+    """ Create report when analyzer failed.
+
+    The major report is the preprocessor output. The output filename generated
+    randomly. The compiler output also captured into '.stderr.txt' file. And
+    some more execution context also saved into '.info.txt' file.
+    """
     def extension(opts):
+        """ Generate preprocessor file extension. """
         mapping = {
             'objective-c++': '.mii',
             'objective-c': '.mi',
@@ -558,40 +567,53 @@ def report_failure(opts, _):
         return mapping.get(opts['language'], '.i')
 
     def destination(opts):
+        """ Creates failures directory if not exits yet. """
         name = os.path.abspath(opts['html_dir'] + os.sep + 'failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
 
     error = opts['error_type']
-    (fd, name) = tempfile.mkstemp(suffix=extension(opts),
-                                  prefix='clang_' + error + '_',
-                                  dir=destination(opts))
-    os.close(fd)
+    (handle, name) = tempfile.mkstemp(suffix=extension(opts),
+                                      prefix='clang_' + error + '_',
+                                      dir=destination(opts))
+    os.close(handle)
     cwd = opts['directory']
     cmd = get_clang_arguments(cwd, build_args(opts, name))
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     subprocess.call(cmd, cwd=cwd)
 
-    with open(name + '.info.txt', 'w') as fd:
-        fd.write(os.path.abspath(opts['file']) + os.linesep)
-        fd.write(error.title().replace('_', ' ') + os.linesep)
-        fd.write(' '.join(cmd) + os.linesep)
-        fd.write(opts['uname'])
-        fd.write(
+    with open(name + '.info.txt', 'w') as handle:
+        handle.write(os.path.abspath(opts['file']) + os.linesep)
+        handle.write(error.title().replace('_', ' ') + os.linesep)
+        handle.write(' '.join(cmd) + os.linesep)
+        handle.write(opts['uname'])
+        handle.write(
             check_output([cmd[0], '-v'],
                          stderr=subprocess.STDOUT).decode('ascii'))
-        fd.close()
+        handle.close()
 
-    with open(name + '.stderr.txt', 'w') as fd:
-        fd.writelines(opts['error_output'])
-        fd.close()
+    with open(name + '.stderr.txt', 'w') as handle:
+        handle.writelines(opts['error_output'])
+        handle.close()
 
     return opts['exit_code']
 
 
 @trace
 def get_clang_arguments(cwd, cmd):
+    """ Capture Clang invocation.
+
+    Clang can be executed directly (when you just ask specific action to
+    execute) or indidect way (whey you first ask Clang to print the command
+    to run for that compilation, and then execute the given command).
+
+    This script is using the indirect way. Which means it always pass '-###'
+    to generate the command, and then executes it.
+
+    This method receives the command (with the '-###' argument) and returns
+    the corresponding command.
+    """
     def lastline(stream):
         last = None
         for line in stream:
@@ -625,7 +647,13 @@ def get_clang_arguments(cwd, cmd):
 
 
 def build_args(opts, output=None):
+    """ Create command to run analyzer or failure report generation.
+
+    The output of this method shall be passed to 'get_clang_arguments' to
+    get the real compilation command.
+    """
     def syntax_check():
+        """ Esential parameters to run Clang against a source file. """
         result = []
         if 'arch' in opts:
             result.extend(['-arch', opts['arch']])
@@ -644,6 +672,7 @@ def build_args(opts, output=None):
         return result
 
     def static_analyzer():
+        """ Analyzer specific parameters. """
         result = []
         if 'store_model' in opts:
             result.append('-analyzer-store={0}'.format(opts['store_model']))
