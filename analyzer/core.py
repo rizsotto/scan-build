@@ -608,11 +608,8 @@ def get_clang_arguments(cwd, cmd):
     execute) or indidect way (whey you first ask Clang to print the command
     to run for that compilation, and then execute the given command).
 
-    This script is using the indirect way. Which means it always pass '-###'
-    to generate the command, and then executes it.
-
-    This method receives the command (with the '-###' argument) and returns
-    the corresponding command.
+    This method receives the full command line for direct compilation. And
+    it generates the command for indirect compilation.
     """
     def lastline(stream):
         last = None
@@ -627,6 +624,7 @@ def get_clang_arguments(cwd, cmd):
         return match.group(1) if match else quoted
 
     try:
+        cmd.insert(1, '-###')
         logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
                                  cwd=cwd,
@@ -649,11 +647,9 @@ def get_clang_arguments(cwd, cmd):
 def build_args(opts, output=None):
     """ Create command to run analyzer or failure report generation.
 
-    The output of this method shall be passed to 'get_clang_arguments' to
-    get the real compilation command.
-    """
+    If output is passed it returns failure report command.
+    If it's not given it returns the analyzer command. """
     def syntax_check():
-        """ Esential parameters to run Clang against a source file. """
         result = []
         if 'arch' in opts:
             result.extend(['-arch', opts['arch']])
@@ -672,7 +668,6 @@ def build_args(opts, output=None):
         return result
 
     def static_analyzer():
-        """ Analyzer specific parameters. """
         result = []
         if 'store_model' in opts:
             result.append('-analyzer-store={0}'.format(opts['store_model']))
@@ -697,8 +692,8 @@ def build_args(opts, output=None):
             lambda acc, x: acc + ['-Xclang', x], result, [])
 
     if output:
-        return [opts['clang'], '-###', '-fsyntax-only', '-E', '-o', output] + \
+        return [opts['clang'], '-fsyntax-only', '-E', '-o', output] + \
             syntax_check()
     else:
-        return [opts['clang'], '-###', '--analyze'] + \
+        return [opts['clang'], '--analyze'] + \
             syntax_check() + static_analyzer() + implicit_output()
