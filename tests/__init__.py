@@ -5,6 +5,7 @@ import tests.test_get_clang_arguments
 import tests.test_report_failure
 import tests.test_run_analyzer
 import tests.test_set_analyzer_output
+import tests.test_scan_file
 
 
 def suite():
@@ -16,4 +17,5 @@ def suite():
     suite.addTests(loader.loadTestsFromModule(test_report_failure))
     suite.addTests(loader.loadTestsFromModule(test_run_analyzer))
     suite.addTests(loader.loadTestsFromModule(test_set_analyzer_output))
+    suite.addTests(loader.loadTestsFromModule(test_scan_file))
     return suite
