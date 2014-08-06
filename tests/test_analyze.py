@@ -75,21 +75,3 @@ class AnalyzerTest(unittest.TestCase):
         input = {'archs_seen': ['-arch', 'sparc', '-arch', 'i386']}
         self.assertNotEqual(spy.success, sut.arch_loop(input, spy.fail))
         self.assertEqual({'arch': 'i386'}, spy.arg)
-
-    def test_files_loop_on_empty_forwards_call(self):
-        spy = fixtures.Spy()
-        input = {'key': 'value'}
-        self.assertEqual(spy.success, sut.files_loop(input, spy.call))
-        self.assertEqual(None, spy.arg)
-
-    def test_files_loop_set_file_on_continuation(self):
-        spy = fixtures.Spy()
-        input = {'files': ['a']}
-        self.assertEqual(spy.success, sut.files_loop(input, spy.call))
-        self.assertEqual({'file': 'a'}, spy.arg)
-
-    def test_files_loop_on_failure(self):
-        spy = fixtures.Spy()
-        input = {'files': ['a', 'b']}
-        self.assertNotEqual(spy.success, sut.files_loop(input, spy.fail))
-        self.assertEqual({'file': 'b'}, spy.arg)

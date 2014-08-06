@@ -17,52 +17,17 @@ import shlex
 import itertools
 
 
-def run():
-    def split_env_content(name):
-        content = os.environ.get(name)
-        return content.split() if content else None
-
-    if os.environ.get('CCC_ANALYZER_VERBOSE'):
-        log_level = logging.DEBUG
-    elif os.environ.get('CCC_ANALYZER_LOG'):
-        log_level = logging.INFO
-    else:
-        log_level = logging.WARNING
-
-    logging.basicConfig(format='%(message)s', level=log_level)
-    logging.info(' '.join(sys.argv))
-
-    return build_and_analyze(
-        command=sys.argv,
-        is_cxx=False,
-        verbose=True if log_level < logging.WARNING else None,
-        analyses=split_env_content('CCC_ANALYZER_ANALYSIS'),
-        plugins=split_env_content('CCC_ANALYZER_PLUGINS'),
-        config=split_env_content('CCC_ANALYZER_CONFIG'),
-        store_model=os.environ.get('CCC_ANALYZER_STORE_MODEL'),
-        constraints_model=os.environ.get('CCC_ANALYZER_CONSTRAINTS_MODEL'),
-        internal_stats=os.environ.get('CCC_ANALYZER_INTERNAL_STATS'),
-        output_format=os.environ.get('CCC_ANALYZER_OUTPUT_FORMAT', 'html'),
-        html_dir=os.environ.get('CCC_ANALYZER_HTML'),
-        ubiviz=os.environ.get('CCC_UBI'),
-        report_failures=os.environ.get('CCC_REPORT_FAILURES'))
-
-
-def build_and_analyze(**kwargs):
+def run(opts):
     """ Creates a method to run the command and the analyzer. """
-    chain = stack([set_compiler,
-                  execute,
-                  parse,
-                  filter_action,
-                  arch_loop,
-                  files_loop,
-                  set_language,
-                  set_directory,
-                  set_analyzer_output,
-                  run_analyzer,
-                  report_failure])
+    chain = stack([parse,
+                   filter_action,
+                   arch_loop,
+                   set_language,
+                   set_analyzer_output,
+                   run_analyzer,
+                   report_failure])
 
-    return chain(kwargs)
+    return chain(opts)
 
 
 def stack(conts):
@@ -168,43 +133,6 @@ def get_default_checkers(clang):
                [checkers(language)
                 for language
                 in ['c', 'c++', 'objective-c', 'objective-c++']]))
-
-
-@trace
-@require(['is_cxx'])
-def set_compiler(opts, continuation):
-    """ Detect compilers from environment/architecture. """
-    uname = check_output(['uname', '-a']).decode('ascii')
-    match = re.match('Darwin', uname)
-    cc_compiler = 'clang' if match else 'gcc'
-    cxx_compiler = 'clang++' if match else 'g++'
-
-    if opts['is_cxx']:
-        compiler = os.environ.get('CCC_CXX', cxx_compiler)
-        clang = os.environ.get('CLANG_CXX', 'clang++')
-    else:
-        compiler = os.environ.get('CCC_CC', cc_compiler)
-        clang = os.environ.get('CLANG_CXX', 'clang')
-
-    return continuation(
-        filter_dict(opts, frozenset(),
-                    {'clang': clang,
-                     'compiler': compiler,
-                     'uname': uname}))
-
-
-@trace
-@require(['command', 'compiler'])
-def execute(opts, continuation):
-    """ This method execute the original compiler call as it was given,
-    to create those artifacts which is required by the build sysyem.
-    And the exit code also comming from this step.
-    """
-    cmd = [opts['compiler']] + opts['command'][1:]
-    logging.debug('exec command: {0}'.format(' '.join(cmd)))
-    result = subprocess.call(cmd)
-    continuation(filter_dict(opts, frozenset(['compiler']), dict()))
-    return result
 
 
 class Action(object):
@@ -425,21 +353,6 @@ def arch_loop(opts, continuation):
 
 
 @trace
-@require()
-def files_loop(opts, continuation):
-    key = 'files'
-    result = 0
-    if key in opts:
-        for fn in opts[key]:
-            logging.info('analysis, source file: {0}'.format(fn))
-            result += continuation(
-                filter_dict(opts, frozenset([key]), {'file': fn}))
-    else:
-        logging.info('skip analysis, source file not found')
-    return result
-
-
-@trace
 @require(['file'])
 def set_language(opts, continuation):
     def from_filename(name, is_cxx):
@@ -483,14 +396,6 @@ def set_language(opts, continuation):
         return continuation(
             filter_dict(opts, frozenset([key]), {key: language}))
     return 0
-
-
-@trace
-@require()
-def set_directory(opts, continuation):
-    if 'directory' not in opts:
-        opts['directory'] = os.getcwd()
-    return continuation(opts)
 
 
 @trace

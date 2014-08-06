@@ -4,6 +4,12 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import analyzer.driver
+import shlex
+import logging
+import multiprocessing
+import json
+
 
 def run():
     def cleanup_out_directory(dir_name):
@@ -22,7 +28,6 @@ def run():
             import tempfile
             return tempfile.mkdtemp(prefix='beye-', suffix='.out')
 
-    import multiprocessing
     multiprocessing.freeze_support()
 
     args = parse_command_line()
@@ -31,9 +36,10 @@ def run():
     out_dir = create_out_directory(args.output)
     if run_analyzer(args, out_dir) and found_bugs(out_dir):
         generate_report(out_dir)
-        logging.info('output directory: {}'.format(result))
+        logging.warning('output directory: {0}'.format(out_dir))
     else:
         cleanup_out_directory(out_dir)
+        logging.warning('no bugs were found')
 
 
 def parse_command_line():
@@ -54,9 +60,9 @@ def parse_command_line():
     parser.add_argument('--log-level',
                         metavar='LEVEL',
                         choices='DEBUG INFO WARNING ERROR'.split(),
-                        default='INFO',
-                        help="Choose a log level from DEBUG, INFO (default),\
-                              WARNING or ERROR")
+                        default='WARNING',
+                        help="Choose a log level from DEBUG, INFO,\
+                              WARNING (default) or ERROR")
     return parser.parse_args()
 
 
@@ -68,25 +74,26 @@ def generate_report(out_dir):
     pass
 
 
-def run_analyzer(opts, out_dir):
-    with open(opts.input, 'r') as fd:
-        if opts.sequential:
-            for c in json.load(fd):
-                analyze(c, opts, out_dir)
-        else:
-            pool = multiprocessing.Pool()
-            for c in json.load(fd):
-                pool.apply_async(func=analyze, args=(c, opts, out_dir))
-            pool.close()
-            pool.join()
+def run_analyzer(args, out_dir):
+    def set_common_params(opts):
+        output = analyzer.driver.check_output
+        return analyzer.driver.filter_dict(
+            opts,
+            frozenset(['output', 'input', 'sequential', 'log_level']),
+            {'verbose': True,
+             'html_dir': out_dir,
+             'output_format': opts.get('output_format', 'html'),
+             'uname': output(['uname', '-a']).decode('ascii'),
+             'clang': 'clang'})
+
+    const = set_common_params(args.__dict__)
+    with open(args.input, 'r') as fd:
+        pool = multiprocessing.Pool(1 if args.sequential else None)
+        for c in json.load(fd):
+            c.update(const)
+            c.update(command=shlex.split(c['command']))
+            pool.apply_async(func=analyzer.driver.run, args=(c,))
+        pool.close()
+        pool.join()
 
     return True
-
-
-def analyze(task, opts, out_dir):
-    import analyzer.driver
-    task['html_dir'] = out_dir
-    task['output_format'] = 'html'
-    cmds = shlex.split(task['command'])
-    task['command'] = cmds
-    return analyzer.driver.run(**task)
