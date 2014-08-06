@@ -17,9 +17,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'beye = analyzer.driver:run',
-            'ccc-analyzer = analyzer.core:run_cc',
-            'c++-analyzer = analyzer.core:run_cxx'
+            'beye = analyzer.beye:run'
         ]
     },
     classifiers=[

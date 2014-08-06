@@ -19,4 +19,5 @@ install:
 script:
   - pep8 analyzer tests
   - python setup.py test
+  - python setup.py check
   - python setup.py install
