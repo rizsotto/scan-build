@@ -535,8 +535,6 @@ def run_analyzer(opts, continuation):
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
     output = child.stdout.readlines()
-    # copy to stderr
-    sys.stderr.writelines(output)
     # do report details if it were asked
     child.wait()
     if 'report_failures' in opts and child.returncode:

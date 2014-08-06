@@ -29,18 +29,18 @@ class RunAnalyzerTest(unittest.TestCase):
     def test_run_analyzer(self):
         content = "int div(int n, int d) { return n / d; }"
         (result, fwds) = run_analyzer(content, dict())
-        self.assertEquals(None, fwds)
-        self.assertEquals(0, result)
+        self.assertEqual(None, fwds)
+        self.assertEqual(0, result)
 
     def test_run_analyzer_crash(self):
         content = "int div(int n, int d) { return n / d }"
         (result, fwds) = run_analyzer(content, dict())
-        self.assertEquals(None, fwds)
-        self.assertEquals(1, result)
+        self.assertEqual(None, fwds)
+        self.assertEqual(1, result)
 
     def test_run_analyzer_crash_and_forwarded(self):
         content = "int div(int n, int d) { return n / d }"
         (result, fwds) = run_analyzer(content, {'report_failures': True})
-        self.assertEquals('crash', fwds['error_type'])
-        self.assertEquals(1, fwds['exit_code'])
+        self.assertEqual('crash', fwds['error_type'])
+        self.assertEqual(1, fwds['exit_code'])
         self.assertTrue(len(fwds['error_output']) > 0)

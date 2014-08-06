@@ -14,7 +14,7 @@ class SetAnalyzerOutputTest(fixtures.TestCase):
     def test_set_analyzer_output_forwarded(self):
         spy = fixtures.Spy()
         sut.set_analyzer_output(dict(), spy.call)
-        self.assertEquals(dict(), spy.arg)
+        self.assertEqual(dict(), spy.arg)
 
     def test_set_analyzer_output_create_file(self):
         class Spy:

@@ -32,11 +32,11 @@ class GetClangArgumentsTest(fixtures.TestCase):
         self.assertIn('var="this is it"', result)
 
     def test_get_clang_arguments_fails(self):
-        self.assertEquals(None,
-                          sut.get_clang_arguments('.',
-                                                  ['clang',
-                                                   '-###',
-                                                   '-fsyntax-only',
-                                                   '-x',
-                                                   'c',
-                                                   'notexist.c']))
+        self.assertEqual(None,
+                         sut.get_clang_arguments('.',
+                                                 ['clang',
+                                                  '-###',
+                                                  '-fsyntax-only',
+                                                  '-x',
+                                                  'c',
+                                                  'notexist.c']))

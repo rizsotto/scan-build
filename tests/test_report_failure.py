@@ -13,7 +13,7 @@ import re
 class ReportFailureTest(fixtures.TestCase):
 
     def assertUnderFailures(self, path):
-        self.assertEquals('failures', os.path.basename(os.path.dirname(path)))
+        self.assertEqual('failures', os.path.basename(os.path.dirname(path)))
 
     def test_report_failure_create_files(self):
         with fixtures.TempDir() as tmpdir:
@@ -49,9 +49,9 @@ class ReportFailureTest(fixtures.TestCase):
             # info file generated and content dumped
             info_file = pp_file + '.info.txt'
             self.assertIn(info_file, result)
-            self.assertEquals('Other Error\n', result[info_file][1])
-            self.assertEquals(uname_msg, result[info_file][3])
+            self.assertEqual('Other Error\n', result[info_file][1])
+            self.assertEqual(uname_msg, result[info_file][3])
             # error file generated and content dumped
             error_file = pp_file + '.stderr.txt'
             self.assertIn(error_file, result)
-            self.assertEquals([error_msg], result[error_file])
+            self.assertEqual([error_msg], result[error_file])
