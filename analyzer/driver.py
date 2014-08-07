@@ -14,11 +14,26 @@ import tempfile
 import copy
 import functools
 import shlex
-import itertools
+from analyzer.decorators import trace, require
 
 
+@trace
 def run(opts):
-    """ Creates a method to run the command and the analyzer. """
+    def stack(conts):
+        """ Creates a single method from multiple continuations.
+
+        The analysis is written continuation-passing like style.
+        Each step takes two arguments: the current analysis state,
+        and a method to call as next thing to do.
+
+        This method takes an array of those functions and build
+        a single method wich takes only one argument, the state. """
+        def bind(cs, acc):
+            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
+
+        conts.reverse()
+        return bind(conts, lambda x: x)
+
     chain = stack([parse,
                    filter_action,
                    arch_loop,
@@ -28,61 +43,6 @@ def run(opts):
                    report_failure])
 
     return chain(opts)
-
-
-def stack(conts):
-    """ Creates a single method from multiple continuations.
-
-    The analysis is written continuation-passing like style.
-    Each step takes two arguments: the current analysis state,
-    and a method to call as next thing to do.
-
-    This method takes an array of those functions and build
-    a single method wich takes only one argument, the state. """
-    def bind(cs, acc):
-        return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
-
-    conts.reverse()
-    return bind(conts, lambda x: x)
-
-
-def trace(function):
-    """ Decorator to simplify debugging. """
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        logging.debug('entering {0}'.format(function.__name__))
-        result = function(*args, **kwargs)
-        logging.debug('leaving {0}'.format(function.__name__))
-        return result
-
-    return wrapper
-
-
-def require(required=[]):
-    """ Decorator for checking the required values in state.
-
-    It checks the required attributes in the passed state and stop when
-    any of those is missing.
-    """
-    def decorator(function):
-        @functools.wraps(function)
-        def wrapper(opts, cont):
-            try:
-                precondition(opts)
-                return function(opts, cont)
-            except Exception as e:
-                logging.error(str(e))
-                return None
-
-        def precondition(opts):
-            for key in required:
-                if key not in opts:
-                    raise KeyError(
-                        '{0} not passed to {1}'.format(key, function.__name__))
-
-        return wrapper
-
-    return decorator
 
 
 def filter_dict(original, removables, additions):
@@ -116,23 +76,6 @@ def check_output(*popenargs, **kwargs):
             cmd = popenargs[0]
         raise subprocess.CalledProcessError(retcode, cmd)
     return output
-
-
-def get_default_checkers(clang):
-    """ To get the default plugins we execute Clang to print how this
-    comilation would be called. For input file we specify stdin. And
-    pass only language information. """
-    def checkers(language):
-        pattern = re.compile('^-analyzer-checker=(.*)$')
-        cmd = [clang, '--analyze', '-x', language, '-']
-        return [pattern.match(arg).group(1)
-                for arg
-                in get_clang_arguments('.', cmd)
-                if pattern.match(arg)]
-    return set(itertools.chain.from_iterable(
-               [checkers(language)
-                for language
-                in ['c', 'c++', 'objective-c', 'objective-c++']]))
 
 
 class Action(object):

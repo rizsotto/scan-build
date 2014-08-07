@@ -4,14 +4,19 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.driver
 import shlex
 import logging
 import multiprocessing
 import json
+import itertools
+from analyzer.decorators import trace, require
+from analyzer.driver import run, get_clang_arguments, check_output, filter_dict
 
 
-def run():
+def main():
+    multiprocessing.freeze_support()
+    logging.basicConfig(format='%(message)s')
+
     def cleanup_out_directory(dir_name):
         import shutils
         shutil.rmtree(dir_name)
@@ -28,10 +33,9 @@ def run():
             import tempfile
             return tempfile.mkdtemp(prefix='beye-', suffix='.out')
 
-    multiprocessing.freeze_support()
-
     args = parse_command_line()
-    logging.basicConfig(format='%(message)s', level=args.log_level)
+
+    logging.getLogger().setLevel(args.log_level)
 
     out_dir = create_out_directory(args.output)
     if run_analyzer(args, out_dir) and found_bugs(out_dir):
@@ -42,6 +46,7 @@ def run():
         logging.warning('no bugs were found')
 
 
+@trace
 def parse_command_line():
     from argparse import ArgumentParser
     parser = ArgumentParser()
@@ -66,24 +71,26 @@ def parse_command_line():
     return parser.parse_args()
 
 
+@trace
 def found_bugs(out_dir):
     return True
 
 
+@trace
 def generate_report(out_dir):
     pass
 
 
+@trace
 def run_analyzer(args, out_dir):
     def set_common_params(opts):
-        output = analyzer.driver.check_output
-        return analyzer.driver.filter_dict(
+        return filter_dict(
             opts,
             frozenset(['output', 'input', 'sequential', 'log_level']),
-            {'verbose': True,
+            {'verbose': logging.getLogger().isEnabledFor(logging.INFO),
              'html_dir': out_dir,
              'output_format': opts.get('output_format', 'html'),
-             'uname': output(['uname', '-a']).decode('ascii'),
+             'uname': check_output(['uname', '-a']).decode('ascii'),
              'clang': 'clang'})
 
     const = set_common_params(args.__dict__)
@@ -92,8 +99,26 @@ def run_analyzer(args, out_dir):
         for c in json.load(fd):
             c.update(const)
             c.update(command=shlex.split(c['command']))
-            pool.apply_async(func=analyzer.driver.run, args=(c,))
+            pool.apply_async(func=run, args=(c,))
         pool.close()
         pool.join()
 
     return True
+
+
+@trace
+def get_default_checkers(clang):
+    """ To get the default plugins we execute Clang to print how this
+    comilation would be called. For input file we specify stdin. And
+    pass only language information. """
+    def checkers(language):
+        pattern = re.compile('^-analyzer-checker=(.*)$')
+        cmd = [clang, '--analyze', '-x', language, '-']
+        return [pattern.match(arg).group(1)
+                for arg
+                in get_clang_arguments('.', cmd)
+                if pattern.match(arg)]
+    return set(itertools.chain.from_iterable(
+               [checkers(language)
+                for language
+                in ['c', 'c++', 'objective-c', 'objective-c++']]))

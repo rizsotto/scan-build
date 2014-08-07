@@ -17,7 +17,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'beye = analyzer.beye:run'
+            'beye = analyzer.beye:main'
         ]
     },
     classifiers=[
