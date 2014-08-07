@@ -397,39 +397,6 @@ def run_analyzer(opts, continuation):
 
 
 @trace
-@require(['output_file'])
-def scan_file(opts, continuation):
-    patterns = frozenset(
-        [re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
-         re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
-         re.compile('<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
-         re.compile('<!-- BUGLINE (?P<bug_line>.*) -->$'),
-         re.compile('<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
-         re.compile('<!-- BUGDESC (?P<bug_description>.*) -->$'),
-         re.compile('<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')])
-    endsign = re.compile('<!-- BUGMETAEND -->')
-
-    bug_info = dict()
-    with open(opts['output_file']) as handler:
-        for line in handler.readlines():
-            # do not read the file further
-            if endsign.match(line):
-                break
-            # search for the right lines
-            for regex in patterns:
-                match = regex.match(line.strip())
-                if match:
-                    bug_info.update(match.groupdict())
-
-    # fix some default values
-    bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
-    bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
-    bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
-
-    return continuation(filter_dict(opts, frozenset(), bug_info))
-
-
-@trace
 @require(['language',
           'directory',
           'file',

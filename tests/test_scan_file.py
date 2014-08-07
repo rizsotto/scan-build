@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.driver as sut
+import analyzer.beye as sut
 import tests.fixtures as fixtures
 import unittest
 import os
@@ -15,9 +15,7 @@ def run_scan(content):
         file_name = tmpdir + os.sep + 'test.html'
         with open(file_name, 'w') as fd:
             fd.writelines(content)
-        opts = {'output_file': file_name}
-        spy = fixtures.Spy()
-        return (sut.scan_file(opts, spy.call), spy.arg)
+        return sut.scan_file(file_name)
 
 
 class ScanFileTest(unittest.TestCase):
@@ -35,19 +33,17 @@ class ScanFileTest(unittest.TestCase):
             "<!-- BUGMETAEND -->\n",
             "<!-- REPORTHEADER -->\n",
             "some tails\n"]
-        (result, fwds) = run_scan(content)
-        self.assertEqual(0, result)
-        self.assertEqual(fwds['bug_category'], 'Logic error')
-        self.assertEqual(fwds['bug_path_length'], 4)
-        self.assertEqual(fwds['bug_line'], 5)
-        self.assertEqual(fwds['bug_description'], 'Division by zero')
-        self.assertEqual(fwds['bug_type'], 'Division by zero')
-        self.assertEqual(fwds['bug_file'], 'xx')
+        result = run_scan(content)
+        self.assertEqual(result['bug_category'], 'Logic error')
+        self.assertEqual(result['bug_path_length'], 4)
+        self.assertEqual(result['bug_line'], 5)
+        self.assertEqual(result['bug_description'], 'Division by zero')
+        self.assertEqual(result['bug_type'], 'Division by zero')
+        self.assertEqual(result['bug_file'], 'xx')
 
     def test_scan_file_empty(self):
         content = []
-        (result, fwds) = run_scan(content)
-        self.assertEqual(0, result)
-        self.assertEqual(fwds['bug_category'], 'Other')
-        self.assertEqual(fwds['bug_path_length'], 1)
-        self.assertEqual(fwds['bug_line'], 0)
+        result = run_scan(content)
+        self.assertEqual(result['bug_category'], 'Other')
+        self.assertEqual(result['bug_path_length'], 1)
+        self.assertEqual(result['bug_line'], 0)

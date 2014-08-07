@@ -9,8 +9,12 @@ import logging
 import multiprocessing
 import json
 import itertools
-from analyzer.decorators import trace, require
+import re
+import glob
+import os.path
+from analyzer.decorators import trace
 from analyzer.driver import run, get_clang_arguments, check_output, filter_dict
+import analyzer.parallel
 
 
 def main():
@@ -38,7 +42,7 @@ def main():
     logging.getLogger().setLevel(args.log_level)
 
     out_dir = create_out_directory(args.output)
-    if run_analyzer(args, out_dir) and found_bugs(out_dir):
+    if run_analyzer(args, out_dir):
         generate_report(out_dir)
         logging.warning('output directory: {0}'.format(out_dir))
     else:
@@ -72,13 +76,20 @@ def parse_command_line():
 
 
 @trace
-def found_bugs(out_dir):
-    return True
-
-
-@trace
 def generate_report(out_dir):
-    pass
+    def consume(result, new):
+        category = new['bug_category']
+        current = result.get(category, [])
+        current.append(new)
+        result.update({category: current})
+
+    bugs = dict()
+    analyzer.parallel.run(
+        glob.iglob(os.path.join(out_dir, '*.html')),
+        scan_file,
+        consume,
+        bugs)
+    logging.info(bugs)
 
 
 @trace
@@ -103,7 +114,7 @@ def run_analyzer(args, out_dir):
         pool.close()
         pool.join()
 
-    return True
+    return len(glob.glob(os.path.join(out_dir, '*.html'))) > 0
 
 
 @trace
@@ -122,3 +133,35 @@ def get_default_checkers(clang):
                [checkers(language)
                 for language
                 in ['c', 'c++', 'objective-c', 'objective-c++']]))
+
+
+@trace
+def scan_file(result):
+    patterns = frozenset(
+        [re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
+         re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
+         re.compile('<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
+         re.compile('<!-- BUGLINE (?P<bug_line>.*) -->$'),
+         re.compile('<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
+         re.compile('<!-- BUGDESC (?P<bug_description>.*) -->$'),
+         re.compile('<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')])
+    endsign = re.compile('<!-- BUGMETAEND -->')
+
+    bug_info = dict()
+    with open(result) as handler:
+        for line in handler.readlines():
+            # do not read the file further
+            if endsign.match(line):
+                break
+            # search for the right lines
+            for regex in patterns:
+                match = regex.match(line.strip())
+                if match:
+                    bug_info.update(match.groupdict())
+
+    # fix some default values
+    bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
+    bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
+    bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
+
+    return bug_info
