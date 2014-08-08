@@ -538,9 +538,9 @@ def build_args(opts, output=None):
             result.extend(opts['plugins'])
         if 'output_format' in opts:
             result.append('-analyzer-output={0}'.format(opts['output_format']))
-        if 'config' in opts:
-            result.append(opts['config'])
-        if 'verbose' in opts:
+        if 'analyzer_config' in opts:
+            result.append(opts['analyzer_config'])
+        if 'verbose' in opts and 2 <= opts['verbose']:
             result.append('-analyzer-display-progress')
         if 'ubiviz' in opts:
             result.append('-analyzer-viz-egraph-ubigraph')

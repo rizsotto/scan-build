@@ -12,9 +12,9 @@ def trace(function):
     """ Decorator to simplify debugging. """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-        logging.debug('entering {0}'.format(function.__name__))
+        logging.log(5, 'entering {0}'.format(function.__name__))
         result = function(*args, **kwargs)
-        logging.debug('leaving {0}'.format(function.__name__))
+        logging.log(5, 'leaving {0}'.format(function.__name__))
         return result
 
     return wrapper

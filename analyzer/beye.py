@@ -22,7 +22,7 @@ def main():
     logging.basicConfig(format='%(message)s')
 
     def cleanup_out_directory(dir_name):
-        import shutils
+        import shutil
         shutil.rmtree(dir_name)
 
     def create_out_directory(hint):
@@ -37,10 +37,19 @@ def main():
             import tempfile
             return tempfile.mkdtemp(prefix='beye-', suffix='.out')
 
+    def from_number_to_level(num):
+        if 0 == num:
+            return logging.WARNING
+        elif 1 == num:
+            return logging.INFO
+        elif 2 == num:
+            return logging.DEBUG
+        else:
+            return 5
+
     args = parse_command_line()
 
-    logging.getLogger().setLevel(args.log_level)
-
+    logging.getLogger().setLevel(from_number_to_level(args.verbose))
     out_dir = create_out_directory(args.output)
     if run_analyzer(args, out_dir):
         generate_report(out_dir)
@@ -53,25 +62,131 @@ def main():
 @trace
 def parse_command_line():
     from argparse import ArgumentParser
-    parser = ArgumentParser()
-    parser.add_argument("--output",
-                        metavar='DIR',
-                        help="Specify output directory\
-                              (default generated)")
-    parser.add_argument("--input",
-                        metavar='FILE',
-                        default="compile_commands.json",
-                        help="The JSON compilation database\
-                              (default compile_commands.json)")
-    parser.add_argument("--sequential",
-                        action='store_true',
-                        help="execute analyzer sequentialy (default false)")
-    parser.add_argument('--log-level',
-                        metavar='LEVEL',
-                        choices='DEBUG INFO WARNING ERROR'.split(),
-                        default='WARNING',
-                        help="Choose a log level from DEBUG, INFO,\
-                              WARNING (default) or ERROR")
+    parser = ArgumentParser(prog='beye')
+    group1 = parser.add_argument_group('options')
+    group1.add_argument(
+        '--analyze-headers',
+        action='store_true',
+        help='Also analyze functions in #included files. By default,\
+              such functions are skipped unless they are called by\
+              functions within the main source file.')
+    group1.add_argument(
+        '--output', '-o',
+        metavar='<output location>',
+        help='Specifies the output directory for analyzer reports.\
+              Subdirectories will be created as needed to represent separate\
+              "runs" of the analyzer. If this option is not specified, a\
+              directory is created in /tmp (TMPDIR on Mac OS X) to store the\
+              reports.')
+    group1.add_argument(
+        '--html-title',
+        metavar='<title>',
+        help='Specify the title used on generated HTML pages.\
+              If not specified, a default title will be used.')
+    format_group = group1.add_mutually_exclusive_group()
+    format_group.add_argument(
+        '--plist',
+        dest='output_format',
+        const='plist',
+        default='html',
+        action='store_const',
+        help='By default the output of scan-build is a set of HTML files.\
+              This option outputs the results as a set of .plist files.')
+    format_group.add_argument(
+        '--plist-html',
+        dest='output_format',
+        const='plist-html',
+        default='html',
+        action='store_const',
+        help='By default the output of scan-build is a set of HTML files.\
+              This option outputs the results as a set of HTML and .plist\
+              files.')
+    group1.add_argument(
+        '--status-bugs',
+        action='store_true',
+        help='By default, the exit status of scan-build is the same as the\
+              executed build command. Specifying this option causes the exit\
+              status of scan-build to be 1 if it found potential bugs and 0\
+              otherwise.')
+    group1.add_argument(
+        '--verbose', '-v',
+        action='count',
+        default=0,
+        help="Enable verbose output from scan-build. A second and third '-v'\
+              increases verbosity.")
+    # TODO: implement '-view '
+
+    group2 = parser.add_argument_group('advanced options')
+    group2.add_argument(
+        '--no-failure-reports',
+        action='store_true',
+        help="Do not create a 'failures' subdirectory that includes analyzer\
+              crash reports and preprocessed source files.")
+    group2.add_argument(
+        '--stats',
+        action='store_true',
+        help='Generates visitation statistics for the project being analyzed.')
+    group2.add_argument(
+        '--maxloop',
+        metavar='<loop count>',
+        help='Specifiy the number of times a block can be visited before\
+              giving up. Default is 4. Increase for more comprehensive\
+              coverage at a cost of speed.')
+    group2.add_argument(
+        '--internal-stats',
+        action='store_true',
+        help='Generate internal analyzer statistics.')
+    group2.add_argument(
+        '--use-analyzer',
+        metavar='<Xcode|path to clang>',
+        help="scan-build uses the 'clang' executable relative to itself for\
+              static analysis. One can override this behavior with this\
+              option by using the 'clang' packaged with Xcode (on OS X) or\
+              from the PATH.")
+    group2.add_argument(
+        '--keep-empty',
+        action='store_true',
+        help="Don't remove the build results directory even if no issues were\
+              reported.")
+    group2.add_argument(
+        '--analyzer-config',
+        metavar='<options>',
+        help="Provide options to pass through to the analyzer's\
+              -analyzer-config flag. Several options are separated with comma:\
+              'key1=val1,key2=val2'\
+              \
+              Available options:\
+                   * stable-report-filename=true or false (default)\
+                     Switch the page naming to:\
+                     report-<filename>-<function/method name>-<id>.html\
+                     instead of report-XXXXXX.html")
+    group2.add_argument(
+        '--input',
+        metavar='<file>',
+        default="compile_commands.json",
+        help="The JSON compilation database (default compile_commands.json)")
+    group2.add_argument(
+        '--sequential',
+        action='store_true',
+        help="Execute analyzer sequentialy (default parallel)")
+
+    group3 = parser.add_argument_group('controlling checkers')
+    group3.add_argument(
+        '--load-plugin',
+        metavar='<plugin library>',
+        action='append',
+        help='Loading external checkers using the clang plugin interface.')
+    group3.add_argument(
+        '--enable-checker',
+        metavar='<checker name>',
+        action='append',
+        help='Enable specific checker.')
+    group3.add_argument(
+        '--disable-checker',
+        metavar='<checker name>',
+        action='append',
+        help='Disable specific checker.')
+
     return parser.parse_args()
 
 
@@ -97,10 +212,14 @@ def run_analyzer(args, out_dir):
     def set_common_params(opts):
         return filter_dict(
             opts,
-            frozenset(['output', 'input', 'sequential', 'log_level']),
-            {'verbose': logging.getLogger().isEnabledFor(logging.INFO),
-             'html_dir': out_dir,
-             'output_format': opts.get('output_format', 'html'),
+            frozenset([
+                'output',
+                'html_title',
+                'keep_empty',
+                'status_bugs',
+                'input',
+                'sequential']),
+            {'html_dir': out_dir,
              'uname': check_output(['uname', '-a']).decode('ascii'),
              'clang': 'clang'})
 
