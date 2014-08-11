@@ -51,7 +51,7 @@ class ReportDirectory(object):
         return self.name
 
     def __exit__(self, type, value, traceback):
-        report = len(glob.glob(os.path.join(self.name, '*.html'))) > 0
+        report = len(glob.glob(os.path.join(self.name, '*'))) > 0
         if report and not self.keep:
             import shutil
             shutil.rmtree(self.name)
@@ -72,8 +72,9 @@ class ReportDirectory(object):
 
 @trace
 def parse_command_line():
-    from argparse import ArgumentParser
-    parser = ArgumentParser(prog='beye')
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+    parser = ArgumentParser(prog='beye',
+                            formatter_class=ArgumentDefaultsHelpFormatter)
     group1 = parser.add_argument_group('options')
     group1.add_argument(
         '--analyze-headers',
@@ -83,12 +84,11 @@ def parse_command_line():
               functions within the main source file.')
     group1.add_argument(
         '--output', '-o',
-        metavar='<output location>',
+        metavar='<path>',
+        default='/tmp',
         help='Specifies the output directory for analyzer reports.\
               Subdirectories will be created as needed to represent separate\
-              "runs" of the analyzer. If this option is not specified, a\
-              directory is created in /tmp (TMPDIR on Mac OS X) to store the\
-              reports.')
+              "runs" of the analyzer.')
     group1.add_argument(
         '--html-title',  # TODO: implement usage
         metavar='<title>',
@@ -101,33 +101,36 @@ def parse_command_line():
         const='plist',
         default='html',
         action='store_const',
-        help='By default the output of scan-build is a set of HTML files.\
-              This option outputs the results as a set of .plist files.')
+        help='This option outputs the results as a set of .plist files.')
     format_group.add_argument(
         '--plist-html',
         dest='output_format',
         const='plist-html',
         default='html',
         action='store_const',
-        help='By default the output of scan-build is a set of HTML files.\
-              This option outputs the results as a set of HTML and .plist\
+        help='This option outputs the results as a set of HTML and .plist\
               files.')
     group1.add_argument(
         '--status-bugs',  # TODO: implement usage
         action='store_true',
-        help='By default, the exit status of scan-build is the same as the\
+        help='By default, the exit status of ‘beye’ is the same as the\
               executed build command. Specifying this option causes the exit\
-              status of scan-build to be 1 if it found potential bugs and 0\
+              status of ‘beye’ to be 1 if it found potential bugs and 0\
               otherwise.')
     group1.add_argument(
         '--verbose', '-v',
         action='count',
         default=0,
-        help="Enable verbose output from scan-build. A second and third '-v'\
+        help="Enable verbose output from ‘beye’. A second and third '-v'\
               increases verbosity.")
     # TODO: implement '-view '
 
     group2 = parser.add_argument_group('advanced options')
+    group2.add_argument(
+        '--keep-empty',
+        action='store_true',
+        help="Don't remove the build results directory even if no issues were\
+              reported.")
     group2.add_argument(
         '--no-failure-reports',
         dest='report_failures',
@@ -139,28 +142,45 @@ def parse_command_line():
         action='store_true',
         help='Generates visitation statistics for the project being analyzed.')
     group2.add_argument(
-        '--maxloop',
-        metavar='<loop count>',
-        type=int,
-        help='Specifiy the number of times a block can be visited before\
-              giving up. Default is 4. Increase for more comprehensive\
-              coverage at a cost of speed.')
-    group2.add_argument(
         '--internal-stats',
         action='store_true',
         help='Generate internal analyzer statistics.')
     group2.add_argument(
-        '--use-analyzer',
-        metavar='<Xcode|path to clang>',
-        help="scan-build uses the 'clang' executable relative to itself for\
-              static analysis. One can override this behavior with this\
-              option by using the 'clang' packaged with Xcode (on OS X) or\
-              from the PATH.")
+        '--maxloop',
+        metavar='<loop count>',
+        type=int,
+        default=4,
+        help='Specifiy the number of times a block can be visited before\
+              giving up. Increase for more comprehensive coverage at a cost\
+              of speed.')
     group2.add_argument(
-        '--keep-empty',
-        action='store_true',
-        help="Don't remove the build results directory even if no issues were\
-              reported.")
+        '--store',
+        metavar='<model>',
+        dest='store_model',
+        default='region',
+        choices=['region', 'basic'],
+        help='Specify the store model used by the analyzer.\
+              ‘region’ specifies a field- sensitive store model.\
+              ‘basic’ which is far less precise but can more quickly\
+              analyze code. ‘basic’ was the default store model for\
+              checker-0.221 and earlier.')
+    group2.add_argument(
+        '--constraints',
+        metavar='<model>',
+        dest='constraints_model',
+        default='range',
+        choices=['range', 'basic'],
+        help='Specify the contraint engine used by the analyzer. Specifying\
+              ‘basic’ uses a simpler, less powerful constraint model used by\
+              checker-0.160 and earlier.')
+    group2.add_argument(
+        '--use-analyzer',  # TODO: implement usage
+        metavar='<path>',
+        default='clang',
+        help="‘beye’ uses the ‘clang’ executable relative to itself for\
+              static analysis. One can override this behavior with this\
+              option by using the ‘clang’ packaged with Xcode (on OS X) or\
+              from the PATH.")
     group2.add_argument(
         '--analyzer-config',
         metavar='<options>',
@@ -169,19 +189,19 @@ def parse_command_line():
               'key1=val1,key2=val2'\
               \
               Available options:\
-                   * stable-report-filename=true or false (default)\
-                     Switch the page naming to:\
-                     report-<filename>-<function/method name>-<id>.html\
-                     instead of report-XXXXXX.html")
+                stable-report-filename=true or false (default)\
+                Switch the page naming to:\
+                report-<filename>-<function/method name>-<id>.html\
+                instead of report-XXXXXX.html")
     group2.add_argument(
         '--input',
         metavar='<file>',
         default="compile_commands.json",
-        help="The JSON compilation database (default compile_commands.json)")
+        help="The JSON compilation database.")
     group2.add_argument(
         '--sequential',
         action='store_true',
-        help="Execute analyzer sequentialy (default parallel)")
+        help="Execute analyzer sequentialy.")
 
     group3 = parser.add_argument_group('controlling checkers')
     group3.add_argument(
