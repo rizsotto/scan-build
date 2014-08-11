@@ -130,7 +130,8 @@ def parse_command_line():
     group2 = parser.add_argument_group('advanced options')
     group2.add_argument(
         '--no-failure-reports',
-        action='store_true',
+        dest='report_failures',
+        action='store_false',
         help="Do not create a 'failures' subdirectory that includes analyzer\
               crash reports and preprocessed source files.")
     group2.add_argument(
