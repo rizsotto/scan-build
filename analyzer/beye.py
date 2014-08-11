@@ -186,6 +186,7 @@ def parse_command_line():
     group3.add_argument(
         '--load-plugin',
         metavar='<plugin library>',
+        dest='plugins',
         action='append',
         help='Loading external checkers using the clang plugin interface.')
     group3.add_argument(
