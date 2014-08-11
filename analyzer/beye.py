@@ -192,10 +192,23 @@ def parse_command_line():
 
 @trace
 def generate_report(out_dir):
+    """ Generate the index.html """
     def consume(result, new):
+        def isNotIn(container):
+            def isDuplicate(one, two):
+                return one['bug_file'] == two['bug_file']\
+                    and one['bug_line'] == two['bug_line']\
+                    and one['bug_path_length'] == two['bug_path_length']
+
+            for elem in container:
+                if isDuplicate(elem, new):
+                    return False
+            return True
+
         category = new['bug_category']
         current = result.get(category, [])
-        current.append(new)
+        if isNotIn(current):
+            current.append(new)
         result.update({category: current})
 
     bugs = dict()
@@ -256,6 +269,7 @@ def get_default_checkers(clang):
 
 @trace
 def scan_file(result):
+    """ Parse out the bug information from HTML output. """
     patterns = frozenset(
         [re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
          re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
@@ -282,5 +296,6 @@ def scan_file(result):
     bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
     bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
     bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
+    bug_info['report_file'] = result
 
     return bug_info
