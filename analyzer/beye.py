@@ -21,22 +21,6 @@ def main():
     multiprocessing.freeze_support()
     logging.basicConfig(format='%(message)s')
 
-    def cleanup_out_directory(dir_name):
-        import shutil
-        shutil.rmtree(dir_name)
-
-    def create_out_directory(hint):
-        if (hint):
-            import os
-            try:
-                os.mkdir(hint)
-                return hint
-            except OSError as ex:
-                raise
-        else:
-            import tempfile
-            return tempfile.mkdtemp(prefix='beye-', suffix='.out')
-
     def from_number_to_level(num):
         if 0 == num:
             return logging.WARNING
@@ -50,13 +34,40 @@ def main():
     args = parse_command_line()
 
     logging.getLogger().setLevel(from_number_to_level(args.verbose))
-    out_dir = create_out_directory(args.output)
-    if run_analyzer(args, out_dir):
-        generate_report(out_dir)
+
+    with ReportDirectory(args.output, args.keep_empty) as out_dir:
         logging.warning('output directory: {0}'.format(out_dir))
-    else:
-        cleanup_out_directory(out_dir)
-        logging.warning('no bugs were found')
+        run_analyzer(args, out_dir)
+        return 1 if generate_report(out_dir) else 0
+
+
+class ReportDirectory(object):
+
+    def __init__(self, hint='', keep=False):
+        self.name = ReportDirectory._create(hint)
+        self.keep = keep
+
+    def __enter__(self):
+        return self.name
+
+    def __exit__(self, type, value, traceback):
+        report = len(glob.glob(os.path.join(self.name, '*.html'))) > 0
+        if report and not self.keep:
+            import shutil
+            shutil.rmtree(self.name)
+
+    @staticmethod
+    def _create(hint):
+        if hint is not None:
+            import os
+            try:
+                os.mkdir(hint)
+                return hint
+            except OSError as ex:
+                raise
+        else:
+            import tempfile
+            return tempfile.mkdtemp(prefix='beye-', suffix='.out')
 
 
 @trace
@@ -219,6 +230,8 @@ def generate_report(out_dir):
         bugs)
     logging.info(bugs)
 
+    return len(bugs) > 0
+
 
 @trace
 def run_analyzer(args, out_dir):
@@ -245,8 +258,6 @@ def run_analyzer(args, out_dir):
             pool.apply_async(func=run, args=(c,))
         pool.close()
         pool.join()
-
-    return len(glob.glob(os.path.join(out_dir, '*.html'))) > 0
 
 
 @trace
