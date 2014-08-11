@@ -534,8 +534,22 @@ def build_args(opts, output=None):
             result.append('-analyzer-stats')
         if 'analyses' in opts:
             result.extend(opts['analyses'])
-        if 'plugins' in opts:
-            result.extend(opts['plugins'])
+        if 'enable_checker' in opts:
+            result = functools.reduce(
+                lambda acc, x: acc + ['-analyzer-checker', x],
+                opts['enable_checker'],
+                result)
+        if 'disable_checker' in opts:
+            result = functools.reduce(
+                lambda acc, x: acc + ['-analyzer-disable-checker', x],
+                opts['disable_checker'],
+                result)
+        if 'analyze_headers' in opts:
+            result.append('-analyzer-opt-analyze-headers')
+        if 'stats' in opts:
+            result.append('-analyzer-checker=debug.Stats')
+        if 'maxloop' in opts:
+            result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
         if 'output_format' in opts:
             result.append('-analyzer-output={0}'.format(opts['output_format']))
         if 'analyzer_config' in opts:

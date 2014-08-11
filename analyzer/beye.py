@@ -90,7 +90,7 @@ def parse_command_line():
               directory is created in /tmp (TMPDIR on Mac OS X) to store the\
               reports.')
     group1.add_argument(
-        '--html-title',
+        '--html-title',  # TODO: implement usage
         metavar='<title>',
         help='Specify the title used on generated HTML pages.\
               If not specified, a default title will be used.')
@@ -113,7 +113,7 @@ def parse_command_line():
               This option outputs the results as a set of HTML and .plist\
               files.')
     group1.add_argument(
-        '--status-bugs',
+        '--status-bugs',  # TODO: implement usage
         action='store_true',
         help='By default, the exit status of scan-build is the same as the\
               executed build command. Specifying this option causes the exit\
@@ -141,6 +141,7 @@ def parse_command_line():
     group2.add_argument(
         '--maxloop',
         metavar='<loop count>',
+        type=int,
         help='Specifiy the number of times a block can be visited before\
               giving up. Default is 4. Increase for more comprehensive\
               coverage at a cost of speed.')
