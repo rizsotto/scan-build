@@ -12,6 +12,7 @@ import itertools
 import re
 import glob
 import os.path
+import shutil
 from analyzer.decorators import trace
 from analyzer.driver import run, get_clang_arguments, check_output, filter_dict
 import analyzer.parallel
@@ -34,6 +35,7 @@ def main():
     args = parse_command_line()
 
     logging.getLogger().setLevel(from_number_to_level(args.verbose))
+    logging.debug(args.__dict__)
 
     with ReportDirectory(args.output, args.keep_empty) as out_dir:
         logging.warning('output directory: {0}'.format(out_dir))
@@ -43,7 +45,7 @@ def main():
 
 class ReportDirectory(object):
 
-    def __init__(self, hint='', keep=False):
+    def __init__(self, hint, keep):
         self.name = ReportDirectory._create(hint)
         self.keep = keep
 
@@ -51,14 +53,13 @@ class ReportDirectory(object):
         return self.name
 
     def __exit__(self, type, value, traceback):
-        report = len(glob.glob(os.path.join(self.name, '*'))) > 0
-        if report and not self.keep:
-            import shutil
+        empty = 0 == len(glob.glob(os.path.join(self.name, '*')))
+        if empty and not self.keep:
             shutil.rmtree(self.name)
 
     @staticmethod
     def _create(hint):
-        if hint is not None:
+        if hint != '/tmp':
             import os
             try:
                 os.mkdir(hint)
@@ -245,15 +246,23 @@ def generate_report(out_dir):
             current.append(new)
         result.update({category: current})
 
+    def report(bugs):
+        logging.debug(bugs)
+        result = len(bugs) > 0
+        if result:
+            this_dir, _ = os.path.split(__file__)
+            resources_dir = os.path.join(this_dir, 'resources')
+            shutil.copy(os.path.join(resources_dir, 'scanview.css'), out_dir)
+            shutil.copy(os.path.join(resources_dir, 'sorttable.js'), out_dir)
+        return result
+
     bugs = dict()
     analyzer.parallel.run(
         glob.iglob(os.path.join(out_dir, '*.html')),
         scan_file,
         consume,
         bugs)
-    logging.info(bugs)
-
-    return len(bugs) > 0
+    return report(bugs)
 
 
 @trace

@@ -15,6 +15,7 @@ setup(
     long_description=open('README.rst').read(),
     zip_safe=False,
     packages=find_packages(),
+    package_data={'analyzer': ['resources/*']},
     entry_points={
         'console_scripts': [
             'beye = analyzer.beye:main'
