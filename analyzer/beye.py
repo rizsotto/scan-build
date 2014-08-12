@@ -7,14 +7,18 @@
 import shlex
 import logging
 import multiprocessing
+import subprocess
 import json
 import itertools
 import re
 import glob
+import os
 import os.path
 import shutil
 from analyzer.decorators import trace
-from analyzer.driver import run, get_clang_arguments, check_output, filter_dict
+from analyzer.driver import (
+    run, check_output, filter_dict,
+    get_clang_version, get_clang_arguments)
 import analyzer.parallel
 
 
@@ -40,7 +44,7 @@ def main():
     with ReportDirectory(args.output, args.keep_empty) as out_dir:
         logging.warning('output directory: {0}'.format(out_dir))
         run_analyzer(args, out_dir)
-        return 1 if generate_report(out_dir) else 0
+        return 1 if generate_report(args.__dict__, out_dir) else 0
 
 
 class ReportDirectory(object):
@@ -175,8 +179,9 @@ def parse_command_line():
               ‘basic’ uses a simpler, less powerful constraint model used by\
               checker-0.160 and earlier.')
     group2.add_argument(
-        '--use-analyzer',  # TODO: implement usage
+        '--use-analyzer',
         metavar='<path>',
+        dest='clang',
         default='clang',
         help="‘beye’ uses the ‘clang’ executable relative to itself for\
               static analysis. One can override this behavior with this\
@@ -226,7 +231,7 @@ def parse_command_line():
 
 
 @trace
-def generate_report(out_dir):
+def generate_report(args, out_dir):
     """ Generate the index.html """
     def consume(result, new):
         def isNotIn(container):
@@ -246,14 +251,24 @@ def generate_report(out_dir):
             current.append(new)
         result.update({category: current})
 
-    def report(bugs):
-        logging.debug(bugs)
-        result = len(bugs) > 0
+    @trace
+    def copy_resource_files():
+        this_dir, _ = os.path.split(__file__)
+        resources_dir = os.path.join(this_dir, 'resources')
+        shutil.copy(os.path.join(resources_dir, 'scanview.css'), out_dir)
+        shutil.copy(os.path.join(resources_dir, 'sorttable.js'), out_dir)
+        shutil.copy(os.path.join(resources_dir, 'selectable.js'), out_dir)
+
+    @trace
+    def report(bugs, crashes):
+        logging.debug('bugs: {0}, crashes: {1}'.format(bugs, crashes))
+        result = (len(bugs) + len(crashes)) > 0
         if result:
-            this_dir, _ = os.path.split(__file__)
-            resources_dir = os.path.join(this_dir, 'resources')
-            shutil.copy(os.path.join(resources_dir, 'scanview.css'), out_dir)
-            shutil.copy(os.path.join(resources_dir, 'sorttable.js'), out_dir)
+            opts = filter_dict(args,
+                               set(),
+                               {'output': os.path.join(out_dir, 'index.html')})
+            format_report(opts, bugs, crashes)
+            copy_resource_files()
         return result
 
     bugs = dict()
@@ -262,7 +277,7 @@ def generate_report(out_dir):
         scan_file,
         consume,
         bugs)
-    return report(bugs)
+    return report(bugs, dict())  # TODO: collect crash reports
 
 
 @trace
@@ -278,8 +293,7 @@ def run_analyzer(args, out_dir):
                 'input',
                 'sequential']),
             {'html_dir': out_dir,
-             'uname': check_output(['uname', '-a']).decode('ascii'),
-             'clang': 'clang'})
+             'uname': check_output(['uname', '-a']).decode('ascii')})
 
     const = set_common_params(args.__dict__)
     with open(args.input, 'r') as fd:
@@ -342,3 +356,75 @@ def scan_file(result):
     bug_info['report_file'] = result
 
     return bug_info
+
+
+@trace
+def format_report(opts, bugs, crashes):
+    import textwrap
+    main = textwrap.dedent("""
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>{html_title}</title>
+            <link type="text/css" rel="stylesheet" href="scanview.css"/>
+            <script type='text/javascript' src="sorttable.js"></script>
+            <script type='text/javascript' src='selectable.js'></script>
+          </head>
+          <body>
+            <h1>{html_title}</h1>
+            <table>
+              <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
+              <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
+              <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
+              <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
+              <tr><th>Date:</th><td>{date}</td></tr>
+        {version_section}
+            </table>
+        {bug_section}
+        {crash_section}
+          </body>
+        </html>
+        """).strip()
+
+    bug_section = textwrap.dedent("""
+        <h2>Bug Summary</h2>
+        {bugs_summary}
+        <h2>Reports</h2>
+        <table class="sortable" style="table-layout:automatic">
+          <thead>
+            <tr>
+              <td>Bug Group</td>
+              <td class="sorttable_sorted">Bug Type
+                <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
+              </td>
+              <td>File</td>
+              <td class="Q">Line</td>
+              <td class="Q">Path Length</td>
+              <td class="sorttable_nosort"></td>
+              <!-- REPORTBUGCOL -->
+            </tr>
+          </thead>
+          <tbody>
+        {bugs}
+          </tbody>
+        </table>
+        """).strip()
+
+    crash_section = textwrap.dedent("""
+        <h2>Analyzer Failures</h2>
+        {crashes}
+        """).strip()
+
+    with open(opts['output'], 'w') as handle:
+        handle.write(
+            main.format(
+                html_title='{}',
+                user_name='{}',
+                host_name='{}',
+                current_dir=os.getcwd(),
+                cmd_args='{}',
+                clang_version=get_clang_version(opts['clang']),
+                date='{}',
+                version_section='',
+                bug_section='{}',
+                crash_section='{}'))

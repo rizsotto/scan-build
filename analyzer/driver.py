@@ -444,9 +444,7 @@ def report_failure(opts, _):
         handle.write(error.title().replace('_', ' ') + os.linesep)
         handle.write(' '.join(cmd) + os.linesep)
         handle.write(opts['uname'])
-        handle.write(
-            check_output([cmd[0], '-v'],
-                         stderr=subprocess.STDOUT).decode('ascii'))
+        handle.write(get_clang_version(cmd[0]))
         handle.close()
 
     with open(name + '.stderr.txt', 'w') as handle:
@@ -454,6 +452,13 @@ def report_failure(opts, _):
         handle.close()
 
     return opts['exit_code']
+
+
+@trace
+def get_clang_version(cmd):
+    lines = check_output([cmd, '-v'],
+                         stderr=subprocess.STDOUT).decode('ascii')
+    return lines.splitlines()[0]
 
 
 @trace
