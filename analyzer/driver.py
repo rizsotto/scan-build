@@ -225,6 +225,10 @@ def parse(opts, continuation):
             values[key] = max(current, action)
         return take
 
+    def is_cxx(compiler):
+        return re.match('^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$',
+                        compiler)
+
     class ArgumentIterator(object):
         """ Iterator from the current value can be queried. """
         def __init__(self, args):
@@ -242,6 +246,8 @@ def parse(opts, continuation):
         command = opts['command']
         if isinstance(command, str):
             command = shlex.split(command)
+        # get the invocation intent
+        state.update(is_cxx=is_cxx(command[0]))
         # iterate on arguments
         it = ArgumentIterator(command[1:])
         while True:
