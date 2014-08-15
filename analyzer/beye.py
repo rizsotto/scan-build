@@ -4,7 +4,6 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import shlex
 import logging
 import multiprocessing
 import subprocess
@@ -302,7 +301,6 @@ def run_analyzer(args, out_dir):
         pool = multiprocessing.Pool(1 if args.sequential else None)
         for c in json.load(fd):
             c.update(const)
-            c.update(command=shlex.split(c['command']))
             pool.apply_async(func=run, args=(c,))
         pool.close()
         pool.join()
