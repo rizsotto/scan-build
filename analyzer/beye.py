@@ -22,7 +22,7 @@ import analyzer.parallel
 
 def main():
     multiprocessing.freeze_support()
-    logging.basicConfig(format='%(message)s')
+    logging.basicConfig(format='beye: %(message)s')
 
     def from_number_to_level(num):
         if 0 == num:
@@ -40,7 +40,6 @@ def main():
     logging.debug(args.__dict__)
 
     with ReportDirectory(args.output, args.keep_empty) as out_dir:
-        logging.warning('output directory: {0}'.format(out_dir))
         run_analyzer(args, out_dir)
         return 1 if generate_report(args.__dict__, out_dir) else 0
 
@@ -56,8 +55,13 @@ class ReportDirectory(object):
 
     def __exit__(self, type, value, traceback):
         empty = 0 == len(glob.glob(os.path.join(self.name, '*')))
+        msg = "Run 'scan-view {0}' to examine bug reports."
         if empty and not self.keep:
             shutil.rmtree(self.name)
+            msg = "Removing directory '{0}' because it contains no report."
+        elif self.keep:
+            msg = "Report directory '{0}' contans no report, but kept."
+        logging.warning(msg.format(self.name))
 
     @staticmethod
     def _create(hint):
