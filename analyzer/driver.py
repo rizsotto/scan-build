@@ -368,7 +368,7 @@ def set_analyzer_output(opts, continuation):
 @require(['language', 'directory', 'file', 'clang'])
 def run_analyzer(opts, continuation):
     cwd = opts['directory']
-    cmd = get_clang_arguments(cwd, build_args(opts))
+    cmd = build_args(opts)
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     child = subprocess.Popen(cmd,
                              cwd=cwd,
