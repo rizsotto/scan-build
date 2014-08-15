@@ -530,8 +530,6 @@ def build_args(opts, output=None):
                 '-analyzer-constraints={0}'.format(opts['constraints_model']))
         if 'internal_stats' in opts:
             result.append('-analyzer-stats')
-        if 'analyses' in opts:
-            result.extend(opts['analyses'])
         if 'enable_checker' in opts:
             result = functools.reduce(
                 lambda acc, x: acc + ['-analyzer-checker', x],
