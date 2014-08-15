@@ -60,24 +60,6 @@ def filter_dict(original, removables, additions):
     return new
 
 
-def check_output(*popenargs, **kwargs):
-    """ python 2.6 does not have subprocess.check_output method. """
-    if "check_output" in dir(subprocess):
-        return subprocess.check_output(*popenargs, **kwargs)
-
-    if 'stdout' in kwargs:
-        raise ValueError('stdout argument will be overridden.')
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd)
-    return output
-
-
 class Action(object):
     """ Enumeration class for compiler action. """
     Link, Compile, Preprocess, Info = range(4)
@@ -456,9 +438,8 @@ def report_failure(opts, _):
 
 @trace
 def get_clang_version(cmd):
-    lines = check_output([cmd, '-v'],
-                         stderr=subprocess.STDOUT).decode('ascii')
-    return lines.splitlines()[0]
+    lines = subprocess.check_output([cmd, '-v'], stderr=subprocess.STDOUT)
+    return lines.decode('ascii').splitlines()[0]
 
 
 @trace

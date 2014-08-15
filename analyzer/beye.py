@@ -17,8 +17,7 @@ import os.path
 import shutil
 from analyzer.decorators import trace
 from analyzer.driver import (
-    run, check_output, filter_dict,
-    get_clang_version, get_clang_arguments)
+    run, filter_dict, get_clang_version, get_clang_arguments)
 import analyzer.parallel
 
 
@@ -283,6 +282,9 @@ def generate_report(args, out_dir):
 @trace
 def run_analyzer(args, out_dir):
     def set_common_params(opts):
+        def uname():
+            return subprocess.check_output(['uname', '-a']).decode('ascii')
+
         return filter_dict(
             opts,
             frozenset([
@@ -293,7 +295,7 @@ def run_analyzer(args, out_dir):
                 'input',
                 'sequential']),
             {'html_dir': out_dir,
-             'uname': check_output(['uname', '-a']).decode('ascii')})
+             'uname': uname()})
 
     const = set_common_params(args.__dict__)
     with open(args.input, 'r') as fd:
