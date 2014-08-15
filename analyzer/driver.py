@@ -454,7 +454,7 @@ def get_clang_version(cmd):
 
 
 @trace
-def get_clang_arguments(cwd, cmd):
+def get_clang_arguments(cwd, command):
     """ Capture Clang invocation.
 
     Clang can be executed directly (when you just ask specific action to
@@ -477,6 +477,7 @@ def get_clang_arguments(cwd, cmd):
         return match.group(1) if match else quoted
 
     try:
+        cmd = command.copy()
         cmd.insert(1, '-###')
         logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
