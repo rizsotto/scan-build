@@ -225,9 +225,9 @@ def parse(opts, continuation):
             values[key] = max(current, action)
         return take
 
-    def is_cxx(compiler):
-        return re.match('^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$',
-                        compiler)
+    def is_cxx(cmd):
+        m = re.match('([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
+        return False if m is None else True
 
     class ArgumentIterator(object):
         """ Iterator from the current value can be queried. """
