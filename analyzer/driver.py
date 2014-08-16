@@ -338,30 +338,20 @@ def set_language(opts, continuation):
 @require()
 def set_analyzer_output(opts, continuation):
     """ Create output file if was requested. """
-    class TempFile(object):
-        """ Temporary file destroyed on exit, when it's empty. """
-        def __init__(self, html_dir):
-            (self.handle, self.name) = tempfile.mkstemp(suffix='.plist',
-                                                        prefix='report-',
-                                                        dir=html_dir)
-            logging.info('analyzer output: {0}'.format(self.name))
+    def needs_output_file():
+        output_format = opts.get('output_format')
+        return 'plist' == output_format or 'plist-html' == output_format
 
-        def __enter__(self):
-            return self.name
-
-        def __exit__(self, exc, value, tb):
-            try:
-                os.close(self.handle)
-                if 0 == os.stat(self.name).st_size:
-                    os.remove(self.name)
-            except:
-                logging.warning('cleanup failed on {0}'.format(self.name))
-
-    if 'plist' == opts.get('output_format') and 'html_dir' in opts:
-        with TempFile(opts['html_dir']) as output:
+    if needs_output_file():
+        with tempfile.NamedTemporaryFile(prefix='report-',
+                                         suffix='.plist',
+                                         delete='html_dir' not in opts,
+                                         dir=opts.get('html_dir')) as output:
             return continuation(
-                filter_dict(opts, frozenset(), {'analyzer_output': output}))
-    return continuation(opts)
+                filter_dict(opts, frozenset(),
+                            {'analyzer_output': output.name}))
+    else:
+        return continuation(opts)
 
 
 @trace

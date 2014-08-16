@@ -17,31 +17,15 @@ class SetAnalyzerOutputTest(fixtures.TestCase):
         self.assertEqual(dict(), spy.arg)
 
     def test_set_analyzer_output_create_file(self):
-        class Spy:
-            def __init__(self):
-                self.arg = None
-
-            def call(self, params):
-                self.arg = params
-                with open(params['analyzer_output'], 'w') as fd:
-                    fd.write('hello from here')
-
         with fixtures.TempDir() as tmpdir:
             opts = {'html_dir': tmpdir, 'output_format': 'plist'}
-            spy = Spy()
+            spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
             self.assertTrue(os.path.exists(spy.arg['analyzer_output']))
 
-    def test_set_analyzer_output_delete_empty_file(self):
-        class Spy:
-            def __init__(self):
-                self.arg = None
-
-            def call(self, params):
-                self.arg = params
-
+    def test_set_analyzer_output_delete_file(self):
         with fixtures.TempDir() as tmpdir:
-            opts = {'html_dir': tmpdir, 'output_format': 'plist'}
-            spy = Spy()
+            opts = {'output_format': 'plist'}
+            spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
             self.assertFalse(os.path.exists(spy.arg['analyzer_output']))
