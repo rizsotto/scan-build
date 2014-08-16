@@ -11,9 +11,9 @@ import glob
 import os
 import os.path
 import shutil
+import multiprocessing
 from analyzer.decorators import trace
 from analyzer.driver import filter_dict, get_clang_version
-import analyzer.parallel
 
 
 @trace
@@ -58,11 +58,13 @@ def generate_report(args, out_dir):
         return result
 
     bugs = dict()
-    analyzer.parallel.run(
-        glob.iglob(os.path.join(out_dir, '*.html')),
-        scan_file,
-        consume,
-        bugs)
+    pool = multiprocessing.Pool(1 if args['sequential'] else None)
+    for c in pool.imap_unordered(scan_file,
+                                 glob.iglob(os.path.join(out_dir, '*.html'))):
+        consume(bugs, c)
+    pool.close()
+    pool.join()
+
     return report(bugs, dict())  # TODO: collect crash reports
 
 
