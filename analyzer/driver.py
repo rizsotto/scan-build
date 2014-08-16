@@ -477,7 +477,7 @@ def get_clang_arguments(cwd, command):
         return match.group(1) if match else quoted
 
     try:
-        cmd = command.copy()
+        cmd = command[:]
         cmd.insert(1, '-###')
         logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
         child = subprocess.Popen(cmd,
