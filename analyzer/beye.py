@@ -10,10 +10,8 @@ import subprocess
 import json
 import itertools
 import re
-import glob
 import os
 import os.path
-import shutil
 from analyzer.decorators import trace
 from analyzer.driver import run, filter_dict, get_clang_arguments
 from analyzer.report import generate_report
@@ -53,13 +51,14 @@ class ReportDirectory(object):
         return self.name
 
     def __exit__(self, type, value, traceback):
-        empty = 0 == len(glob.glob(os.path.join(self.name, '*')))
-        msg = "Run 'scan-view {0}' to examine bug reports."
-        if empty and not self.keep:
-            shutil.rmtree(self.name)
-            msg = "Removing directory '{0}' because it contains no report."
-        elif self.keep:
-            msg = "Report directory '{0}' contans no report, but kept."
+        if os.listdir(self.name):
+            msg = "Run 'scan-view {0}' to examine bug reports."
+        else:
+            if self.keep:
+                msg = "Report directory '{0}' contans no report, but kept."
+            else:
+                os.rmdir(self.name)
+                msg = "Removing directory '{0}' because it contains no report."
         logging.warning(msg.format(self.name))
 
     @staticmethod
