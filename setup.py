@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='beye',
@@ -14,7 +14,7 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.rst').read(),
     zip_safe=False,
-    packages=find_packages(),
+    packages=['analyzer'],
     package_data={'analyzer': ['resources/*']},
     entry_points={
         'console_scripts': [
