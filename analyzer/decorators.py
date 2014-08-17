@@ -34,7 +34,9 @@ def require(required=[]):
                 return function(opts, cont)
             except Exception as e:
                 logging.error(str(e))
-                return None
+                return {'error': {'exception': e,
+                                  'function': function.__name__},
+                        'input': opts}
 
         def precondition(opts):
             for key in required:

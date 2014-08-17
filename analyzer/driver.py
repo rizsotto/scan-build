@@ -255,37 +255,39 @@ def parse(opts, continuation):
             match(state, it)
     except StopIteration:
         return continuation(filter_dict(opts, frozenset(['command']), state))
-    except:
-        logging.exception('parsing failed')
 
 
 @trace
 @require(['action'])
 def filter_action(opts, continuation):
     """ Continue analysis only if it compilation or link. """
-    return continuation(opts) if opts['action'] <= Action.Compile else 0
+    return continuation(opts) if opts['action'] <= Action.Compile else None
 
 
 @trace
 @require()
 def arch_loop(opts, continuation):
+    """ Do run analyzer through one of the given architectures. """
     disableds = ['ppc', 'ppc64']
 
     key = 'archs_seen'
-    result = 0
     if key in opts:
         archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
         if not archs:
             logging.info('skip analysis, found not supported arch')
+            return None
         else:
-            for arch in archs:
-                logging.info('analysis, on arch: {0}'.format(arch))
-                result += continuation(
-                    filter_dict(opts, frozenset([key]), {'arch': arch}))
+            # There should be only one arch given (or the same multiple times)
+            # If there are multiple arch are given, and those are not the same
+            # those should not change the preprocessing step. (But that's the
+            # only pass we have before run the analyzer.)
+            arch = archs.pop()
+            logging.info('analysis, on arch: {0}'.format(arch))
+            return continuation(
+                filter_dict(opts, frozenset([key]), {'arch': arch}))
     else:
         logging.info('analysis, on default arch')
-        result = continuation(opts)
-    return result
+        return continuation(opts)
 
 
 @trace
@@ -331,7 +333,7 @@ def set_language(opts, continuation):
         logging.info('analysis, language: {0}'.format(language))
         return continuation(
             filter_dict(opts, frozenset([key]), {key: language}))
-    return 0
+    return None
 
 
 @trace
@@ -376,7 +378,9 @@ def run_analyzer(opts, continuation):
                         {'error_type': error_type,
                          'error_output': output,
                          'exit_code': child.returncode}))
-    return child.returncode
+    return {'analyzer': {'error_output': output,
+                         'exit_code': child.returncode},
+            'file': opts['file']}
 
 
 @trace
@@ -434,7 +438,13 @@ def report_failure(opts, _):
         handle.writelines(opts['error_output'])
         handle.close()
 
-    return opts['exit_code']
+    return {'analyzer': {'error_output': output,
+                         'exit_code': child.returncode},
+            'crash': {'source': opts['file'],
+                      'problem': error.title().replace('_', ' '),
+                      'preproc': name,
+                      'stderr': name + '.stderr.txt'},
+            'file': opts['file']}
 
 
 @trace
@@ -466,26 +476,22 @@ def get_clang_arguments(cwd, command):
         match = re.match('^\"([^\"]*)\"$', quoted)
         return match.group(1) if match else quoted
 
-    try:
-        cmd = command[:]
-        cmd.insert(1, '-###')
-        logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-        child = subprocess.Popen(cmd,
-                                 cwd=cwd,
-                                 universal_newlines=True,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
-        line = lastline(child.stdout)
-        child.wait()
-        if 0 == child.returncode:
-            if re.match('^clang: error:', line):
-                raise Exception(line)
-            return [strip_quotes(x) for x in shlex.split(line)]
-        else:
+    cmd = command[:]
+    cmd.insert(1, '-###')
+    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    child = subprocess.Popen(cmd,
+                             cwd=cwd,
+                             universal_newlines=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+    line = lastline(child.stdout)
+    child.wait()
+    if 0 == child.returncode:
+        if re.match('^clang: error:', line):
             raise Exception(line)
-    except Exception as e:
-        logging.error('failed to get clang arguments: {0}'.format(str(e)))
-        return None
+        return [strip_quotes(x) for x in shlex.split(line)]
+    else:
+        raise Exception(line)
 
 
 def build_args(opts, output=None):

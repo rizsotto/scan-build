@@ -37,7 +37,7 @@ def main():
     logging.debug(args.__dict__)
 
     with ReportDirectory(args.output, args.keep_empty) as out_dir:
-        run_analyzer(args, out_dir)
+        crashes = run_analyzer(args, out_dir)
         return 1 if generate_report(args.__dict__, out_dir) else 0
 
 
@@ -232,7 +232,7 @@ def parse_command_line():
 
 @trace
 def run_analyzer(args, out_dir):
-    def set_common_params(opts):
+    def common_params(opts):
         def uname():
             return subprocess.check_output(['uname', '-a']).decode('ascii')
 
@@ -248,14 +248,29 @@ def run_analyzer(args, out_dir):
             {'html_dir': out_dir,
              'uname': uname()})
 
-    const = set_common_params(args.__dict__)
+    def wrap(iterable, const):
+        for current in iterable:
+            current.update(const)
+            yield current
+
+    def consume(crashes, current):
+        if current is not None:
+            if 'analyzer' in current:
+                report = current['analyzer']
+                for line in report['error_output']:
+                    logging.warning(line.rstrip())
+            if 'crash' in current:
+                crashes.append(current['crash'])
+
+    crashes = []
     with open(args.input, 'r') as fd:
         pool = multiprocessing.Pool(1 if args.sequential else None)
-        for c in json.load(fd):
-            c.update(const)
-            pool.apply_async(func=run, args=(c,))
+        for c in pool.imap_unordered(run, wrap(json.load(fd),
+                                               common_params(args.__dict__))):
+            consume(crashes, c)
         pool.close()
         pool.join()
+    return crashes
 
 
 @trace

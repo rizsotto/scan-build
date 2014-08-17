@@ -14,15 +14,10 @@ class Spy:
     def __init__(self):
         self.arg = None
         self.success = 0
-        self.error = 500
 
     def call(self, params):
         self.arg = params
         return self.success
-
-    def fail(self, params):
-        self.arg = params
-        return self.error
 
 
 class TempDir:

@@ -27,7 +27,14 @@ class AnalyzerTest(unittest.TestCase):
         test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
         test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i'})
         test({f: 'f.i', l: 'c-cpp-output'}, {f: 'f.i', l: 'c-cpp-output'})
-        test(None, {f: 'file.java'})
+
+    def test_set_language_fails(self):
+        def test(expected, input):
+            spy = fixtures.Spy()
+            self.assertEqual(None, sut.set_language(input, spy.call))
+            self.assertEqual(expected, spy.arg)
+
+        test(None, {'file': 'file.java'})
 
     def test_filter_dict_insert_works(self):
         input = {'key': 1}
@@ -70,8 +77,8 @@ class AnalyzerTest(unittest.TestCase):
         self.assertEqual(spy.success, sut.arch_loop(input, spy.call))
         self.assertEqual({'arch': 'i386'}, spy.arg)
 
-    def test_arch_loop_stops_on_failure(self):
+    def test_arch_loop_forwards_call(self):
         spy = fixtures.Spy()
-        input = {'archs_seen': ['-arch', 'sparc', '-arch', 'i386']}
-        self.assertNotEqual(spy.success, sut.arch_loop(input, spy.fail))
-        self.assertEqual({'arch': 'i386'}, spy.arg)
+        input = {'archs_seen': ['-arch', 'i386', '-arch', 'sparc']}
+        self.assertEqual(spy.success, sut.arch_loop(input, spy.call))
+        self.assertEqual({'arch': 'sparc'}, spy.arg)
