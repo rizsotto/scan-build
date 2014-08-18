@@ -20,21 +20,9 @@ from analyzer.driver import filter_dict, get_clang_version
 def generate_report(args, out_dir):
     """ Generate the index.html """
     def consume(result, new):
-        def isNotIn(container):
-            def isDuplicate(one, two):
-                return one['bug_file'] == two['bug_file']\
-                    and one['bug_line'] == two['bug_line']\
-                    and one['bug_path_length'] == two['bug_path_length']
-
-            for elem in container:
-                if isDuplicate(elem, new):
-                    return False
-            return True
-
         category = new['bug_category']
         current = result.get(category, [])
-        if isNotIn(current):
-            current.append(new)
+        current.append(new)
         result.update({category: current})
 
     @trace
