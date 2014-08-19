@@ -274,7 +274,7 @@ def arch_loop(opts, continuation):
     if key in opts:
         archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
         if not archs:
-            logging.info('skip analysis, found not supported arch')
+            logging.debug('skip analysis, found not supported arch')
             return None
         else:
             # There should be only one arch given (or the same multiple times)
@@ -282,11 +282,11 @@ def arch_loop(opts, continuation):
             # those should not change the preprocessing step. (But that's the
             # only pass we have before run the analyzer.)
             arch = archs.pop()
-            logging.info('analysis, on arch: {0}'.format(arch))
+            logging.debug('analysis, on arch: {0}'.format(arch))
             return continuation(
                 filter_dict(opts, frozenset([key]), {'arch': arch}))
     else:
-        logging.info('analysis, on default arch')
+        logging.debug('analysis, on default arch')
         return continuation(opts)
 
 
@@ -326,11 +326,11 @@ def set_language(opts, continuation):
     language = opts[key] if key in opts else \
         from_filename(opts['file'], opts.get('is_cxx'))
     if language is None:
-        logging.info('skip analysis, language not known')
+        logging.debug('skip analysis, language not known')
     elif language not in accepteds:
-        logging.info('skip analysis, language not supported')
+        logging.debug('skip analysis, language not supported')
     else:
-        logging.info('analysis, language: {0}'.format(language))
+        logging.debug('analysis, language: {0}'.format(language))
         return continuation(
             filter_dict(opts, frozenset([key]), {key: language}))
     return None

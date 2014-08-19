@@ -258,7 +258,7 @@ def run_analyzer(args, out_dir):
             if 'analyzer' in current:
                 report = current['analyzer']
                 for line in report['error_output']:
-                    logging.warning(line.rstrip())
+                    logging.info(line.rstrip())
             if 'crash' in current:
                 crashes.append(current['crash'])
 
