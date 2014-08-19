@@ -12,7 +12,7 @@ import itertools
 import re
 import os
 import os.path
-from analyzer.decorators import trace
+from analyzer.decorators import trace, require
 from analyzer.driver import run, filter_dict, get_clang_arguments
 from analyzer.report import generate_report
 
@@ -33,12 +33,12 @@ def main():
 
     args = parse_command_line()
 
-    logging.getLogger().setLevel(from_number_to_level(args.verbose))
-    logging.debug(args.__dict__)
+    logging.getLogger().setLevel(from_number_to_level(args['verbose']))
+    logging.debug(args)
 
-    with ReportDirectory(args.output, args.keep_empty) as out_dir:
+    with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
         crashes = run_analyzer(args, out_dir)
-        return 1 if generate_report(args.__dict__, out_dir) else 0
+        return 1 if generate_report(args, out_dir) else 0
 
 
 class ReportDirectory(object):
@@ -227,10 +227,11 @@ def parse_command_line():
         action='append',
         help='Disable specific checker.')
 
-    return parser.parse_args()
+    return parser.parse_args().__dict__
 
 
 @trace
+@require(['input'])
 def run_analyzer(args, out_dir):
     def common_params(opts):
         def uname():
@@ -263,10 +264,10 @@ def run_analyzer(args, out_dir):
                 crashes.append(current['crash'])
 
     crashes = []
-    with open(args.input, 'r') as fd:
-        pool = multiprocessing.Pool(1 if args.sequential else None)
-        for c in pool.imap_unordered(run, wrap(json.load(fd),
-                                               common_params(args.__dict__))):
+    with open(args['input'], 'r') as fd:
+        pool = multiprocessing.Pool(1 if 'sequential' in args else None)
+        for c in pool.imap_unordered(run,
+                                     wrap(json.load(fd), common_params(args))):
             consume(crashes, c)
         pool.close()
         pool.join()
