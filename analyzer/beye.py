@@ -14,7 +14,7 @@ import os
 import os.path
 from analyzer.decorators import trace, require
 from analyzer.driver import run, filter_dict, get_clang_arguments
-from analyzer.report import generate_report
+from analyzer.report import create_report_generator
 
 
 def main():
@@ -37,8 +37,11 @@ def main():
     logging.debug(args)
 
     with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
-        crashes = run_analyzer(args, out_dir)
-        return 1 if generate_report(args, out_dir) else 0
+        with create_report_generator(args, out_dir) as generator:
+            run_analyzer(args, out_dir, generator)
+            number_of_bugs = generator.create_report()
+            # TODO get result from bear if --status-bugs were not requested
+            return number_of_bugs if 'status_bugs' in args else 0
 
 
 class ReportDirectory(object):
@@ -116,7 +119,7 @@ def parse_command_line():
         help='This option outputs the results as a set of HTML and .plist\
               files.')
     group1.add_argument(
-        '--status-bugs',  # TODO: implement usage
+        '--status-bugs',
         action='store_true',
         help='By default, the exit status of ‘beye’ is the same as the\
               executed build command. Specifying this option causes the exit\
@@ -231,8 +234,7 @@ def parse_command_line():
 
 
 @trace
-@require(['input'])
-def run_analyzer(args, out_dir):
+def run_analyzer(args, out_dir, report_generator):
     def common_params(opts):
         def uname():
             return subprocess.check_output(['uname', '-a']).decode('ascii')
@@ -254,24 +256,22 @@ def run_analyzer(args, out_dir):
             current.update(const)
             yield current
 
-    def consume(crashes, current):
+    def consume(report_generator, current):
         if current is not None:
             if 'analyzer' in current:
                 report = current['analyzer']
                 for line in report['error_output']:
                     logging.info(line.rstrip())
             if 'crash' in current:
-                crashes.append(current['crash'])
+                report_generator.crash(current['crash'])
 
-    crashes = []
     with open(args['input'], 'r') as fd:
         pool = multiprocessing.Pool(1 if 'sequential' in args else None)
         for c in pool.imap_unordered(run,
                                      wrap(json.load(fd), common_params(args))):
-            consume(crashes, c)
+            consume(report_generator, c)
         pool.close()
         pool.join()
-    return crashes
 
 
 @trace
