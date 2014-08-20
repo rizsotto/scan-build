@@ -12,7 +12,6 @@ import os
 import os.path
 import shutil
 import glob
-import textwrap
 from analyzer.decorators import trace
 from analyzer.driver import filter_dict, get_clang_version
 
@@ -22,14 +21,13 @@ class Crashes(object):
     @trace
     def __init__(self, out_dir):
         self.count = 0
-        self.line_template = textwrap.dedent(
-            """
-            <tr>
-              <td>{problem}</td>
-              <td>{source}</td>
-              <td><a href="{preproc}">preprocessor output</a></td>
-              <td><a href="{stderr}">analyzer std err</a></td>
-            </tr>""").lstrip()
+        self.line_template = reindent("""
+                |<tr>
+                |  <td>{problem}</td>
+                |  <td>{source}</td>
+                |  <td><a href="{preproc}">preprocessor output</a></td>
+                |  <td><a href="{stderr}">analyzer std err</a></td>
+                |</tr>""", 8)
         self.name = os.path.join(out_dir, 'crashes.html.fragment')
         self.handle = open(self.name, 'w')
 
@@ -48,24 +46,23 @@ class Crashes(object):
         self.handle.close()
         if self.count:
             with open(self.name, 'r') as handle:
-                report.write(
-                    textwrap.dedent(
-                        """
-                        <table>
-                          <thead>
-                            <tr>
-                              <td>Problem</td>
-                              <td>Source File</td>
-                              <td>Preprocessed File</td>
-                              <td>STDERR Output</td>
-                            </tr>
-                          </thead>
-                          <tbody>
-                        """).lstrip())
+                report.write(reindent("""
+                |<table>
+                |  <thead>
+                |    <tr>
+                |      <td>Problem</td>
+                |      <td>Source File</td>
+                |      <td>Preprocessed File</td>
+                |      <td>STDERR Output</td>
+                |    </tr>
+                |  </thead>
+                |  <tbody>""", 4))
                 # copy line by line
                 for line in handle:
                     report.write(line)
-                report.write("\n  </tbody>\n</table>")
+                report.write(reindent("""
+                |  </tbody>
+                |</table>""", 4))
 
 
 class Bugs(object):
@@ -73,16 +70,15 @@ class Bugs(object):
     @trace
     def __init__(self, out_dir):
         self.count = 0
-        self.line_template = textwrap.dedent(
-            """
-            <tr>
-              <td class="DESC">{bug_category}</td>
-              <td class="DESC">{bug_type}</td>
-              <td>{bug_file}</td>
-              <td class="Q">{bug_line}</td>
-              <td class="Q">{bug_path_length}</td>
-              <td><a href="{report_file}#EndPath">View Report</a></td>
-            </tr>""").lstrip()
+        self.line_template = reindent("""
+                |<tr>
+                |  <td class="DESC">{bug_category}</td>
+                |  <td class="DESC">{bug_type}</td>
+                |  <td>{bug_file}</td>
+                |  <td class="Q">{bug_line}</td>
+                |  <td class="Q">{bug_path_length}</td>
+                |  <td><a href="{report_file}#EndPath">View Report</a></td>
+                |</tr>""", 8)
         self.name = os.path.join(out_dir, 'bugs.html.fragment')
         self.handle = open(self.name, 'w')
 
@@ -96,60 +92,33 @@ class Bugs(object):
         self.handle.close()
         os.remove(self.name)
 
-    def etwas():
-        bug_section = textwrap.dedent("""
-            <h2>Bug Summary</h2>
-            {bugs_summary}
-            <h2>Reports</h2>
-            <table class="sortable" style="table-layout:automatic">
-              <thead>
-                <tr>
-                  <td>Bug Group</td>
-                  <td class="sorttable_sorted">Bug Type
-                    <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
-                  </td>
-                  <td>File</td>
-                  <td class="Q">Line</td>
-                  <td class="Q">Path Length</td>
-                  <td class="sorttable_nosort"></td>
-                  <!-- REPORTBUGCOL -->
-                </tr>
-              </thead>
-              <tbody>
-            {bugs}
-              </tbody>
-            </table>
-            """).lstrip()
-
     @trace
     def concat_to_report(self, report):
         self.handle.close()
         if self.count:
             with open(self.name, 'r') as handle:
-                report.write(
-                    textwrap.dedent(
-                        """
-                        <table class="sortable" style="table-layout:automatic">
-                          <thead>
-                            <tr>
-                              <td>Bug Group</td>
-                              <td class="sorttable_sorted">
-                                Bug Type
-                                <span id="sorttable_sortfwdind">&nbsp;&#x25BE;
-                                </span>
-                              </td>
-                              <td>File</td>
-                              <td class="Q">Line</td>
-                              <td class="Q">Path Length</td>
-                              <td class="sorttable_nosort"></td>
-                            </tr>
-                          </thead>
-                          <tbody>
-                        """).lstrip())
+                report.write(reindent("""
+                |<table class="sortable" style="table-layout:automatic">
+                |  <thead>
+                |    <tr>
+                |      <td>Bug Group</td>
+                |      <td class="sorttable_sorted">
+                |        Bug Type
+                |        <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
+                |      </td>
+                |      <td>File</td>
+                |      <td class="Q">Line</td>
+                |      <td class="Q">Path Length</td>
+                |      <td class="sorttable_nosort"></td>
+                |    </tr>
+                |  </thead>
+                |  <tbody>""", 4))
                 # copy line by line
                 for line in handle:
                     report.write(line)
-                report.write("\n  </tbody>\n</table>")
+                report.write(reindent("""
+                |  </tbody>
+                |</table>""", 4))
 
 
 class ReportGenerator(object):
@@ -265,38 +234,39 @@ def format_report(opts, out_dir, bugs, crashes):
     output = os.path.join(out_dir, 'index.html')
     with open(output, 'w') as handle:
         handle.write(
-            textwrap.dedent("""
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>{html_title}</title>
-                <link type="text/css" rel="stylesheet" href="scanview.css"/>
-                <script type='text/javascript' src="sorttable.js"></script>
-                <script type='text/javascript' src='selectable.js'></script>
-              </head>
-              <body>
-                <h1>{html_title}</h1>
-                <table>
-                  <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
-                  <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
-                  <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
-                  <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
-                  <tr><th>Date:</th><td>{date}</td></tr>
-            {version_section}
-                </table>
-            """).lstrip()
-                .format(
-                    html_title=opts.get('html_title', default_title()),
-                    user_name=getpass.getuser(),
-                    host_name=socket.getfqdn(),
-                    current_dir=os.getcwd(),
-                    cmd_args=' '.join(sys.argv),
-                    clang_version=get_clang_version(opts['clang']),
-                    date=datetime.datetime.today().strftime('%c'),
-                    version_section=''))
+            reindent("""
+            |<!DOCTYPE html>
+            |<html>
+            |  <head>
+            |    <title>{html_title}</title>
+            |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
+            |    <script type='text/javascript' src="sorttable.js"></script>
+            |    <script type='text/javascript' src='selectable.js'></script>
+            |  </head>
+            |  <body>
+            |    <h1>{html_title}</h1>
+            |    <table>
+            |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
+            |      <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
+            |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
+            |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
+            |      <tr><th>Date:</th><td>{date}</td></tr>
+            |{version_section}
+            |    </table>""", 0).format(
+                html_title=opts.get('html_title', default_title()),
+                user_name=getpass.getuser(),
+                host_name=socket.gethostname(),
+                current_dir=os.getcwd(),
+                cmd_args=' '.join(sys.argv),
+                clang_version=get_clang_version(opts['clang']),
+                date=datetime.datetime.today().strftime('%c'),
+                version_section=''))
         bugs.concat_to_report(handle)
         crashes.concat_to_report(handle)
-        handle.write("\n  </body>\n</html>")
+        handle.write(
+            reindent("""
+            |  </body>
+            |</html>""", 0))
 
 
 @trace
@@ -306,3 +276,11 @@ def copy_resource_files(out_dir):
     shutil.copy(os.path.join(resources_dir, 'scanview.css'), out_dir)
     shutil.copy(os.path.join(resources_dir, 'sorttable.js'), out_dir)
     shutil.copy(os.path.join(resources_dir, 'selectable.js'), out_dir)
+
+
+def reindent(text, indent):
+    result = ''
+    for line in text.splitlines():
+        if len(line.strip()):
+            result += ' ' * indent + line.split('|')[1] + os.linesep
+    return result
