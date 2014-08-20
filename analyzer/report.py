@@ -16,188 +16,41 @@ from analyzer.decorators import trace
 from analyzer.driver import filter_dict, get_clang_version
 
 
-class Crashes(object):
-
-    @trace
-    def __init__(self, out_dir):
-        self.count = 0
-        self.line_template = reindent("""
-                |<tr>
-                |  <td>{problem}</td>
-                |  <td>{source}</td>
-                |  <td><a href="{preproc}">preprocessor output</a></td>
-                |  <td><a href="{stderr}">analyzer std err</a></td>
-                |</tr>""", 8)
-        self.name = os.path.join(out_dir, 'crashes.html.fragment')
-        self.handle = open(self.name, 'w')
-
-    @trace
-    def add(self, report):
-        self.count += 1
-        self.handle.write(self.line_template.format(**report))
-
-    @trace
-    def close(self):
-        self.handle.close()
-        os.remove(self.name)
-
-    @trace
-    def concat_to_report(self, report):
-        self.handle.close()
-        if self.count:
-            with open(self.name, 'r') as handle:
-                report.write(reindent("""
-                |<table>
-                |  <thead>
-                |    <tr>
-                |      <td>Problem</td>
-                |      <td>Source File</td>
-                |      <td>Preprocessed File</td>
-                |      <td>STDERR Output</td>
-                |    </tr>
-                |  </thead>
-                |  <tbody>""", 4))
-                # copy line by line
-                for line in handle:
-                    report.write(line)
-                report.write(reindent("""
-                |  </tbody>
-                |</table>""", 4))
-
-
-class Bugs(object):
-
-    @trace
-    def __init__(self, out_dir):
-        self.count = 0
-        self.line_template = reindent("""
-                |<tr>
-                |  <td class="DESC">{bug_category}</td>
-                |  <td class="DESC">{bug_type}</td>
-                |  <td>{bug_file}</td>
-                |  <td class="Q">{bug_line}</td>
-                |  <td class="Q">{bug_path_length}</td>
-                |  <td><a href="{report_file}#EndPath">View Report</a></td>
-                |</tr>""", 8)
-        self.name = os.path.join(out_dir, 'bugs.html.fragment')
-        self.handle = open(self.name, 'w')
-
-    @trace
-    def add(self, report):
-        self.count += 1
-        self.handle.write(self.line_template.format(**report))
-
-    @trace
-    def close(self):
-        self.handle.close()
-        os.remove(self.name)
-
-    @trace
-    def concat_to_report(self, report):
-        self.handle.close()
-        if self.count:
-            with open(self.name, 'r') as handle:
-                report.write(reindent("""
-                |<table class="sortable" style="table-layout:automatic">
-                |  <thead>
-                |    <tr>
-                |      <td>Bug Group</td>
-                |      <td class="sorttable_sorted">
-                |        Bug Type
-                |        <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
-                |      </td>
-                |      <td>File</td>
-                |      <td class="Q">Line</td>
-                |      <td class="Q">Path Length</td>
-                |      <td class="sorttable_nosort"></td>
-                |    </tr>
-                |  </thead>
-                |  <tbody>""", 4))
-                # copy line by line
-                for line in handle:
-                    report.write(line)
-                report.write(reindent("""
-                |  </tbody>
-                |</table>""", 4))
-
-
-class ReportGenerator(object):
-
-    def __init__(self, args, out_dir):
-        self.args = args
-        self.out_dir = out_dir
-        self.crashes = Crashes(out_dir)
-        self.bugs = Bugs(out_dir)
-
-    # PEP 0343 requuires this
-    def __enter__(self):
-        return self
-
-    # PEP 0343 requuires this
-    def __exit__(self, type, value, traceback):
-        self.crashes.close()
-        self.bugs.close()
-
-    # public interface for beye
-    @trace
-    def crash(self, report):
-        self.crashes.add(report)
-
-    # public interface for beye
-    @trace
-    def create_report(self):
-        pattern = os.path.join(self.out_dir, '*.html')
-        pool = multiprocessing.Pool(1 if 'sequential' in self.args else None)
-        count = 0
-        for c in pool.imap_unordered(scan_file, glob.iglob(pattern)):
-            self.bugs.add(c)
-            count += 1
-        pool.close()
-        pool.join()
-
-        if count:
-            format_report(self.args, self.out_dir, self.bugs, self.crashes)
-            copy_resource_files(self.out_dir)
-        return count
+@trace
+def generate_report(args, out_dir):
+    # TODO: don't do any of these if output format was not html
+    pool = multiprocessing.Pool(1 if 'sequential' in args else None)
+    (bugs, count1) = bug_fragment(
+        pool.imap_unordered(scan_bug,
+                            glob.iglob(os.path.join(out_dir,
+                                                    '*.html'))),
+        out_dir)
+    (crashes, count2) = crash_fragment(
+        pool.imap_unordered(scan_crash,
+                            glob.iglob(os.path.join(out_dir,
+                                                    'failures',
+                                                    '*.info.txt'))),
+        out_dir)
+    pool.close()
+    pool.join()
+    if count1 + count2 > 0:
+        assembly_report(args, out_dir, bugs, crashes)
+    os.remove(bugs)
+    os.remove(crashes)
+    return count1 + count2
 
 
 @trace
-def create_report_generator(opts, out_dir):
-    def report_requested():
-        output_format = opts.get('output_format')
-        return 'html' == output_format or 'plist-html' == output_format
-
-    class Fake(object):
-
-        def __init__(self):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, type, value, traceback):
-            pass
-
-        def crash(self, report):
-            pass
-
-        def create_report(self):
-            return 0
-
-    return ReportGenerator(opts, out_dir) if report_requested() else Fake()
-
-
-@trace
-def scan_file(result):
+def scan_bug(result):
     """ Parse out the bug information from HTML output. """
-    patterns = frozenset(
-        [re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
-         re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
-         re.compile('<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
-         re.compile('<!-- BUGLINE (?P<bug_line>.*) -->$'),
-         re.compile('<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
-         re.compile('<!-- BUGDESC (?P<bug_description>.*) -->$'),
-         re.compile('<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')])
+    patterns = [
+        re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
+        re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
+        re.compile('<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
+        re.compile('<!-- BUGLINE (?P<bug_line>.*) -->$'),
+        re.compile('<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
+        re.compile('<!-- BUGDESC (?P<bug_description>.*) -->$'),
+        re.compile('<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
     endsign = re.compile('<!-- BUGMETAEND -->')
 
     bug_info = dict()
@@ -222,51 +75,151 @@ def scan_file(result):
 
 
 @trace
-def format_report(opts, out_dir, bugs, crashes):
+def scan_crash(filename):
+    match = re.match('(.*)\.info\.txt', filename)
+    name = match.group(1) if match else None
+    with open(filename) as handler:
+        lines = handler.readlines()
+        return {'source': lines[0].rstrip(),
+                'problem': lines[1].rstrip(),
+                'preproc': name,
+                'stderr': name + '.stderr.txt'},
+
+
+@trace
+def crash_fragment(iterator, out_dir):
+    name = os.path.join(out_dir, 'crashes.html.fragment')
+    count = 0
+    with open(name, 'w') as handle:
+        indent = 4
+        handle.write(reindent("""
+        |<table>
+        |  <thead>
+        |    <tr>
+        |      <td>Problem</td>
+        |      <td>Source File</td>
+        |      <td>Preprocessed File</td>
+        |      <td>STDERR Output</td>
+        |    </tr>
+        |  </thead>
+        |  <tbody>""", indent))
+        for current in iterator:
+            count += 1
+            handle.write(reindent("""
+        |    <tr>
+        |      <td>{problem}</td>
+        |      <td>{source}</td>
+        |      <td><a href="{preproc}">preprocessor output</a></td>
+        |      <td><a href="{stderr}">analyzer std err</a></td>
+        |    </tr>""", indent).format(**current))
+        handle.write(reindent("""
+        |  </tbody>
+        |</table>""", indent))
+    return (name, count)
+
+
+@trace
+def bug_fragment(iterator, out_dir):
+    def hash_bug(bug):
+        return str(bug['bug_line']) + ':' +\
+            str(bug['bug_path_length']) + ':' +\
+            bug['bug_file'][::-1]
+
+    def update_counters(counters, bug):
+        category = bug['bug_category']
+        current = counters.get(category, 0)
+        counters.update({category: current + 1})
+
+    name = os.path.join(out_dir, 'bugs.html.fragment')
+    uniques = set()
+    counters = dict()
+    with open(name, 'w') as handle:
+        indent = 4
+        handle.write(reindent("""
+        |<table class="sortable" style="table-layout:automatic">
+        |  <thead>
+        |    <tr>
+        |      <td>Bug Group</td>
+        |      <td class="sorttable_sorted">
+        |        Bug Type
+        |        <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
+        |      </td>
+        |      <td>File</td>
+        |      <td class="Q">Line</td>
+        |      <td class="Q">Path Length</td>
+        |      <td class="sorttable_nosort"></td>
+        |    </tr>
+        |  </thead>
+        |  <tbody>""", indent))
+        for current in iterator:
+            hash = hash_bug(current)
+            if hash not in uniques:
+                uniques.add(hash)
+                update_counters(counters, current)
+                handle.write(reindent("""
+        |    <tr>
+        |      <td class="DESC">{bug_category}</td>
+        |      <td class="DESC">{bug_type}</td>
+        |      <td>{bug_file}</td>
+        |      <td class="Q">{bug_line}</td>
+        |      <td class="Q">{bug_path_length}</td>
+        |      <td><a href="{report_file}#EndPath">View Report</a></td>
+        |    </tr>""", indent).format(**current))
+        handle.write(reindent("""
+        |  </tbody>
+        |</table>""", indent))
+    return (name, len(uniques))
+
+
+@trace
+def assembly_report(opts, out_dir, bug_fragment, crash_fragment):
     import getpass
     import socket
     import sys
     import datetime
+
+    def from_file(output_handle, file_name):
+        with open(file_name, 'r') as input_handle:
+            for line in input_handle:
+                output_handle.write(line)
 
     def default_title():
         return os.getcwd() + ' - analyzer results'
 
     output = os.path.join(out_dir, 'index.html')
     with open(output, 'w') as handle:
-        handle.write(
-            reindent("""
-            |<!DOCTYPE html>
-            |<html>
-            |  <head>
-            |    <title>{html_title}</title>
-            |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
-            |    <script type='text/javascript' src="sorttable.js"></script>
-            |    <script type='text/javascript' src='selectable.js'></script>
-            |  </head>
-            |  <body>
-            |    <h1>{html_title}</h1>
-            |    <table>
-            |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
-            |      <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
-            |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
-            |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
-            |      <tr><th>Date:</th><td>{date}</td></tr>
-            |{version_section}
-            |    </table>""", 0).format(
-                html_title=opts.get('html_title', default_title()),
-                user_name=getpass.getuser(),
-                host_name=socket.gethostname(),
-                current_dir=os.getcwd(),
-                cmd_args=' '.join(sys.argv),
-                clang_version=get_clang_version(opts['clang']),
-                date=datetime.datetime.today().strftime('%c'),
-                version_section=''))
-        bugs.concat_to_report(handle)
-        crashes.concat_to_report(handle)
-        handle.write(
-            reindent("""
-            |  </body>
-            |</html>""", 0))
+        handle.write(reindent("""
+        |<!DOCTYPE html>
+        |<html>
+        |  <head>
+        |    <title>{html_title}</title>
+        |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
+        |    <script type='text/javascript' src="sorttable.js"></script>
+        |    <script type='text/javascript' src='selectable.js'></script>
+        |  </head>
+        |  <body>
+        |    <h1>{html_title}</h1>
+        |    <table>
+        |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
+        |      <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
+        |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
+        |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
+        |      <tr><th>Date:</th><td>{date}</td></tr>
+        |{version_section}
+        |    </table>""", 0).format(
+            html_title=opts.get('html_title', default_title()),
+            user_name=getpass.getuser(),
+            host_name=socket.gethostname(),
+            current_dir=os.getcwd(),
+            cmd_args=' '.join(sys.argv),
+            clang_version=get_clang_version(opts['clang']),
+            date=datetime.datetime.today().strftime('%c'),
+            version_section=''))
+        from_file(handle, bug_fragment)
+        from_file(handle, crash_fragment)
+        handle.write(reindent("""
+        |  </body>
+        |</html>""", 0))
 
 
 @trace

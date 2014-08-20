@@ -411,7 +411,7 @@ def report_failure(opts, _):
 
     def destination(opts):
         """ Creates failures directory if not exits yet. """
-        name = os.path.abspath(opts['html_dir'] + os.sep + 'failures')
+        name = os.path.join(opts['html_dir'], 'failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
@@ -440,10 +440,6 @@ def report_failure(opts, _):
 
     return {'analyzer': {'error_output': output,
                          'exit_code': child.returncode},
-            'crash': {'source': opts['file'],
-                      'problem': error.title().replace('_', ' '),
-                      'preproc': name,
-                      'stderr': name + '.stderr.txt'},
             'file': opts['file']}
 
 

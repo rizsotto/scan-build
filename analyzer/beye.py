@@ -14,7 +14,7 @@ import os
 import os.path
 from analyzer.decorators import trace, require
 from analyzer.driver import run, filter_dict, get_clang_arguments
-from analyzer.report import create_report_generator
+from analyzer.report import generate_report
 
 
 def main():
@@ -37,11 +37,10 @@ def main():
     logging.debug(args)
 
     with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
-        with create_report_generator(args, out_dir) as generator:
-            run_analyzer(args, out_dir, generator)
-            number_of_bugs = generator.create_report()
-            # TODO get result from bear if --status-bugs were not requested
-            return number_of_bugs if 'status_bugs' in args else 0
+        run_analyzer(args, out_dir)
+        number_of_bugs = generate_report(args, out_dir)
+        # TODO get result from bear if --status-bugs were not requested
+        return number_of_bugs if 'status_bugs' in args else 0
 
 
 class ReportDirectory(object):
@@ -234,7 +233,7 @@ def parse_command_line():
 
 
 @trace
-def run_analyzer(args, out_dir, report_generator):
+def run_analyzer(args, out_dir):
     def common_params(opts):
         def uname():
             return subprocess.check_output(['uname', '-a']).decode('ascii')
@@ -256,20 +255,13 @@ def run_analyzer(args, out_dir, report_generator):
             current.update(const)
             yield current
 
-    def consume(report_generator, current):
-        if current is not None:
-            if 'analyzer' in current:
-                report = current['analyzer']
-                for line in report['error_output']:
-                    logging.info(line.rstrip())
-            if 'crash' in current:
-                report_generator.crash(current['crash'])
-
     with open(args['input'], 'r') as fd:
         pool = multiprocessing.Pool(1 if 'sequential' in args else None)
-        for c in pool.imap_unordered(run,
-                                     wrap(json.load(fd), common_params(args))):
-            consume(report_generator, c)
+        for current in pool.imap_unordered(
+                run, wrap(json.load(fd), common_params(args))):
+            if current is not None and 'analyzer' in current:
+                for line in current['analyzer']['error_output']:
+                    logging.info(line.rstrip())
         pool.close()
         pool.join()
 

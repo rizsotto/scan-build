@@ -15,7 +15,7 @@ def run_scan(content):
         file_name = tmpdir + os.sep + 'test.html'
         with open(file_name, 'w') as fd:
             fd.writelines(content)
-        return sut.scan_file(file_name)
+        return sut.scan_bug(file_name)
 
 
 class ScanFileTest(unittest.TestCase):
