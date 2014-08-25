@@ -14,7 +14,7 @@ import os
 import os.path
 import shutil
 import glob
-from xml.sax.saxutils import escape, quoteattr
+from xml.sax.saxutils import escape
 from analyzer.decorators import trace, require
 from analyzer.driver import (
     run, filter_dict, get_clang_arguments, get_clang_version)
@@ -361,7 +361,7 @@ def scan_bug(result):
     bug_info['bug_type_class'] = classname(bug_info)
     safe_value(bug_info, 'bug_category', escape)
     safe_value(bug_info, 'bug_type', escape)
-    safe_value(bug_info, 'bug_type_class', quoteattr)
+    safe_value(bug_info, 'bug_type_class', escape)
 
     return bug_info
 
@@ -374,8 +374,8 @@ def scan_crash(filename):
         lines = handler.readlines()
         return {'source': escape(lines[0].rstrip()),
                 'problem': escape(lines[1].rstrip()),
-                'preproc': quoteattr(name),
-                'stderr': quoteattr(name) + '.stderr.txt'},
+                'preproc': escape(name),
+                'stderr': escape(name + '.stderr.txt')},
 
 
 class ReportFragment(object):
