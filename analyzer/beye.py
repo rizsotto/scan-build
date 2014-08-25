@@ -494,12 +494,12 @@ def bug_fragment(iterator, out_dir):
         |  </tbody>
         |</table>""", indent))
     with ReportFragment(name, len(uniques)) as bugs:
-        return summary_fragment(uniques, counters, out_dir, bugs)\
+        return summary_fragment(counters, out_dir, bugs)\
             if bugs.count else bugs
 
 
 @trace
-def summary_fragment(uniques, counters, out_dir, tail_fragment):
+def summary_fragment(counters, out_dir, tail_fragment):
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
@@ -524,7 +524,7 @@ def summary_fragment(uniques, counters, out_dir, tail_fragment):
         |                 onClick="CopyCheckedStateToCheckButtons(this);"/>
         |        </center>
         |      </td>
-        |    </tr>""", indent).format(len(uniques)))
+        |    </tr>""", indent).format(tail_fragment.count))
         for category, types in counters.items():
             handle.write(reindent("""
         |    <tr>
@@ -546,7 +546,7 @@ def summary_fragment(uniques, counters, out_dir, tail_fragment):
         |  </tbody>
         |</table>""", indent))
         tail_fragment.write(handle)
-    return ReportFragment(name, len(uniques))
+    return ReportFragment(name, tail_fragment.count)
 
 
 @trace
