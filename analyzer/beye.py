@@ -14,6 +14,7 @@ import os
 import os.path
 import shutil
 import glob
+from xml.sax.saxutils import escape, quoteattr
 from analyzer.decorators import trace, require
 from analyzer.driver import (
     run, filter_dict, get_clang_arguments, get_clang_version)
@@ -320,6 +321,16 @@ def generate_report(args, out_dir):
 @trace
 def scan_bug(result):
     """ Parse out the bug information from HTML output. """
+    def classname(bug):
+        def smash(key):
+            return bug.get(key, '').lower().replace(' ', '_')
+        return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
+
+    def safe_value(container, key, encode):
+        if key in container:
+            value = encode(container[key])
+            container.update({key: value})
+
     patterns = [
         re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
         re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
@@ -347,6 +358,10 @@ def scan_bug(result):
     bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
     bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
     bug_info['report_file'] = result
+    bug_info['bug_type_class'] = classname(bug_info)
+    safe_value(bug_info, 'bug_category', escape)
+    safe_value(bug_info, 'bug_type', escape)
+    safe_value(bug_info, 'bug_type_class', quoteattr)
 
     return bug_info
 
@@ -357,10 +372,10 @@ def scan_crash(filename):
     name = match.group(1) if match else None
     with open(filename) as handler:
         lines = handler.readlines()
-        return {'source': lines[0].rstrip(),
-                'problem': lines[1].rstrip(),
-                'preproc': name,
-                'stderr': name + '.stderr.txt'},
+        return {'source': escape(lines[0].rstrip()),
+                'problem': escape(lines[1].rstrip()),
+                'preproc': quoteattr(name),
+                'stderr': quoteattr(name) + '.stderr.txt'},
 
 
 class ReportFragment(object):
@@ -393,6 +408,8 @@ def crash_fragment(iterator, out_dir):
     with open(name, 'w') as handle:
         indent = 4
         handle.write(reindent("""
+        |<h2>Analyzer Failures</h2>
+        |<p>The analyzer had problems processing the following files:</p>
         |<table>
         |  <thead>
         |    <tr>
@@ -426,9 +443,16 @@ def bug_fragment(iterator, out_dir):
             bug['bug_file'][::-1]
 
     def update_counters(counters, bug):
-        category = bug['bug_category']
-        current = counters.get(category, 0)
-        counters.update({category: current + 1})
+        bug_category = bug['bug_category']
+        current_category = counters.get(bug_category, dict())
+        bug_type = bug['bug_type']
+        current_type = current_category.get(bug_type, {
+            'bug_type': bug_type,
+            'bug_type_class': bug['bug_type_class'],
+            'bug_count': 0})
+        current_type.update({'bug_count': current_type['bug_count'] + 1})
+        current_category.update({bug_type: current_type})
+        counters.update({bug_category: current_category})
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
     uniques = set()
@@ -436,6 +460,7 @@ def bug_fragment(iterator, out_dir):
     with open(name, 'w') as handle:
         indent = 4
         handle.write(reindent("""
+        |<h2>Reports</h2>
         |<table class="sortable" style="table-layout:automatic">
         |  <thead>
         |    <tr>
@@ -457,7 +482,7 @@ def bug_fragment(iterator, out_dir):
                 uniques.add(hash)
                 update_counters(counters, current)
                 handle.write(reindent("""
-        |    <tr>
+        |    <tr class={bug_type_class}>
         |      <td class="DESC">{bug_category}</td>
         |      <td class="DESC">{bug_type}</td>
         |      <td>{bug_file}</td>
@@ -468,6 +493,59 @@ def bug_fragment(iterator, out_dir):
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
+    with ReportFragment(name, len(uniques)) as bugs:
+        return summary_fragment(uniques, counters, out_dir, bugs)\
+            if bugs.count else bugs
+
+
+@trace
+def summary_fragment(uniques, counters, out_dir, tail_fragment):
+    name = os.path.join(out_dir, 'summary.html.fragment')
+    with open(name, 'w') as handle:
+        indent = 4
+        handle.write(reindent("""
+        |<h2>Bug Summary</h2>
+        |<table>
+        |  <thead>
+        |    <tr>
+        |      <td>Bug Type</td>
+        |      <td>Quantity</td>
+        |      <td class="sorttable_nosort">Display?</td>
+        |    </tr>
+        |  </thead>
+        |  <tbody>""", indent))
+        handle.write(reindent("""
+        |    <tr style="font-weight:bold">
+        |      <td class="SUMM_DESC">All Bugs</td>
+        |      <td class="Q">{0}</td>
+        |      <td>
+        |        <center>
+        |          <input checked type="checkbox" id="AllBugsCheck"
+        |                 onClick="CopyCheckedStateToCheckButtons(this);"/>
+        |        </center>
+        |      </td>
+        |    </tr>""", indent).format(len(uniques)))
+        for category, types in counters.items():
+            handle.write(reindent("""
+        |    <tr>
+        |      <th>{0}</th><th colspan=2></th>
+        |    </tr>""", indent).format(category))
+            for bug_type in types.values():
+                handle.write(reindent("""
+        |    <tr>
+        |      <td class="SUMM_DESC">{bug_type}</td>
+        |      <td class="Q">{bug_count}</td>
+        |      <td>
+        |        <center>
+        |          <input checked type="checkbox"
+        |                 onClick="ToggleDisplay(this,'{bug_type_class}');"/>
+        |        </center>
+        |      </td>
+        |    </tr>""", indent).format(**bug_type))
+        handle.write(reindent("""
+        |  </tbody>
+        |</table>""", indent))
+        tail_fragment.write(handle)
     return ReportFragment(name, len(uniques))
 
 
@@ -500,7 +578,6 @@ def assembly_report(opts, out_dir, *fragments):
         |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
         |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
         |      <tr><th>Date:</th><td>{date}</td></tr>
-        |{version_section}
         |    </table>""", 0).format(
             html_title=opts.get('html_title', default_title()),
             user_name=getpass.getuser(),
@@ -508,8 +585,7 @@ def assembly_report(opts, out_dir, *fragments):
             current_dir=os.getcwd(),
             cmd_args=' '.join(sys.argv),
             clang_version=get_clang_version(opts['clang']),
-            date=datetime.datetime.today().strftime('%c'),
-            version_section=''))
+            date=datetime.datetime.today().strftime('%c')))
         for fragment in fragments:
             fragment.write(handle)
         handle.write(reindent("""
