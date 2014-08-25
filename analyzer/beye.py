@@ -106,7 +106,7 @@ def parse_command_line():
               Subdirectories will be created as needed to represent separate\
               "runs" of the analyzer.')
     group1.add_argument(
-        '--html-title',  # TODO: implement usage
+        '--html-title',
         metavar='<title>',
         help='Specify the title used on generated HTML pages.\
               If not specified, a default title will be used.')
@@ -550,14 +550,15 @@ def summary_fragment(uniques, counters, out_dir, tail_fragment):
 
 
 @trace
+@require(['clang'])
 def assembly_report(opts, out_dir, *fragments):
     import getpass
     import socket
     import sys
     import datetime
 
-    def default_title():
-        return os.getcwd() + ' - analyzer results'
+    if 'html_title' not in opts or opts['html_title'] is None:
+        opts['html_title'] = os.getcwd() + ' - analyzer results'
 
     output = os.path.join(out_dir, 'index.html')
     with open(output, 'w') as handle:
@@ -579,7 +580,7 @@ def assembly_report(opts, out_dir, *fragments):
         |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
         |      <tr><th>Date:</th><td>{date}</td></tr>
         |    </table>""", 0).format(
-            html_title=opts.get('html_title', default_title()),
+            html_title=opts['html_title'],
             user_name=getpass.getuser(),
             host_name=socket.gethostname(),
             current_dir=os.getcwd(),
