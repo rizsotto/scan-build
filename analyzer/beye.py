@@ -33,6 +33,10 @@ def main():
         else:
             return 5
 
+    def needs_report_file(opts):
+        output_format = opts.get('output_format')
+        return 'html' == output_format or 'plist-html' == output_format
+
     args = parse_command_line()
 
     logging.getLogger().setLevel(from_number_to_level(args['verbose']))
@@ -40,7 +44,8 @@ def main():
 
     with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
         run_analyzer(args, out_dir)
-        number_of_bugs = generate_report(args, out_dir)
+        number_of_bugs = generate_report(args, out_dir)\
+            if needs_report_file(args) else 0
         # TODO get result from bear if --status-bugs were not requested
         return number_of_bugs if 'status_bugs' in args else 0
 
@@ -288,7 +293,6 @@ def get_default_checkers(clang):
 
 @trace
 def generate_report(args, out_dir):
-    # TODO: don't do any of these if output format was not html
     pool = multiprocessing.Pool(1 if 'sequential' in args else None)
     (bugs, count1) = bug_fragment(
         pool.imap_unordered(scan_bug,
