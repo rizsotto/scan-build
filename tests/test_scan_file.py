@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.report as sut
+import analyzer.beye as sut
 import tests.fixtures as fixtures
 import unittest
 import os
