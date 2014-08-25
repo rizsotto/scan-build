@@ -241,6 +241,7 @@ def parse_command_line():
 
 
 @trace
+@require(['input'])
 def run_analyzer(args, out_dir):
     def common_params(opts):
         def uname():

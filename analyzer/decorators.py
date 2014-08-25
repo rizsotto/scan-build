@@ -30,10 +30,10 @@ def require(required=[]):
     """
     def decorator(function):
         @functools.wraps(function)
-        def wrapper(opts, cont):
+        def wrapper(opts, *rest):
             try:
                 precondition(opts)
-                return function(opts, cont)
+                return function(opts, *rest)
             except Exception as e:
                 logging.error(str(e))
                 return {'error': {'exception': e,
