@@ -305,6 +305,7 @@ def generate_report(args, out_dir):
     pool.join()
     if count1 + count2 > 0:
         assembly_report(args, out_dir, bugs, crashes)
+        copy_resource_files(out_dir)
     os.remove(bugs)
     os.remove(crashes)
     return count1 + count2
