@@ -59,6 +59,7 @@ class ReportDirectory(object):
     def __enter__(self):
         return self.name
 
+    @trace
     def __exit__(self, type, value, traceback):
         if os.listdir(self.name):
             msg = "Run 'scan-view {0}' to examine bug reports."
@@ -294,25 +295,25 @@ def get_default_checkers(clang):
 @trace
 def generate_report(args, out_dir):
     pool = multiprocessing.Pool(1 if 'sequential' in args else None)
-    (bugs, count1) = bug_fragment(
-        pool.imap_unordered(scan_bug,
-                            glob.iglob(os.path.join(out_dir,
-                                                    '*.html'))),
-        out_dir)
-    (crashes, count2) = crash_fragment(
-        pool.imap_unordered(scan_crash,
-                            glob.iglob(os.path.join(out_dir,
-                                                    'failures',
-                                                    '*.info.txt'))),
-        out_dir)
+    result = 0
+    with bug_fragment(
+            pool.imap_unordered(scan_bug,
+                                glob.iglob(os.path.join(out_dir,
+                                                        '*.html'))),
+            out_dir) as bugs:
+        with crash_fragment(
+                pool.imap_unordered(scan_crash,
+                                    glob.iglob(os.path.join(out_dir,
+                                                            'failures',
+                                                            '*.info.txt'))),
+                out_dir) as crashes:
+            result = bugs.count + crashes.count
+            if result > 0:
+                assembly_report(args, out_dir, bugs, crashes)
+                copy_resource_files(out_dir)
     pool.close()
     pool.join()
-    if count1 + count2 > 0:
-        assembly_report(args, out_dir, bugs, crashes)
-        copy_resource_files(out_dir)
-    os.remove(bugs)
-    os.remove(crashes)
-    return count1 + count2
+    return result
 
 
 @trace
@@ -361,6 +362,29 @@ def scan_crash(filename):
                 'stderr': name + '.stderr.txt'},
 
 
+class ReportFragment(object):
+    """ Represents a report fragment on the disk. The only usage at report
+        generation, when multiple fragments are combined together. """
+
+    def __init__(self, filename, count):
+        self.filename = filename
+        self.count = count
+
+    def __enter__(self):
+        return self
+
+    @trace
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.remove(self.filename)
+
+    @trace
+    def write(self, output_handle):
+        if self.count:
+            with open(self.filename, 'r') as input_handle:
+                for line in input_handle:
+                    output_handle.write(line)
+
+
 @trace
 def crash_fragment(iterator, out_dir):
     name = os.path.join(out_dir, 'crashes.html.fragment')
@@ -390,7 +414,7 @@ def crash_fragment(iterator, out_dir):
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
-    return (name, count)
+    return ReportFragment(name, count)
 
 
 @trace
@@ -443,20 +467,15 @@ def bug_fragment(iterator, out_dir):
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
-    return (name, len(uniques))
+    return ReportFragment(name, len(uniques))
 
 
 @trace
-def assembly_report(opts, out_dir, bug_fragment, crash_fragment):
+def assembly_report(opts, out_dir, *fragments):
     import getpass
     import socket
     import sys
     import datetime
-
-    def from_file(output_handle, file_name):
-        with open(file_name, 'r') as input_handle:
-            for line in input_handle:
-                output_handle.write(line)
 
     def default_title():
         return os.getcwd() + ' - analyzer results'
@@ -490,8 +509,8 @@ def assembly_report(opts, out_dir, bug_fragment, crash_fragment):
             clang_version=get_clang_version(opts['clang']),
             date=datetime.datetime.today().strftime('%c'),
             version_section=''))
-        from_file(handle, bug_fragment)
-        from_file(handle, crash_fragment)
+        for fragment in fragments:
+            fragment.write(handle)
         handle.write(reindent("""
         |  </body>
         |</html>""", 0))
