@@ -438,8 +438,8 @@ def report_failure(opts, _):
         handle.writelines(opts['error_output'])
         handle.close()
 
-    return {'analyzer': {'error_output': output,
-                         'exit_code': child.returncode},
+    return {'analyzer': {'error_output': opts['error_output'],
+                         'exit_code': opts['exit_code']},
             'file': opts['file']}
 
 
