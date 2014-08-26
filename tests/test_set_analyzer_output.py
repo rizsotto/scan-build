@@ -24,8 +24,7 @@ class SetAnalyzerOutputTest(fixtures.TestCase):
             self.assertTrue(os.path.exists(spy.arg['analyzer_output']))
 
     def test_set_analyzer_output_delete_file(self):
-        with fixtures.TempDir() as tmpdir:
-            opts = {'output_format': 'plist'}
-            spy = fixtures.Spy()
-            sut.set_analyzer_output(opts, spy.call)
-            self.assertFalse(os.path.exists(spy.arg['analyzer_output']))
+        opts = {'output_format': 'plist'}
+        spy = fixtures.Spy()
+        sut.set_analyzer_output(opts, spy.call)
+        self.assertFalse(os.path.exists(spy.arg['analyzer_output']))

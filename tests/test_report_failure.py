@@ -18,8 +18,8 @@ class ReportFailureTest(fixtures.TestCase):
     def test_report_failure_create_files(self):
         with fixtures.TempDir() as tmpdir:
             # create input file
-            with open(tmpdir + os.sep + 'test.c', 'w') as fd:
-                fd.write('int main() { return 0')
+            with open(tmpdir + os.sep + 'test.c', 'w') as handle:
+                handle.write('int main() { return 0')
             error_msg = 'this is my error output'
             uname_msg = 'this is my uname\n'
             # execute test
@@ -39,9 +39,9 @@ class ReportFailureTest(fixtures.TestCase):
             for root, _, files in os.walk(tmpdir):
                 keys = [os.path.join(root, name) for name in files]
                 for key in keys:
-                    with open(key, 'r') as fd:
-                        result[key] = fd.readlines()
-                    if re.match('^(.*/)+clang(.*)\.i$', key):
+                    with open(key, 'r') as handle:
+                        result[key] = handle.readlines()
+                    if re.match(r'^(.*/)+clang(.*)\.i$', key):
                         pp_file = key
 
             # prepocessor file generated

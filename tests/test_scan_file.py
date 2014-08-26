@@ -14,16 +14,16 @@ import os.path
 def run_bug_scan(content):
     with fixtures.TempDir() as tmpdir:
         file_name = tmpdir + os.sep + 'test.html'
-        with open(file_name, 'w') as fd:
-            fd.writelines(content)
+        with open(file_name, 'w') as handle:
+            handle.writelines(content)
         return sut.scan_bug(file_name)
 
 
 def run_crash_scan(content, preproc):
     with fixtures.TempDir() as tmpdir:
         file_name = tmpdir + os.sep + preproc + '.info.txt'
-        with open(file_name, 'w') as fd:
-            fd.writelines(content)
+        with open(file_name, 'w') as handle:
+            handle.writelines(content)
         return sut.scan_crash(file_name)
 
 
@@ -79,8 +79,8 @@ class ScanFileTest(unittest.TestCase):
         import re
         with fixtures.TempDir() as tmpdir:
             # create input file
-            with open(tmpdir + os.sep + 'test.c', 'w') as fd:
-                fd.write('int main() { return 0')
+            with open(tmpdir + os.sep + 'test.c', 'w') as handle:
+                handle.write('int main() { return 0')
             # produce failure report
             opts = {'language': 'c',
                     'directory': tmpdir,
@@ -97,7 +97,7 @@ class ScanFileTest(unittest.TestCase):
             for root, _, files in os.walk(tmpdir):
                 keys = [os.path.join(root, name) for name in files]
                 for key in keys:
-                    if re.match('^(.*/)+clang(.*)\.i$', key):
+                    if re.match(r'^(.*/)+clang(.*)\.i$', key):
                         pp_file = key
             self.assertIsNot(pp_file, None)
             # read the failure report back

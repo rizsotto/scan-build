@@ -21,6 +21,7 @@ from analyzer.driver import (
 
 
 def main():
+    """ Entry point for beye. """
     multiprocessing.freeze_support()
     logging.basicConfig(format='beye: %(message)s')
 
@@ -32,7 +33,7 @@ def main():
         elif 2 == num:
             return logging.DEBUG
         else:
-            return 5
+            return 5  # used by the trace decorator
 
     def needs_report_file(opts):
         output_format = opts.get('output_format')
@@ -52,6 +53,10 @@ def main():
 
 
 class ReportDirectory(object):
+    """ Responsible for the report directory.
+
+    hint -- could specify the parent directory of the output directory.
+    keep -- a boolean value to keep or delete the empty report directory. """
 
     def __init__(self, hint, keep):
         self.name = ReportDirectory._create(hint)
@@ -61,7 +66,7 @@ class ReportDirectory(object):
         return self.name
 
     @trace
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, _value, _traceback):
         if os.listdir(self.name):
             msg = "Run 'scan-view {0}' to examine bug reports."
         else:
@@ -75,11 +80,10 @@ class ReportDirectory(object):
     @staticmethod
     def _create(hint):
         if hint != '/tmp':
-            import os
             try:
                 os.mkdir(hint)
                 return hint
-            except OSError as ex:
+            except OSError:
                 raise
         else:
             import tempfile
@@ -88,6 +92,7 @@ class ReportDirectory(object):
 
 @trace
 def parse_command_line():
+    """ Parse command line and return a dictionary of given values. """
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     parser = ArgumentParser(prog='beye',
                             formatter_class=ArgumentDefaultsHelpFormatter)
@@ -244,6 +249,15 @@ def parse_command_line():
 @trace
 @require(['input'])
 def run_analyzer(args, out_dir):
+    """ Runs the analyzer.
+
+    The analyzer main method is written in the module 'driver:run'.
+    This function calls the analyzer for each module in the compilation
+    database. The method argument is a dictionary, comming from the database
+    entry plus some command line paramters. The analyzer result contains
+    (beside many others) the output of it, which is printed here to avoid
+    non-readable output. """
+
     def common_params(opts):
         def uname():
             return subprocess.check_output(['uname', '-a']).decode('ascii')
@@ -265,10 +279,10 @@ def run_analyzer(args, out_dir):
             current.update(const)
             yield current
 
-    with open(args['input'], 'r') as fd:
+    with open(args['input'], 'r') as handle:
         pool = multiprocessing.Pool(1 if 'sequential' in args else None)
         for current in pool.imap_unordered(
-                run, wrap(json.load(fd), common_params(args))):
+                run, wrap(json.load(handle), common_params(args))):
             if current is not None and 'analyzer' in current:
                 for line in current['analyzer']['error_output']:
                     logging.info(line.rstrip())
@@ -282,7 +296,7 @@ def get_default_checkers(clang):
     comilation would be called. For input file we specify stdin. And
     pass only language information. """
     def checkers(language):
-        pattern = re.compile('^-analyzer-checker=(.*)$')
+        pattern = re.compile(r'^-analyzer-checker=(.*)$')
         cmd = [clang, '--analyze', '-x', language, '-']
         return [pattern.match(arg).group(1)
                 for arg
@@ -296,6 +310,9 @@ def get_default_checkers(clang):
 
 @trace
 def generate_report(args, out_dir):
+    """ Report generation.
+
+    Report is generated from .html files, and it's a .html file itself. """
     pool = multiprocessing.Pool(1 if 'sequential' in args else None)
     result = 0
     with bug_fragment(
@@ -332,14 +349,14 @@ def scan_bug(result):
             container.update({key: value})
 
     patterns = [
-        re.compile('<!-- BUGTYPE (?P<bug_type>.*) -->$'),
-        re.compile('<!-- BUGFILE (?P<bug_file>.*) -->$'),
-        re.compile('<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
-        re.compile('<!-- BUGLINE (?P<bug_line>.*) -->$'),
-        re.compile('<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
-        re.compile('<!-- BUGDESC (?P<bug_description>.*) -->$'),
-        re.compile('<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
-    endsign = re.compile('<!-- BUGMETAEND -->')
+        re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
+        re.compile(r'<!-- BUGFILE (?P<bug_file>.*) -->$'),
+        re.compile(r'<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
+        re.compile(r'<!-- BUGLINE (?P<bug_line>.*) -->$'),
+        re.compile(r'<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
+        re.compile(r'<!-- BUGDESC (?P<bug_description>.*) -->$'),
+        re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
+    endsign = re.compile(r'<!-- BUGMETAEND -->')
 
     bug_info = dict()
     with open(result) as handler:
@@ -368,7 +385,8 @@ def scan_bug(result):
 
 @trace
 def scan_crash(filename):
-    match = re.match('(.*)\.info\.txt', filename)
+    """ Parse out the crash information from the report file. """
+    match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
     with open(filename) as handler:
         lines = handler.readlines()
@@ -390,7 +408,7 @@ class ReportFragment(object):
         return self
 
     @trace
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _type, _value, _traceback):
         os.remove(self.filename)
 
     @trace
@@ -477,9 +495,9 @@ def bug_fragment(iterator, out_dir):
         |  </thead>
         |  <tbody>""", indent))
         for current in iterator:
-            hash = hash_bug(current)
-            if hash not in uniques:
-                uniques.add(hash)
+            bug_hash = hash_bug(current)
+            if bug_hash not in uniques:
+                uniques.add(bug_hash)
                 update_counters(counters, current)
                 handle.write(reindent("""
         |    <tr class={bug_type_class}>
@@ -596,6 +614,7 @@ def assembly_report(opts, out_dir, *fragments):
 
 @trace
 def copy_resource_files(out_dir):
+    """ Copy the javascript and css files to the report directory. """
     this_dir, _ = os.path.split(__file__)
     resources_dir = os.path.join(this_dir, 'resources')
     shutil.copy(os.path.join(resources_dir, 'scanview.css'), out_dir)

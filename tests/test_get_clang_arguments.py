@@ -11,8 +11,8 @@ import os
 
 def get_clang_arguments(opts):
     with fixtures.TempDir() as tmpdir:
-        with open(tmpdir + os.sep + 'test.c', 'w') as fd:
-            fd.write('')
+        with open(tmpdir + os.sep + 'test.c', 'w') as handle:
+            handle.write('')
 
         adds = {'language': 'c',
                 'directory': tmpdir,

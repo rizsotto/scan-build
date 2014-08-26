@@ -77,30 +77,30 @@ def parse(opts, continuation):
         def regex(pattern, action):
             regexp = re.compile(pattern)
 
-            def eval(it):
+            def evaluate(it):
                 match = regexp.match(it.current)
                 if match:
                     action(state, it, match)
                     return True
-            return eval
+            return evaluate
 
         def anyof(opts, action):
-            def eval(it):
+            def evaluate(it):
                 if it.current in frozenset(opts):
                     action(state, it, None)
                     return True
-            return eval
+            return evaluate
 
         tasks = [
             #
-            regex('^-(E|MM?)$', take_action(Action.Preprocess)),
+            regex(r'^-(E|MM?)$', take_action(Action.Preprocess)),
             anyof(['-c'], take_action(Action.Compile)),
             anyof(['-print-prog-name'], take_action(Action.Info)),
             #
             anyof(['-arch'], take_two('archs_seen')),
             #
             anyof(['-filelist'], take_from_file('files')),
-            regex('^[^-].+', take_one('files')),
+            regex(r'^[^-].+', take_one('files')),
             #
             anyof(['-x'], take_second('language')),
             #
@@ -111,36 +111,37 @@ def parse(opts, continuation):
             anyof(['-ftrapv-handler',
                    '--sysroot',
                    '-target'], take_two('compile_options')),
-            regex('^-isysroot', take_two('compile_options')),
-            regex('^-m(32|64)$', take_one('compile_options')),
-            regex('^-mios-simulator-version-min(.*)',
+            regex(r'^-isysroot', take_two('compile_options')),
+            regex(r'^-m(32|64)$', take_one('compile_options')),
+            regex(r'^-mios-simulator-version-min(.*)',
                   take_joined('compile_options')),
-            regex('^-stdlib(.*)', take_joined('compile_options')),
-            regex('^-mmacosx-version-min(.*)', take_joined('compile_options')),
-            regex('^-miphoneos-version-min(.*)',
+            regex(r'^-stdlib(.*)', take_joined('compile_options')),
+            regex(r'^-mmacosx-version-min(.*)',
                   take_joined('compile_options')),
-            regex('^-O[1-3]$', take_one('compile_options')),
+            regex(r'^-miphoneos-version-min(.*)',
+                  take_joined('compile_options')),
+            regex(r'^-O[1-3]$', take_one('compile_options')),
             anyof(['-O'], take_as('-O1', 'compile_options')),
             anyof(['-Os'], take_as('-O2', 'compile_options')),
-            regex('^-[DIU](.*)$', take_joined('compile_options')),
+            regex(r'^-[DIU](.*)$', take_joined('compile_options')),
             anyof(['-nostdinc'], take_one('compile_options')),
-            regex('^-std=', take_one('compile_options')),
-            regex('^-include', take_two('compile_options')),
+            regex(r'^-std=', take_one('compile_options')),
+            regex(r'^-include', take_two('compile_options')),
             anyof(['-idirafter',
                    '-imacros',
                    '-iprefix',
                    '-isystem',
                    '-iwithprefix',
                    '-iwithprefixbefore'], take_two('compile_options')),
-            regex('^-m.*', take_one('compile_options')),
-            regex('^-iquote(.*)', take_joined('compile_options')),
-            regex('^-Wno-', take_one('compile_options')),
+            regex(r'^-m.*', take_one('compile_options')),
+            regex(r'^-iquote(.*)', take_joined('compile_options')),
+            regex(r'^-Wno-', take_one('compile_options')),
             # ignore
-            regex('^-framework$', take_two()),
-            regex('^-fobjc-link-runtime(.*)', take_joined()),
-            regex('^-[lL]', take_one()),
-            regex('^-M[TF]$', take_two()),
-            regex('^-[eu]$', take_two()),
+            regex(r'^-framework$', take_two()),
+            regex(r'^-fobjc-link-runtime(.*)', take_joined()),
+            regex(r'^-[lL]', take_one()),
+            regex(r'^-M[TF]$', take_two()),
+            regex(r'^-[eu]$', take_two()),
             anyof(['-fsyntax-only',
                    '-save-temps'], take_one()),
             anyof(['-install_name',
@@ -155,7 +156,7 @@ def parse(opts, continuation):
                    '--serialize-diagnostics'], take_two()),
             anyof(['-sectorder'], take_four()),
             #
-            regex('^-[fF](.+)$', take_one('compile_options'))
+            regex(r'^-[fF](.+)$', take_one('compile_options'))
         ]
         for task in tasks:
             if task(it):
@@ -226,7 +227,7 @@ def parse(opts, continuation):
         return take
 
     def is_cxx(cmd):
-        m = re.match('([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
+        m = re.match(r'([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
         return False if m is None else True
 
     class ArgumentIterator(object):
@@ -469,7 +470,7 @@ def get_clang_arguments(cwd, command):
         return last
 
     def strip_quotes(quoted):
-        match = re.match('^\"([^\"]*)\"$', quoted)
+        match = re.match(r'^\"([^\"]*)\"$', quoted)
         return match.group(1) if match else quoted
 
     cmd = command[:]
@@ -483,7 +484,7 @@ def get_clang_arguments(cwd, command):
     line = lastline(child.stdout)
     child.wait()
     if 0 == child.returncode:
-        if re.match('^clang: error:', line):
+        if re.match(r'^clang: error:', line):
             raise Exception(line)
         return [strip_quotes(x) for x in shlex.split(line)]
     else:

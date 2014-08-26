@@ -9,7 +9,7 @@ import shutil
 import unittest
 
 
-class Spy:
+class Spy(object):
 
     def __init__(self):
         self.arg = None
@@ -20,7 +20,7 @@ class Spy:
         return self.success
 
 
-class TempDir:
+class TempDir(object):
 
     def __init__(self):
         self.name = tempfile.mkdtemp('.test', 'beye', None)
@@ -28,7 +28,7 @@ class TempDir:
     def __enter__(self):
         return self.name
 
-    def __exit__(self, exc, value, tb):
+    def __exit__(self, _type, _value, _traceback):
         self.cleanup()
 
     def cleanup(self):

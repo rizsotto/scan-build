@@ -12,8 +12,9 @@ import os
 
 def run_analyzer(content, opts):
     with fixtures.TempDir() as tmpdir:
-        with open(tmpdir + os.sep + 'test.cpp', 'w') as fd:
-            fd.write(content)
+        with open(tmpdir + os.sep + 'test.cpp', 'w') as handle:
+            handle.write(content)
+
         adds = {'language': 'c++',
                 'directory': tmpdir,
                 'file': 'test.cpp',
@@ -40,7 +41,7 @@ class RunAnalyzerTest(unittest.TestCase):
 
     def test_run_analyzer_crash_and_forwarded(self):
         content = "int div(int n, int d) { return n / d }"
-        (result, fwds) = run_analyzer(content, {'report_failures': True})
+        (_, fwds) = run_analyzer(content, {'report_failures': True})
         self.assertEqual('crash', fwds['error_type'])
         self.assertEqual(1, fwds['exit_code'])
         self.assertTrue(len(fwds['error_output']) > 0)
