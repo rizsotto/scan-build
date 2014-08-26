@@ -8,21 +8,38 @@ import logging
 import functools
 
 
+__all__ = ['trace', 'require']
+
+
+def _trace(message):
+    logging.log(5, message)
+
+
+def _name(function):
+    return function.__qualname__\
+        if dir(function).count('__qualname__') else function.__name__
+
+
+trace_method = _trace
+
+
 def trace(function):
     """ Decorator to simplify debugging. """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-        name = function.__qualname__\
-            if dir(function).count('__qualname__') else function.__name__
-        logging.log(5, 'entering {0}'.format(name))
-        result = function(*args, **kwargs)
-        logging.log(5, 'leaving {0}'.format(name))
-        return result
+        try:
+            trace_method('entering {0}'.format(_name(function)))
+            return function(*args, **kwargs)
+        except:
+            trace_method('exception in {0}'.format(_name(function)))
+            raise
+        finally:
+            trace_method('leaving {0}'.format(_name(function)))
 
     return wrapper
 
 
-def require(required=[]):
+def require(required):
     """ Decorator for checking the required values in state.
 
     It checks the required attributes in the passed state and stop when
@@ -30,10 +47,10 @@ def require(required=[]):
     """
     def decorator(function):
         @functools.wraps(function)
-        def wrapper(opts, *rest):
+        def wrapper(*args, **kwargs):
             try:
-                precondition(opts)
-                return function(opts, *rest)
+                precondition(args[0])
+                return function(*args, **kwargs)
             except Exception as exception:
                 logging.error(str(exception))
                 return {'error': {'exception': exception,
