@@ -19,7 +19,7 @@ from analyzer.decorators import trace, require
 
 @trace
 def run(opts):
-    def stack(conts):
+    def chain(conts):
         """ Creates a single method from multiple continuations.
 
         The analysis is written continuation-passing like style.
@@ -34,7 +34,7 @@ def run(opts):
         conts.reverse()
         return bind(conts, lambda x: x)
 
-    chain = stack([parse,
+    method = chain([parse,
                    filter_action,
                    arch_loop,
                    set_language,
@@ -42,7 +42,7 @@ def run(opts):
                    run_analyzer,
                    report_failure])
 
-    return chain(opts)
+    return method(opts)
 
 
 def filter_dict(original, removables, additions):
