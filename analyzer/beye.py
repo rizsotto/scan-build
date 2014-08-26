@@ -375,7 +375,7 @@ def scan_crash(filename):
         return {'source': escape(lines[0].rstrip()),
                 'problem': escape(lines[1].rstrip()),
                 'preproc': escape(name),
-                'stderr': escape(name + '.stderr.txt')},
+                'stderr': escape(name + '.stderr.txt')}
 
 
 class ReportFragment(object):
