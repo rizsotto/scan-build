@@ -48,20 +48,12 @@ def require(required):
     def decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
-            try:
-                precondition(args[0])
-                return function(*args, **kwargs)
-            except Exception as exception:
-                logging.error(str(exception))
-                return {'error': {'exception': exception,
-                                  'function': function.__name__},
-                        'input': opts}
-
-        def precondition(opts):
             for key in required:
-                if key not in opts:
+                if key not in args[0]:
                     raise KeyError(
-                        '{0} not passed to {1}'.format(key, function.__name__))
+                        '{0} not passed to {1}'.format(key, _name(function)))
+
+            return function(*args, **kwargs)
 
         return wrapper
 

@@ -42,7 +42,11 @@ def run(opts):
                    run_analyzer,
                    report_failure])
 
-    return method(opts)
+    try:
+        return method(opts)
+    except Exception as exception:
+        logging.error(str(exception))
+        return None
 
 
 def filter_dict(original, removables, additions):
@@ -266,6 +270,7 @@ def filter_action(opts, continuation):
 
 
 @trace
+@require([])
 def arch_loop(opts, continuation):
     """ Do run analyzer through one of the given architectures. """
     disableds = ['ppc', 'ppc64']
@@ -337,6 +342,7 @@ def set_language(opts, continuation):
 
 
 @trace
+@require([])
 def set_analyzer_output(opts, continuation):
     """ Create output file if was requested. """
     def needs_output_file():

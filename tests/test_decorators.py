@@ -51,3 +51,29 @@ class TraceDecoratorTest(unittest.TestCase):
             self.assertTraces(['entering method_throws_exception',
                                'exception in method_throws_exception',
                                'leaving method_throws_exception'])
+
+
+@sut.require([])
+def method_without_expecteds(opts):
+    return 0
+
+
+@sut.require(['this', 'that'])
+def method_with_expecteds(opts):
+    return 0
+
+
+class RequireDecoratorTest(unittest.TestCase):
+
+    def test_method_without_expecteds(self):
+        self.assertEqual(method_without_expecteds(dict()), 0)
+        self.assertEqual(method_without_expecteds({}), 0)
+        self.assertEqual(method_without_expecteds({'this': 2}), 0)
+        self.assertEqual(method_without_expecteds({'that': 3}), 0)
+
+    def test_method_with_expecteds(self):
+        self.assertRaises(KeyError, method_with_expecteds, dict())
+        self.assertRaises(KeyError, method_with_expecteds, {})
+        self.assertRaises(KeyError, method_with_expecteds, {'this': 2})
+        self.assertRaises(KeyError, method_with_expecteds, {'that': 3})
+        self.assertEqual(method_with_expecteds({'this': 0, 'that': 3}), 0)
