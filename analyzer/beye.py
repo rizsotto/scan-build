@@ -287,6 +287,31 @@ def run_analyzer(args, out_dir):
 
 
 @trace
+def get_prefix_from(compilation_database):
+    """ Get common path prefix for compilation database entries.
+    This will be used to taylor the file names in the final report. """
+    def common(files):
+        result = None
+        for current in files:
+            result = current if result is None else\
+                os.path.commonprefix([result, current])
+
+        if result is None:
+            return ''
+        elif not os.path.isdir(result):
+            return os.path.dirname(result)
+        else:
+            return result
+
+    def filenames():
+        with open(compilation_database, 'r') as handle:
+            for entry in json.load(handle):
+                yield os.path.dirname(entry['file'])
+
+    return common(filenames())
+
+
+@trace
 def get_default_checkers(clang):
     """ To get the default plugins we execute Clang to print how this
     comilation would be called. For input file we specify stdin. And

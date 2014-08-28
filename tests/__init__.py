@@ -7,6 +7,7 @@ import tests.test_run_analyzer
 import tests.test_set_analyzer_output
 import tests.test_scan_file
 import tests.test_decorators
+import tests.test_get_prefix
 
 
 def suite():
@@ -20,4 +21,5 @@ def suite():
     suite.addTests(loader.loadTestsFromModule(test_set_analyzer_output))
     suite.addTests(loader.loadTestsFromModule(test_scan_file))
     suite.addTests(loader.loadTestsFromModule(test_decorators))
+    suite.addTests(loader.loadTestsFromModule(test_get_prefix))
     return suite
