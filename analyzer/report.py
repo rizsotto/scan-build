@@ -11,7 +11,7 @@ import os
 import os.path
 import shutil
 import glob
-from xml.sax.saxutils import escape
+from cgi import escape
 from analyzer.decorators import trace, require
 from analyzer.driver import filter_dict, get_clang_version
 
@@ -52,7 +52,7 @@ def scan_bug(result):
     """ Parse out the bug information from HTML output. """
     def classname(bug):
         def smash(key):
-            return bug.get(key, '').lower().replace(' ', '_')
+            return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
         return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
 
     def safe_value(container, key, encode):
@@ -90,7 +90,7 @@ def scan_bug(result):
     bug_info['bug_type_class'] = classname(bug_info)
     safe_value(bug_info, 'bug_category', escape)
     safe_value(bug_info, 'bug_type', escape)
-    safe_value(bug_info, 'bug_type_class', escape)
+    safe_value(bug_info, 'bug_type_class', lambda x: escape(x, True))
 
     return bug_info
 
@@ -104,8 +104,8 @@ def scan_crash(filename):
         lines = handler.readlines()
         return {'source': escape(lines[0].rstrip()),
                 'problem': escape(lines[1].rstrip()),
-                'preproc': escape(name),
-                'stderr': escape(name + '.stderr.txt')}
+                'preproc': escape(name, True),
+                'stderr': escape(name + '.stderr.txt', True)}
 
 
 class ReportFragment(object):
@@ -212,7 +212,7 @@ def bug_fragment(iterator, out_dir):
                 uniques.add(bug_hash)
                 update_counters(counters, current)
                 handle.write(reindent("""
-        |    <tr class={bug_type_class}>
+        |    <tr class="{bug_type_class}">
         |      <td class="DESC">{bug_category}</td>
         |      <td class="DESC">{bug_type}</td>
         |      <td>{bug_file}</td>
