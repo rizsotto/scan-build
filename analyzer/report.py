@@ -20,11 +20,12 @@ __all__ = ['generate_report']
 
 
 @trace
+@require(['sequential'])
 def generate_report(args, out_dir):
     """ Report generation.
 
     Report is generated from .html files, and it's a .html file itself. """
-    pool = multiprocessing.Pool(1 if 'sequential' in args else None)
+    pool = multiprocessing.Pool(1 if args['sequential'] else None)
     result = 0
     with bug_fragment(
             pool.imap_unordered(scan_bug,

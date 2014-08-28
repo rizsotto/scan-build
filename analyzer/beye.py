@@ -243,7 +243,7 @@ def parse_command_line():
 
 
 @trace
-@require(['input'])
+@require(['input', 'sequential'])
 def run_analyzer(args, out_dir):
     """ Runs the analyzer.
 
@@ -276,7 +276,7 @@ def run_analyzer(args, out_dir):
             yield current
 
     with open(args['input'], 'r') as handle:
-        pool = multiprocessing.Pool(1 if 'sequential' in args else None)
+        pool = multiprocessing.Pool(1 if args['sequential'] else None)
         for current in pool.imap_unordered(
                 run, wrap(json.load(handle), common_params(args))):
             if current is not None and 'analyzer' in current:
