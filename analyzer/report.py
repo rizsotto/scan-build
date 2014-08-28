@@ -9,11 +9,16 @@ import multiprocessing
 import re
 import os
 import os.path
+import sys
 import shutil
 import glob
-from cgi import escape
 from analyzer.decorators import trace, require
 from analyzer.driver import filter_dict, get_clang_version
+
+if 3 == sys.version_info[0]:
+    from html import escape
+else:
+    from cgi import escape
 
 
 __all__ = ['generate_report']
