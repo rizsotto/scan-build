@@ -52,7 +52,12 @@ def main():
 
     with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
         run_analyzer(args, out_dir)
-        number_of_bugs = generate_report(args, out_dir)\
+        number_of_bugs = generate_report(
+            {'sequential': args['sequential'],
+             'out_dir': out_dir,
+             'prefix': get_prefix_from(args['input']),
+             'clang': args['clang'],
+             'html_title': args['html_title']})\
             if needs_report_file(args) else 0
         # TODO get result from bear if --status-bugs were not requested
         return number_of_bugs if 'status_bugs' in args else 0

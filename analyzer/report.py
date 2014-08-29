@@ -25,28 +25,38 @@ __all__ = ['generate_report']
 
 
 @trace
-@require(['sequential'])
-def generate_report(args, out_dir):
-    """ Report generation.
+@require(['sequential', 'out_dir', 'clang', 'prefix'])
+def generate_report(opts):
+    """ Report is generated from .html files, and it's a .html file itself.
 
-    Report is generated from .html files, and it's a .html file itself. """
-    pool = multiprocessing.Pool(1 if args['sequential'] else None)
+    Two major parts: bug reports (comming from 'report-*.html' files) and
+    crash reports (comming from 'failures' directory content). Each parts
+    are tables (or multiple tables) with rows. To reduce the memory footprint
+    of the report generation, these tables are generated before the final
+    report. Those called fragments (because they are fragments). The
+    'assembly_report' write the final report.
+
+    Copy stylesheet(s) and javascript file(s) are also part of this method.
+    """
+    pool = multiprocessing.Pool(1 if opts['sequential'] else None)
     result = 0
     with bug_fragment(
             pool.imap_unordered(scan_bug,
-                                glob.iglob(os.path.join(out_dir,
+                                glob.iglob(os.path.join(opts['out_dir'],
                                                         '*.html'))),
-            out_dir) as bugs:
+            opts['out_dir'],
+            opts['prefix']) as bugs:
         with crash_fragment(
                 pool.imap_unordered(scan_crash,
-                                    glob.iglob(os.path.join(out_dir,
+                                    glob.iglob(os.path.join(opts['out_dir'],
                                                             'failures',
                                                             '*.info.txt'))),
-                out_dir) as crashes:
+                opts['out_dir'],
+                opts['prefix']) as crashes:
             result = bugs.count + crashes.count
             if result > 0:
-                assembly_report(args, out_dir, bugs, crashes)
-                copy_resource_files(out_dir)
+                assembly_report(opts, bugs, crashes)
+                copy_resource_files(opts['out_dir'])
     pool.close()
     pool.join()
     return result
@@ -59,11 +69,6 @@ def scan_bug(result):
         def smash(key):
             return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
         return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
-
-    def safe_value(container, key, encode):
-        if key in container:
-            value = encode(container[key])
-            container.update({key: value})
 
     patterns = [
         re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
@@ -93,9 +98,6 @@ def scan_bug(result):
     bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
     bug_info['report_file'] = result
     bug_info['bug_type_class'] = classname(bug_info)
-    safe_value(bug_info, 'bug_category', escape)
-    safe_value(bug_info, 'bug_type', escape)
-    safe_value(bug_info, 'bug_type_class', lambda x: escape(x, True))
 
     return bug_info
 
@@ -107,15 +109,19 @@ def scan_crash(filename):
     name = match.group(1) if match else None
     with open(filename) as handler:
         lines = handler.readlines()
-        return {'source': escape(lines[0].rstrip()),
-                'problem': escape(lines[1].rstrip()),
-                'preproc': escape(name, True),
-                'stderr': escape(name + '.stderr.txt', True)}
+        return {'source': lines[0].rstrip(),
+                'problem': lines[1].rstrip(),
+                'preproc': name,
+                'stderr': name + '.stderr.txt'}
 
 
 class ReportFragment(object):
     """ Represents a report fragment on the disk. The only usage at report
-        generation, when multiple fragments are combined together. """
+    generation, when multiple fragments are combined together.
+
+    The object shall be used within a 'with' to guard the resource. To delete
+    the file in this case. Carry the bug count also important to decide about
+    to include the fragment or not. """
 
     def __init__(self, filename, count):
         self.filename = filename
@@ -137,7 +143,16 @@ class ReportFragment(object):
 
 
 @trace
-def crash_fragment(iterator, out_dir):
+def crash_fragment(iterator, out_dir, prefix):
+    def pretty(opts):
+        """ Make safe this values to embed into HTML. """
+        encode_value(opts, 'source', lambda x: chop(prefix, x))
+        encode_value(opts, 'source', escape)
+        encode_value(opts, 'problem', escape)
+        encode_value(opts, 'preproc', lambda x: escape(x, True))
+        encode_value(opts, 'stderr', lambda x: escape(x, True))
+        return opts
+
     name = os.path.join(out_dir, 'crashes.html.fragment')
     count = 0
     with open(name, 'w') as handle:
@@ -156,6 +171,7 @@ def crash_fragment(iterator, out_dir):
         |  </thead>
         |  <tbody>""", indent))
         for current in iterator:
+            current = pretty(current)
             count += 1
             handle.write(reindent("""
         |    <tr>
@@ -171,13 +187,15 @@ def crash_fragment(iterator, out_dir):
 
 
 @trace
-def bug_fragment(iterator, out_dir):
+def bug_fragment(iterator, out_dir, prefix):
     def hash_bug(bug):
+        """ Make a unique hash for bugs to detect duplicates. """
         return str(bug['bug_line']) + ':' +\
             str(bug['bug_path_length']) + ':' +\
-            bug['bug_file'][::-1]
+            chop(prefix, bug['bug_file'])[::-1]
 
     def update_counters(counters, bug):
+        """ For bug summary fragment it maintain the bug statistic. """
         bug_category = bug['bug_category']
         current_category = counters.get(bug_category, dict())
         bug_type = bug['bug_type']
@@ -188,6 +206,15 @@ def bug_fragment(iterator, out_dir):
         current_type.update({'bug_count': current_type['bug_count'] + 1})
         current_category.update({bug_type: current_type})
         counters.update({bug_category: current_category})
+
+    def pretty(opts):
+        """ Make safe this values to embed into HTML. """
+        encode_value(opts, 'bug_file', lambda x: chop(prefix, x))
+        encode_value(opts, 'bug_file', escape)
+        encode_value(opts, 'bug_category', escape)
+        encode_value(opts, 'bug_type', escape)
+        encode_value(opts, 'bug_type_class', lambda x: escape(x, True))
+        return opts
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
     uniques = set()
@@ -215,6 +242,7 @@ def bug_fragment(iterator, out_dir):
             bug_hash = hash_bug(current)
             if bug_hash not in uniques:
                 uniques.add(bug_hash)
+                current = pretty(current)
                 update_counters(counters, current)
                 handle.write(reindent("""
         |    <tr class="{bug_type_class}">
@@ -235,6 +263,11 @@ def bug_fragment(iterator, out_dir):
 
 @trace
 def summary_fragment(counters, out_dir, tail_fragment):
+    """ Bug summary is a HTML table to give a better overview of the bugs.
+
+    counters -- dictionary of bug categories, which contains a dictionary of
+                bug types, count.
+    """
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
@@ -285,17 +318,18 @@ def summary_fragment(counters, out_dir, tail_fragment):
 
 
 @trace
-@require(['clang'])
-def assembly_report(opts, out_dir, *fragments):
+@require(['out_dir', 'prefix', 'clang'])
+def assembly_report(opts, *fragments):
+    """ Put together the fragments into a final report. """
     import getpass
     import socket
     import sys
     import datetime
 
     if 'html_title' not in opts or opts['html_title'] is None:
-        opts['html_title'] = os.getcwd() + ' - analyzer results'
+        opts['html_title'] = opts['prefix'] + ' - analyzer results'
 
-    output = os.path.join(out_dir, 'index.html')
+    output = os.path.join(opts['out_dir'], 'index.html')
     with open(output, 'w') as handle:
         handle.write(reindent("""
         |<!DOCTYPE html>
@@ -318,7 +352,7 @@ def assembly_report(opts, out_dir, *fragments):
             html_title=opts['html_title'],
             user_name=getpass.getuser(),
             host_name=socket.gethostname(),
-            current_dir=os.getcwd(),
+            current_dir=opts['prefix'],
             cmd_args=' '.join(sys.argv),
             clang_version=get_clang_version(opts['clang']),
             date=datetime.datetime.today().strftime('%c')))
@@ -339,7 +373,23 @@ def copy_resource_files(out_dir):
     shutil.copy(os.path.join(resources_dir, 'selectable.js'), out_dir)
 
 
+def encode_value(container, key, encode):
+    """ Run 'encode' on 'container[key]' value and update it. """
+    if key in container:
+        value = encode(container[key])
+        container.update({key: value})
+
+
+def chop(prefix, filename):
+    """ Create 'filename' from '/prefix/filename' """
+    if len(prefix) and prefix[-1] != os.path.sep:
+        prefix += os.path.sep
+    split = filename.split(prefix, 1)
+    return split[1] if len(split) == 2 else split[1]
+
+
 def reindent(text, indent):
+    """ Utility function to format html output and keep indentation. """
     result = ''
     for line in text.splitlines():
         if len(line.strip()):
