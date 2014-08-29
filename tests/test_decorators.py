@@ -63,6 +63,11 @@ def method_with_expecteds(opts):
     return 0
 
 
+@sut.require([])
+def method_exception_from_inside(opts):
+    raise Exception('here is one')
+
+
 class RequireDecoratorTest(unittest.TestCase):
 
     def test_method_without_expecteds(self):
@@ -77,3 +82,6 @@ class RequireDecoratorTest(unittest.TestCase):
         self.assertRaises(KeyError, method_with_expecteds, {'this': 2})
         self.assertRaises(KeyError, method_with_expecteds, {'that': 3})
         self.assertEqual(method_with_expecteds({'this': 0, 'that': 3}), 0)
+
+    def test_method_exception_not_caught(self):
+        self.assertRaises(Exception, method_exception_from_inside, dict())
