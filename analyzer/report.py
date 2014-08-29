@@ -21,9 +21,6 @@ else:
     from cgi import escape
 
 
-__all__ = ['generate_report']
-
-
 @trace
 @require(['sequential', 'out_dir', 'clang', 'prefix'])
 def generate_report(opts):

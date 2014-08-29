@@ -8,9 +8,6 @@ import logging
 import functools
 
 
-__all__ = ['trace', 'require']
-
-
 def _trace(message):
     logging.log(5, message)
 
