@@ -17,7 +17,17 @@ from analyzer.report import generate_report
 
 
 def main():
-    """ Entry point for beye. """
+    """ Entry point for 'beye'.
+
+    'beye' is orchestrating to run the analyzer against the given project
+    and generates report file (if that was also requested).
+
+    Currently it takes a compilation database as input and run analyzer
+    against each files. The logic to run analyzer against a single file is
+    implemented in 'analyzer.driver' module.
+
+    Report generation logic is in a separate module called 'analyzer.report'.
+    """
     multiprocessing.freeze_support()
     logging.basicConfig(format='beye: %(message)s')
 
@@ -88,7 +98,14 @@ class ReportDirectory(object):
 
 @trace
 def parse_command_line():
-    """ Parse command line and return a dictionary of given values. """
+    """ Parse command line and return a dictionary of given values.
+
+    Command line parameters are defined by previous implementation, and
+    influence either the analyzer behaviour or the report generation.
+    The paramters are grouped together according their functionality.
+
+    The help message is generated from this parse method. Default values
+    are also printed. """
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     parser = ArgumentParser(prog='beye',
                             formatter_class=ArgumentDefaultsHelpFormatter)

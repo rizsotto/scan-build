@@ -19,15 +19,26 @@ from analyzer.decorators import trace, require
 
 @trace
 def run(opts):
+    """ Driver method to run the analyzer against a single file.
+
+    opts -- a dictionary about to run an analysis. It contains all needed
+            information, like: source file, working directory, compilation
+            command lines (these are from the compilation database). And
+            compiler, output directory, analyzer parameters, etc..
+
+    The analysis is written continuation-passing like style. Each step
+    takes two arguments: the current analysis state, and a method to call
+    as next thing to do. (The 'opts' argument is the initial state.)
+
+    Continuations might require certain attribute(s) present in the state.
+    Those are checked with a decorator 'require'.
+    """
+
     def chain(conts):
         """ Creates a single method from multiple continuations.
 
-        The analysis is written continuation-passing like style.
-        Each step takes two arguments: the current analysis state,
-        and a method to call as next thing to do.
-
-        This method takes an array of those functions and build
-        a single method wich takes only one argument, the state. """
+        This method takes an array of those functions and build a single
+        method wich takes only one argument, the state. """
         def bind(cs, acc):
             return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
 
@@ -52,8 +63,13 @@ def run(opts):
 def filter_dict(original, removables, additions):
     """ Utility function to isolate changes on dictionaries.
 
+    original -- the dictionary to copy and extend or filter
+    removables -- list of entries to filter out from the result
+    additions -- a dictionary which is containing additional entries
+
     It only creates shallow copy of the input dictionary. So, modifying
     values are not isolated. But to remove and add new ones are safe.
+    Also it filter out elements which values are None.
     """
     new = dict()
     for (k, v) in original.items():
@@ -72,7 +88,12 @@ class Action(object):
 @trace
 @require(['command'])
 def parse(opts, continuation):
-    """ Parses the command line arguments of the current invocation. """
+    """ Parses the command line arguments of the current invocation.
+
+    To run analysis from a compilation command, first it disassembles the
+    compilation command. Classifies the parameters into groups and throws
+    away those which are not relevant. This method is doing that task.
+    """
     def match(state, it):
         """ This method contains a list of pattern and action tuples.
             The matching start from the top if the list, when the first
@@ -298,6 +319,8 @@ def arch_loop(opts, continuation):
 @trace
 @require(['file'])
 def set_language(opts, continuation):
+    """ Find out the language from command line parameters or file name
+    extension. The decision also influenced by the compiler invocation. """
     def from_filename(name, is_cxx):
         mapping = {
             '.c': 'c++' if is_cxx else 'c',
@@ -344,7 +367,9 @@ def set_language(opts, continuation):
 @trace
 @require([])
 def set_analyzer_output(opts, continuation):
-    """ Create output file if was requested. """
+    """ Create output file if was requested.
+
+    This plays a role only if .plist files are requested. """
     def needs_output_file():
         output_format = opts.get('output_format')
         return 'plist' == output_format or 'plist-html' == output_format
@@ -364,6 +389,10 @@ def set_analyzer_output(opts, continuation):
 @trace
 @require(['language', 'directory', 'file', 'clang'])
 def run_analyzer(opts, continuation):
+    """ From the state parameter it assembles the analysis command line and
+    executes it. Capture the output of the analysis and returns with it. If
+    failure reports are requested, it calls the continuation to generate it.
+    """
     cwd = opts['directory']
     cmd = build_args(opts)
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
@@ -450,6 +479,7 @@ def report_failure(opts, _):
 
 @trace
 def get_clang_version(cmd):
+    """ Returns the compiler version as string. """
     lines = subprocess.check_output([cmd, '-v'], stderr=subprocess.STDOUT)
     return lines.decode('ascii').splitlines()[0]
 
