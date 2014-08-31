@@ -55,30 +55,10 @@ def run(opts):
                    report_failure])
 
     try:
-        return method(opts)
+        return method({k: v for k, v in opts.items() if v is not None})
     except Exception as exception:
         logging.error(str(exception))
         return None
-
-
-def filter_dict(original, removables, additions):
-    """ Utility function to isolate changes on dictionaries.
-
-    original -- the dictionary to copy and extend or filter
-    removables -- list of entries to filter out from the result
-    additions -- a dictionary which is containing additional entries
-
-    It only creates shallow copy of the input dictionary. So, modifying
-    values are not isolated. But to remove and add new ones are safe.
-    Also it filter out elements which values are None.
-    """
-    new = dict()
-    for (k, v) in original.items():
-        if v and k not in removables:
-            new[k] = v
-    for (k, v) in additions.items():
-        new[k] = v
-    return new
 
 
 class Action(object):
@@ -281,7 +261,9 @@ def parse(opts, continuation):
             it.next()
             match(state, it)
     except StopIteration:
-        return continuation(filter_dict(opts, frozenset(['command']), state))
+        del opts['command']
+        state.update(opts)
+        return continuation(state)
 
 
 @trace
@@ -310,8 +292,10 @@ def arch_loop(opts, continuation):
             # only pass we have before run the analyzer.)
             arch = archs.pop()
             logging.debug('analysis, on arch: {0}'.format(arch))
-            return continuation(
-                filter_dict(opts, frozenset([key]), {'arch': arch}))
+
+            opts.update({'arch': arch})
+            del opts[key]
+            return continuation(opts)
     else:
         logging.debug('analysis, on default arch')
         return continuation(opts)
@@ -360,8 +344,8 @@ def set_language(opts, continuation):
         logging.debug('skip analysis, language not supported')
     else:
         logging.debug('analysis, language: {0}'.format(language))
-        return continuation(
-            filter_dict(opts, frozenset([key]), {key: language}))
+        opts.update({key: language})
+        return continuation(opts)
     return None
 
 
@@ -380,9 +364,8 @@ def set_analyzer_output(opts, continuation):
                                          suffix='.plist',
                                          delete='html_dir' not in opts,
                                          dir=opts.get('html_dir')) as output:
-            return continuation(
-                filter_dict(opts, frozenset(),
-                            {'analyzer_output': output.name}))
+            opts.update({'analyzer_output': output.name})
+            return continuation(opts)
     else:
         return continuation(opts)
 
@@ -407,12 +390,11 @@ def run_analyzer(opts, continuation):
     child.wait()
     if 'report_failures' in opts and child.returncode:
         error_type = 'crash' if child.returncode & 127 else 'other_error'
-        return continuation(
-            filter_dict(opts,
-                        frozenset(),
-                        {'error_type': error_type,
-                         'error_output': output,
-                         'exit_code': child.returncode}))
+        opts.update(
+            {'error_type': error_type,
+             'error_output': output,
+             'exit_code': child.returncode})
+        return continuation(opts)
     return {'analyzer': {'error_output': output,
                          'exit_code': child.returncode},
             'file': opts['file']}
@@ -478,6 +460,7 @@ def report_failure(opts, _):
             'file': opts['file']}
 
 
+@trace
 def build_args(opts, output=None):
     """ Create command to run analyzer or failure report generation.
 

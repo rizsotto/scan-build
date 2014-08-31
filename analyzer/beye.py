@@ -12,7 +12,7 @@ import itertools
 import re
 import os
 from analyzer.decorators import trace, require
-from analyzer.driver import run, filter_dict
+from analyzer.driver import run
 from analyzer.report import generate_report
 
 
@@ -280,17 +280,10 @@ def run_analyzer(args, out_dir):
         def uname():
             return subprocess.check_output(['uname', '-a']).decode('ascii')
 
-        return filter_dict(
-            opts,
-            frozenset([
-                'output',
-                'html_title',
-                'keep_empty',
-                'status_bugs',
-                'input',
-                'sequential']),
+        opts.update(
             {'html_dir': out_dir,
              'uname': uname()})
+        return opts
 
     def wrap(iterable, const):
         for current in iterable:

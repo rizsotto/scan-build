@@ -15,13 +15,13 @@ def run_analyzer(content, opts):
         with open(tmpdir + os.sep + 'test.cpp', 'w') as handle:
             handle.write(content)
 
-        adds = {'language': 'c++',
-                'directory': tmpdir,
-                'file': 'test.cpp',
-                'clang': 'clang'}
+        opts.update(
+            {'language': 'c++',
+             'directory': tmpdir,
+             'file': 'test.cpp',
+             'clang': 'clang'})
         spy = fixtures.Spy()
-        result = sut.run_analyzer(
-            sut.filter_dict(opts, frozenset(), adds), spy.call)
+        result = sut.run_analyzer(opts, spy.call)
         return (result, spy.arg)
 
 

@@ -13,7 +13,6 @@ import sys
 import shutil
 import glob
 from analyzer.decorators import trace, require
-from analyzer.driver import filter_dict
 from analyzer.clang import get_version
 
 if 3 == sys.version_info[0]:

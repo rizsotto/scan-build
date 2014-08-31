@@ -36,35 +36,6 @@ class AnalyzerTest(unittest.TestCase):
 
         test(None, {'file': 'file.java'})
 
-    def test_filter_dict_insert_works(self):
-        input = {'key': 1}
-        expected = {'key': 1, 'value': 2}
-        self.assertEqual(expected,
-                         sut.filter_dict(input, frozenset(), {'value': 2}))
-
-    def test_filter_dict_delete_works(self):
-        input = {'key': 1, 'value': 2}
-        expected = {'value': 2}
-        self.assertEqual(expected,
-                         sut.filter_dict(input, frozenset(['key', 'other']),
-                                         dict()))
-
-    def test_filter_dict_modify_works(self):
-        input = {'key': 1}
-        expected = {'key': 2}
-        self.assertEqual(
-            expected, sut.filter_dict(input, frozenset(['key']), {'key': 2}))
-        self.assertEqual(1, input['key'])
-
-    def test_filter_dict_does_strip(self):
-        input = {
-            'good': 'has value',
-            'bad': None,
-            'another bad': None,
-            'normal': 'also'}
-        expected = {'good': 'has value', 'normal': 'also'}
-        self.assertEqual(expected, sut.filter_dict(input, frozenset(), {}))
-
     def test_arch_loop_default_forwards_call(self):
         spy = fixtures.Spy()
         input = {'key': 'value'}
