@@ -12,7 +12,6 @@ import os.path
 import sys
 import tempfile
 import copy
-import functools
 import shlex
 from analyzer.decorators import trace, require
 from analyzer.clang import get_arguments, get_version
@@ -55,7 +54,7 @@ def run(opts):
                    report_failure])
 
     try:
-        return method({k: v for k, v in opts.items() if v is not None})
+        return method(opts)
     except Exception as exception:
         logging.error(str(exception))
         return None
@@ -461,6 +460,7 @@ def report_failure(opts, _):
 
 
 @trace
+@require(['clang'])
 def build_args(opts, output=None):
     """ Create command to run analyzer or failure report generation.
 
@@ -484,45 +484,10 @@ def build_args(opts, output=None):
             result.extend(['-o', opts['html_dir']])
         return result
 
-    def static_analyzer():
-        result = []
-        if 'store_model' in opts:
-            result.append('-analyzer-store={0}'.format(opts['store_model']))
-        if 'constraints_model' in opts:
-            result.append(
-                '-analyzer-constraints={0}'.format(opts['constraints_model']))
-        if 'internal_stats' in opts:
-            result.append('-analyzer-stats')
-        if 'enable_checker' in opts:
-            result = functools.reduce(
-                lambda acc, x: acc + ['-analyzer-checker', x],
-                opts['enable_checker'],
-                result)
-        if 'disable_checker' in opts:
-            result = functools.reduce(
-                lambda acc, x: acc + ['-analyzer-disable-checker', x],
-                opts['disable_checker'],
-                result)
-        if 'analyze_headers' in opts:
-            result.append('-analyzer-opt-analyze-headers')
-        if 'stats' in opts:
-            result.append('-analyzer-checker=debug.Stats')
-        if 'maxloop' in opts:
-            result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
-        if 'output_format' in opts:
-            result.append('-analyzer-output={0}'.format(opts['output_format']))
-        if 'analyzer_config' in opts:
-            result.append(opts['analyzer_config'])
-        if 'verbose' in opts and 2 <= opts['verbose']:
-            result.append('-analyzer-display-progress')
-        if 'ubiviz' in opts:
-            result.append('-analyzer-viz-egraph-ubigraph')
-        return functools.reduce(
-            lambda acc, x: acc + ['-Xclang', x], result, [])
-
     if output:
         return [opts['clang'], '-fsyntax-only', '-E', '-o', output] + \
             syntax_check()
     else:
+        analyzer_flags = opts['direct_args'] if 'direct_args' in opts else []
         return [opts['clang'], '--analyze'] + \
-            syntax_check() + static_analyzer() + implicit_output()
+            syntax_check() + implicit_output() + analyzer_flags

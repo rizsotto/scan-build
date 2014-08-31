@@ -9,6 +9,7 @@ import multiprocessing
 import subprocess
 import json
 import itertools
+import functools
 import re
 import os
 from analyzer.decorators import trace, require
@@ -116,11 +117,10 @@ def parse_command_line():
                             formatter_class=ArgumentDefaultsHelpFormatter)
     group1 = parser.add_argument_group('options')
     group1.add_argument(
-        '--analyze-headers',
-        action='store_true',
-        help='Also analyze functions in #included files. By default,\
-              such functions are skipped unless they are called by\
-              functions within the main source file.')
+        '--input',
+        metavar='<file>',
+        default="compile_commands.json",
+        help="The JSON compilation database.")
     group1.add_argument(
         '--output', '-o',
         metavar='<path>',
@@ -129,10 +129,27 @@ def parse_command_line():
               Subdirectories will be created as needed to represent separate\
               "runs" of the analyzer.')
     group1.add_argument(
+        '--sequential',
+        action='store_true',
+        help="Execute analyzer sequentialy.")
+    group1.add_argument(
+        '--status-bugs',
+        action='store_true',
+        help='By default, the exit status of ‘beye’ is the same as the\
+              executed build command. Specifying this option causes the exit\
+              status of ‘beye’ to be 1 if it found potential bugs and 0\
+              otherwise.')
+    group1.add_argument(
         '--html-title',
         metavar='<title>',
         help='Specify the title used on generated HTML pages.\
               If not specified, a default title will be used.')
+    group1.add_argument(
+        '--analyze-headers',
+        action='store_true',
+        help='Also analyze functions in #included files. By default,\
+              such functions are skipped unless they are called by\
+              functions within the main source file.')
     format_group = group1.add_mutually_exclusive_group()
     format_group.add_argument(
         '--plist',
@@ -149,13 +166,6 @@ def parse_command_line():
         action='store_const',
         help='This option outputs the results as a set of HTML and .plist\
               files.')
-    group1.add_argument(
-        '--status-bugs',
-        action='store_true',
-        help='By default, the exit status of ‘beye’ is the same as the\
-              executed build command. Specifying this option causes the exit\
-              status of ‘beye’ to be 1 if it found potential bugs and 0\
-              otherwise.')
     group1.add_argument(
         '--verbose', '-v',
         action='count',
@@ -233,15 +243,6 @@ def parse_command_line():
                 Switch the page naming to:\
                 report-<filename>-<function/method name>-<id>.html\
                 instead of report-XXXXXX.html")
-    group2.add_argument(
-        '--input',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="The JSON compilation database.")
-    group2.add_argument(
-        '--sequential',
-        action='store_true',
-        help="Execute analyzer sequentialy.")
 
     group3 = parser.add_argument_group('controlling checkers')
     group3.add_argument(
@@ -280,10 +281,11 @@ def run_analyzer(args, out_dir):
         def uname():
             return subprocess.check_output(['uname', '-a']).decode('ascii')
 
-        opts.update(
-            {'html_dir': out_dir,
-             'uname': uname()})
-        return opts
+        return {
+            'clang': opts['clang'],
+            'html_dir': out_dir,
+            'direct_args': parameters_from_command_line(opts),
+            'uname': uname()}
 
     def wrap(iterable, const):
         for current in iterable:
@@ -299,6 +301,52 @@ def run_analyzer(args, out_dir):
                     logging.info(line.rstrip())
         pool.close()
         pool.join()
+
+
+@trace
+def parameters_from_command_line(args):
+    """ A group of command line arguments of 'beye' can mapped to command
+    line arguments of the analyzer. This method generates those. """
+    opts = {k: v for k, v in args.items() if v is not None}
+    result = []
+    if 'store_model' in opts:
+        result.append('-analyzer-store={0}'.format(opts['store_model']))
+    if 'constraints_model' in opts:
+        result.append(
+            '-analyzer-constraints={0}'.format(opts['constraints_model']))
+    if 'internal_stats' in opts:
+        result.append('-analyzer-stats')
+    if 'analyze_headers' in opts:
+        result.append('-analyzer-opt-analyze-headers')
+    if 'stats' in opts:
+        result.append('-analyzer-checker=debug.Stats')
+    if 'maxloop' in opts:
+        result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
+    if 'output_format' in opts:
+        result.append('-analyzer-output={0}'.format(opts['output_format']))
+    if 'analyzer_config' in opts:
+        result.append(opts['analyzer_config'])
+    if 'verbose' in opts and 2 <= opts['verbose']:
+        result.append('-analyzer-display-progress')
+    if 'plugins' in opts:
+        result = functools.reduce(
+            lambda acc, x: acc + ['-load', x],
+            opts['plugins'],
+            result)
+    if 'enable_checker' in opts:
+        result = functools.reduce(
+            lambda acc, x: acc + ['-analyzer-checker', x],
+            opts['enable_checker'],
+            result)
+    if 'disable_checker' in opts:
+        result = functools.reduce(
+            lambda acc, x: acc + ['-analyzer-disable-checker', x],
+            opts['disable_checker'],
+            result)
+    if 'ubiviz' in opts:  # TODO: never passed
+        result.append('-analyzer-viz-egraph-ubigraph')
+    return functools.reduce(
+        lambda acc, x: acc + ['-Xclang', x], result, [])
 
 
 @trace
