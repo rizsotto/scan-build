@@ -28,7 +28,7 @@ class ReportFailureTest(fixtures.TestCase):
                     'file': 'test.c',
                     'clang': 'clang',
                     'uname': uname_msg,
-                    'html_dir': tmpdir,
+                    'out_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': error_msg,
                     'exit_code': 13}

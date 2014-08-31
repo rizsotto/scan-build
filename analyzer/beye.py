@@ -283,7 +283,7 @@ def run_analyzer(args, out_dir):
 
         return {
             'clang': opts['clang'],
-            'html_dir': out_dir,
+            'out_dir': out_dir,
             'direct_args': parameters_from_command_line(opts),
             'uname': uname()}
 

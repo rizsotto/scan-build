@@ -18,7 +18,7 @@ class SetAnalyzerOutputTest(fixtures.TestCase):
 
     def test_set_analyzer_output_create_file(self):
         with fixtures.TempDir() as tmpdir:
-            opts = {'html_dir': tmpdir, 'output_format': 'plist'}
+            opts = {'out_dir': tmpdir, 'output_format': 'plist'}
             spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
             self.assertTrue(os.path.exists(spy.arg['analyzer_output']))

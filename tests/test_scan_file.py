@@ -87,7 +87,7 @@ class ScanFileTest(unittest.TestCase):
                     'file': 'test.c',
                     'clang': 'clang',
                     'uname': 'this and that\n',
-                    'html_dir': tmpdir,
+                    'out_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': 'some output',
                     'exit_code': 13}

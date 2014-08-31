@@ -361,8 +361,8 @@ def set_analyzer_output(opts, continuation):
     if needs_output_file():
         with tempfile.NamedTemporaryFile(prefix='report-',
                                          suffix='.plist',
-                                         delete='html_dir' not in opts,
-                                         dir=opts.get('html_dir')) as output:
+                                         delete='out_dir' not in opts,
+                                         dir=opts.get('out_dir')) as output:
             opts.update({'analyzer_output': output.name})
             return continuation(opts)
     else:
@@ -405,7 +405,7 @@ def run_analyzer(opts, continuation):
           'file',
           'clang',
           'uname',
-          'html_dir',
+          'out_dir',
           'error_type',
           'error_output',
           'exit_code'])
@@ -427,7 +427,7 @@ def report_failure(opts, _):
 
     def destination(opts):
         """ Creates failures directory if not exits yet. """
-        name = os.path.join(opts['html_dir'], 'failures')
+        name = os.path.join(opts['out_dir'], 'failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
@@ -480,8 +480,8 @@ def build_args(opts, output=None):
         result = []
         if 'analyzer_output' in opts:
             result.extend(['-o', opts['analyzer_output']])
-        elif 'html_dir' in opts:
-            result.extend(['-o', opts['html_dir']])
+        elif 'out_dir' in opts:
+            result.extend(['-o', opts['out_dir']])
         return result
 
     if output:
