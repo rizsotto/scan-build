@@ -12,7 +12,7 @@ import itertools
 import re
 import os
 from analyzer.decorators import trace, require
-from analyzer.driver import run, filter_dict, get_clang_arguments
+from analyzer.driver import run, filter_dict
 from analyzer.report import generate_report
 
 
@@ -331,21 +331,3 @@ def get_prefix_from(compilation_database):
                 yield os.path.dirname(entry['file'])
 
     return common(filenames())
-
-
-@trace
-def get_default_checkers(clang):
-    """ To get the default plugins we execute Clang to print how this
-    comilation would be called. For input file we specify stdin. And
-    pass only language information. """
-    def checkers(language):
-        pattern = re.compile(r'^-analyzer-checker=(.*)$')
-        cmd = [clang, '--analyze', '-x', language, '-']
-        return [pattern.match(arg).group(1)
-                for arg
-                in get_clang_arguments('.', cmd)
-                if pattern.match(arg)]
-    return set(itertools.chain.from_iterable(
-               [checkers(language)
-                for language
-                in ['c', 'c++', 'objective-c', 'objective-c++']]))

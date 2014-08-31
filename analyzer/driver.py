@@ -15,6 +15,7 @@ import copy
 import functools
 import shlex
 from analyzer.decorators import trace, require
+from analyzer.clang import get_arguments, get_version
 
 
 @trace
@@ -456,7 +457,7 @@ def report_failure(opts, _):
                                       dir=destination(opts))
     os.close(handle)
     cwd = opts['directory']
-    cmd = get_clang_arguments(cwd, build_args(opts, name))
+    cmd = get_arguments(cwd, build_args(opts, name))
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     subprocess.call(cmd, cwd=cwd)
 
@@ -465,7 +466,7 @@ def report_failure(opts, _):
         handle.write(error.title().replace('_', ' ') + os.linesep)
         handle.write(' '.join(cmd) + os.linesep)
         handle.write(opts['uname'])
-        handle.write(get_clang_version(cmd[0]))
+        handle.write(get_version(cmd[0]))
         handle.close()
 
     with open(name + '.stderr.txt', 'w') as handle:
@@ -475,54 +476,6 @@ def report_failure(opts, _):
     return {'analyzer': {'error_output': opts['error_output'],
                          'exit_code': opts['exit_code']},
             'file': opts['file']}
-
-
-@trace
-def get_clang_version(cmd):
-    """ Returns the compiler version as string. """
-    lines = subprocess.check_output([cmd, '-v'], stderr=subprocess.STDOUT)
-    return lines.decode('ascii').splitlines()[0]
-
-
-@trace
-def get_clang_arguments(cwd, command):
-    """ Capture Clang invocation.
-
-    Clang can be executed directly (when you just ask specific action to
-    execute) or indidect way (whey you first ask Clang to print the command
-    to run for that compilation, and then execute the given command).
-
-    This method receives the full command line for direct compilation. And
-    it generates the command for indirect compilation.
-    """
-    def lastline(stream):
-        last = None
-        for line in stream:
-            last = line
-        if last is None:
-            raise Exception("output not found")
-        return last
-
-    def strip_quotes(quoted):
-        match = re.match(r'^\"([^\"]*)\"$', quoted)
-        return match.group(1) if match else quoted
-
-    cmd = command[:]
-    cmd.insert(1, '-###')
-    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-    child = subprocess.Popen(cmd,
-                             cwd=cwd,
-                             universal_newlines=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-    line = lastline(child.stdout)
-    child.wait()
-    if 0 == child.returncode:
-        if re.match(r'^clang: error:', line):
-            raise Exception(line)
-        return [strip_quotes(x) for x in shlex.split(line)]
-    else:
-        raise Exception(line)
 
 
 def build_args(opts, output=None):

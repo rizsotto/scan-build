@@ -13,7 +13,8 @@ import sys
 import shutil
 import glob
 from analyzer.decorators import trace, require
-from analyzer.driver import filter_dict, get_clang_version
+from analyzer.driver import filter_dict
+from analyzer.clang import get_version
 
 if 3 == sys.version_info[0]:
     from html import escape
@@ -351,7 +352,7 @@ def assembly_report(opts, *fragments):
             host_name=socket.gethostname(),
             current_dir=opts['prefix'],
             cmd_args=' '.join(sys.argv),
-            clang_version=get_clang_version(opts['clang']),
+            clang_version=get_version(opts['clang']),
             date=datetime.datetime.today().strftime('%c')))
         for fragment in fragments:
             fragment.write(handle)
