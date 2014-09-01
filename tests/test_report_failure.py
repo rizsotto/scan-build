@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.driver as sut
+import analyzer.runner as sut
 import tests.fixtures as fixtures
 import os
 import os.path

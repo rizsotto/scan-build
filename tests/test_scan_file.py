@@ -75,7 +75,7 @@ class ScanFileTest(unittest.TestCase):
                          'file.i.stderr.txt')
 
     def test_scan_real_crash(self):
-        import analyzer.driver as sut2
+        import analyzer.runner as sut2
         import re
         with fixtures.TempDir() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')

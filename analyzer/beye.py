@@ -13,7 +13,7 @@ import functools
 import re
 import os
 from analyzer.decorators import trace, require
-from analyzer.driver import run
+from analyzer.runner import run
 from analyzer.report import generate_report
 
 
