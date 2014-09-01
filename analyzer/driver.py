@@ -19,19 +19,35 @@ from analyzer.clang import get_arguments, get_version
 
 @trace
 def run(opts):
-    """ Driver method to run the analyzer against a single file.
+    return exec(create(opts), opts)
 
-    opts -- a dictionary about to run an analysis. It contains all needed
-            information, like: source file, working directory, compilation
-            command lines (these are from the compilation database). And
-            compiler, output directory, analyzer parameters, etc..
+
+@trace
+def create(opts):
+    """ From a single compilation it creates a command to run the analyzer.
+
+    opts -- This is an entry from the compilation database plus some extra
+            information, like: compiler, analyzer parameters, etc..
 
     The analysis is written continuation-passing like style. Each step
     takes two arguments: the current analysis state, and a method to call
     as next thing to do. (The 'opts' argument is the initial state.)
 
-    Continuations might require certain attribute(s) present in the state.
-    Those are checked with a decorator 'require'.
+    From an input dictionary like this..
+
+        { 'directory': ...,
+          'command': ...,
+          'file': ...,
+          'clang': ...,
+          'direct_args': ... }
+
+    creates an output dictionary like this..
+
+        { 'directory': ...,
+          'file': ...,
+          'language': ...,
+          'analyze': ...,
+          'report': ... }
     """
 
     def chain(conts):
@@ -49,9 +65,7 @@ def run(opts):
                    filter_action,
                    arch_loop,
                    set_language,
-                   set_analyzer_output,
-                   run_analyzer,
-                   report_failure])
+                   create_commands])
 
     try:
         return method(opts)
@@ -349,67 +363,45 @@ def set_language(opts, continuation):
 
 
 @trace
-@require([])
-def set_analyzer_output(opts, continuation):
-    """ Create output file if was requested.
+@require(['clang', 'directory', 'file', 'language', 'direct_args'])
+def create_commands(opts, continuation):
+    """ Create command to run analyzer or failure report generation.
 
-    This plays a role only if .plist files are requested. """
-    def needs_output_file():
-        output_format = opts.get('output_format')
-        return 'plist' == output_format or 'plist-html' == output_format
+    If output is passed it returns failure report command.
+    If it's not given it returns the analyzer command. """
+    common = []
+    if 'arch' in opts:
+        common.extend(['-arch', opts['arch']])
+    if 'compile_options' in opts:
+        common.extend(opts['compile_options'])
+    common.extend(['-x', opts['language']])
+    common.append(opts['file'])
 
-    if needs_output_file():
-        with tempfile.NamedTemporaryFile(prefix='report-',
-                                         suffix='.plist',
-                                         delete='out_dir' not in opts,
-                                         dir=opts.get('out_dir')) as output:
-            opts.update({'analyzer_output': output.name})
-            return continuation(opts)
-    else:
-        return continuation(opts)
-
-
-@trace
-@require(['language', 'directory', 'file', 'clang'])
-def run_analyzer(opts, continuation):
-    """ From the state parameter it assembles the analysis command line and
-    executes it. Capture the output of the analysis and returns with it. If
-    failure reports are requested, it calls the continuation to generate it.
-    """
-    cwd = opts['directory']
-    cmd = build_args(opts)
-    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
-    child = subprocess.Popen(cmd,
-                             cwd=cwd,
-                             universal_newlines=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-    output = child.stdout.readlines()
-    # do report details if it were asked
-    child.wait()
-    if 'report_failures' in opts and child.returncode:
-        error_type = 'crash' if child.returncode & 127 else 'other_error'
-        opts.update(
-            {'error_type': error_type,
-             'error_output': output,
-             'exit_code': child.returncode})
-        return continuation(opts)
-    return {'analyzer': {'error_output': output,
-                         'exit_code': child.returncode},
-            'file': opts['file']}
+    return {
+        'directory': opts['directory'],
+        'file': opts['file'],
+        'language': opts['language'],
+        'analyze': [opts['clang'], '--analyze'] + opts['direct_args'] + common,
+        'report': [opts['clang'], '-fsyntax-only', '-E'] + common}
 
 
 @trace
-@require(['language',
+def exec(cmds, opts):
+    cmds.update(opts)
+    return set_analyzer_output(cmds)
+
+
+@trace
+@require(['report',
           'directory',
           'file',
-          'clang',
+          'language',
           'uname',
           'out_dir',
           'error_type',
           'error_output',
           'exit_code'])
-def report_failure(opts, _):
+def report_failure(opts):
     """ Create report when analyzer failed.
 
     The major report is the preprocessor output. The output filename generated
@@ -438,12 +430,12 @@ def report_failure(opts, _):
                                       dir=destination(opts))
     os.close(handle)
     cwd = opts['directory']
-    cmd = get_arguments(cwd, build_args(opts, name))
+    cmd = opts['report'] + ['-o', name]
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     subprocess.call(cmd, cwd=cwd)
 
     with open(name + '.info.txt', 'w') as handle:
-        handle.write(os.path.abspath(opts['file']) + os.linesep)
+        handle.write(opts['file'] + os.linesep)
         handle.write(error.title().replace('_', ' ') + os.linesep)
         handle.write(' '.join(cmd) + os.linesep)
         handle.write(opts['uname'])
@@ -454,40 +446,56 @@ def report_failure(opts, _):
         handle.writelines(opts['error_output'])
         handle.close()
 
-    return {'analyzer': {'error_output': opts['error_output'],
-                         'exit_code': opts['exit_code']},
-            'file': opts['file']}
+    return {'error_output': opts['error_output'],
+            'exit_code': opts['exit_code']}
 
 
 @trace
-@require(['clang'])
-def build_args(opts, output=None):
-    """ Create command to run analyzer or failure report generation.
+@require(['analyze', 'directory', 'output'])
+def run_analyzer(opts, continuation=report_failure):
+    """ From the state parameter it assembles the analysis command line and
+    executes it. Capture the output of the analysis and returns with it. If
+    failure reports are requested, it calls the continuation to generate it.
+    """
+    cwd = opts['directory']
+    cmd = opts['analyze'] + opts['output']
+    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    child = subprocess.Popen(cmd,
+                             cwd=cwd,
+                             universal_newlines=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+    output = child.stdout.readlines()
+    # do report details if it were asked
+    child.wait()
+    if 'report_failures' in opts and child.returncode:
+        error_type = 'crash' if child.returncode & 127 else 'other_error'
+        opts.update(
+            {'error_type': error_type,
+             'error_output': output,
+             'exit_code': child.returncode})
+        return continuation(opts)
+    return {'error_output': output,
+            'exit_code': child.returncode}
 
-    If output is passed it returns failure report command.
-    If it's not given it returns the analyzer command. """
-    def syntax_check():
-        result = []
-        if 'arch' in opts:
-            result.extend(['-arch', opts['arch']])
-        if 'compile_options' in opts:
-            result.extend(opts['compile_options'])
-        result.extend(['-x', opts['language']])
-        result.append(opts['file'])
-        return result
 
-    def implicit_output():
-        result = []
-        if 'analyzer_output' in opts:
-            result.extend(['-o', opts['analyzer_output']])
-        elif 'out_dir' in opts:
-            result.extend(['-o', opts['out_dir']])
-        return result
+@trace
+@require(['out_dir'])
+def set_analyzer_output(opts, continuation=run_analyzer):
+    """ Create output file if was requested.
 
-    if output:
-        return [opts['clang'], '-fsyntax-only', '-E', '-o', output] + \
-            syntax_check()
+    This plays a role only if .plist files are requested. """
+    def needs_output_file():
+        output_format = opts.get('output_format')
+        return 'plist' == output_format or 'plist-html' == output_format
+
+    if needs_output_file():
+        with tempfile.NamedTemporaryFile(prefix='report-',
+                                         suffix='.plist',
+                                         delete='out_dir' not in opts,
+                                         dir=opts.get('out_dir')) as output:
+            opts.update({'output': ['-o', output.name]})
+            return continuation(opts)
     else:
-        analyzer_flags = opts['direct_args'] if 'direct_args' in opts else []
-        return [opts['clang'], '--analyze'] + \
-            syntax_check() + implicit_output() + analyzer_flags
+        opts.update({'output': ['-o', opts['out_dir']]})
+        return continuation(opts)

@@ -13,7 +13,7 @@ import os.path
 
 def run_bug_scan(content):
     with fixtures.TempDir() as tmpdir:
-        file_name = tmpdir + os.sep + 'test.html'
+        file_name = os.path.join(tmpdir, 'test.html')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
         return sut.scan_bug(file_name)
@@ -21,7 +21,7 @@ def run_bug_scan(content):
 
 def run_crash_scan(content, preproc):
     with fixtures.TempDir() as tmpdir:
-        file_name = tmpdir + os.sep + preproc + '.info.txt'
+        file_name = os.path.join(tmpdir, preproc + '.info.txt')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
         return sut.scan_crash(file_name)
@@ -78,20 +78,20 @@ class ScanFileTest(unittest.TestCase):
         import analyzer.driver as sut2
         import re
         with fixtures.TempDir() as tmpdir:
-            # create input file
-            with open(tmpdir + os.sep + 'test.c', 'w') as handle:
+            filename = os.path.join(tmpdir, 'test.c')
+            with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
             # produce failure report
-            opts = {'language': 'c',
-                    'directory': tmpdir,
-                    'file': 'test.c',
-                    'clang': 'clang',
-                    'uname': 'this and that\n',
+            opts = {'directory': os.getcwd(),
+                    'file': filename,
+                    'report': ['clang', '-fsyntax-only', '-E', filename],
+                    'language': 'c',
+                    'uname': 'this is my uname\n',
                     'out_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': 'some output',
                     'exit_code': 13}
-            sut2.report_failure(opts, lambda x: x)
+            sut2.report_failure(opts)
             # find the info file
             pp_file = None
             for root, _, files in os.walk(tmpdir):
@@ -102,7 +102,7 @@ class ScanFileTest(unittest.TestCase):
             self.assertIsNot(pp_file, None)
             # read the failure report back
             result = sut.scan_crash(pp_file + '.info.txt')
-            self.assertEqual(os.path.basename(result['source']), 'test.c')
+            self.assertEqual(result['source'], filename)
             self.assertEqual(result['problem'], 'Other Error')
             self.assertEqual(result['preproc'], pp_file)
             self.assertEqual(result['stderr'], pp_file + '.stderr.txt')

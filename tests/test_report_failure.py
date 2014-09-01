@@ -7,6 +7,7 @@
 import analyzer.driver as sut
 import tests.fixtures as fixtures
 import os
+import os.path
 import re
 
 
@@ -18,21 +19,22 @@ class ReportFailureTest(fixtures.TestCase):
     def test_report_failure_create_files(self):
         with fixtures.TempDir() as tmpdir:
             # create input file
-            with open(tmpdir + os.sep + 'test.c', 'w') as handle:
+            filename = os.path.join(tmpdir, 'test.c')
+            with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
-            error_msg = 'this is my error output'
             uname_msg = 'this is my uname\n'
+            error_msg = 'this is my error output'
             # execute test
-            opts = {'language': 'c',
-                    'directory': tmpdir,
-                    'file': 'test.c',
-                    'clang': 'clang',
+            opts = {'directory': os.getcwd(),
+                    'file': filename,
+                    'report': ['clang', '-fsyntax-only', '-E', filename],
+                    'language': 'c',
                     'uname': uname_msg,
                     'out_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': error_msg,
                     'exit_code': 13}
-            sut.report_failure(opts, lambda x: x)
+            sut.report_failure(opts)
             # verify the result
             result = dict()
             pp_file = None

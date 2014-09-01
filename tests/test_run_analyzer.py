@@ -8,18 +8,21 @@ import analyzer.driver as sut
 import tests.fixtures as fixtures
 import unittest
 import os
+import os.path
 
 
 def run_analyzer(content, opts):
     with fixtures.TempDir() as tmpdir:
-        with open(tmpdir + os.sep + 'test.cpp', 'w') as handle:
+        filename = os.path.join(tmpdir, 'test.cpp')
+        with open(filename, 'w') as handle:
             handle.write(content)
 
-        opts.update(
-            {'language': 'c++',
-             'directory': tmpdir,
-             'file': 'test.cpp',
-             'clang': 'clang'})
+        opts.update({
+            'directory': os.getcwd(),
+            'file': filename,
+            'language': 'c++',
+            'analyze': ['clang', '--analyze', '-x', 'c++', filename],
+            'output': ['-o', tmpdir]})
         spy = fixtures.Spy()
         result = sut.run_analyzer(opts, spy.call)
         return (result, spy.arg)
@@ -31,13 +34,13 @@ class RunAnalyzerTest(unittest.TestCase):
         content = "int div(int n, int d) { return n / d; }"
         (result, fwds) = run_analyzer(content, dict())
         self.assertEqual(None, fwds)
-        self.assertEqual(0, result['analyzer']['exit_code'])
+        self.assertEqual(0, result['exit_code'])
 
     def test_run_analyzer_crash(self):
         content = "int div(int n, int d) { return n / d }"
         (result, fwds) = run_analyzer(content, dict())
         self.assertEqual(None, fwds)
-        self.assertEqual(1, result['analyzer']['exit_code'])
+        self.assertEqual(1, result['exit_code'])
 
     def test_run_analyzer_crash_and_forwarded(self):
         content = "int div(int n, int d) { return n / d }"

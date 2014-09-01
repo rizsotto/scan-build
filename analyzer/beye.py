@@ -283,9 +283,10 @@ def run_analyzer(args, out_dir):
 
         return {
             'clang': opts['clang'],
-            'out_dir': out_dir,
             'direct_args': parameters_from_command_line(opts),
-            'uname': uname()}
+            'out_dir': out_dir,  # FIXME: exec
+            'report_failures': opts['report_failures'],  # FIXME: exec
+            'uname': uname()}  # FIXME: exec
 
     def wrap(iterable, const):
         for current in iterable:
@@ -296,8 +297,8 @@ def run_analyzer(args, out_dir):
         pool = multiprocessing.Pool(1 if args['sequential'] else None)
         for current in pool.imap_unordered(
                 run, wrap(json.load(handle), common_params(args))):
-            if current is not None and 'analyzer' in current:
-                for line in current['analyzer']['error_output']:
+            if current is not None:
+                for line in current['error_output']:
                     logging.info(line.rstrip())
         pool.close()
         pool.join()

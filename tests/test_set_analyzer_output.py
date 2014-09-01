@@ -11,20 +11,26 @@ import os
 
 class SetAnalyzerOutputTest(fixtures.TestCase):
 
-    def test_set_analyzer_output_forwarded(self):
-        spy = fixtures.Spy()
-        sut.set_analyzer_output(dict(), spy.call)
-        self.assertEqual(dict(), spy.arg)
+    def test_html(self):
+        with fixtures.TempDir() as tmpdir:
+            opts = {'out_dir': tmpdir, 'output_format': 'html'}
+            spy = fixtures.Spy()
+            sut.set_analyzer_output(opts, spy.call)
+            self.assertTrue(os.path.exists(spy.arg['output'][1]))
+            self.assertTrue(os.path.isdir(spy.arg['output'][1]))
 
-    def test_set_analyzer_output_create_file(self):
+    def test_plist_html(self):
+        with fixtures.TempDir() as tmpdir:
+            opts = {'out_dir': tmpdir, 'output_format': 'plist-html'}
+            spy = fixtures.Spy()
+            sut.set_analyzer_output(opts, spy.call)
+            self.assertTrue(os.path.exists(spy.arg['output'][1]))
+            self.assertTrue(os.path.isfile(spy.arg['output'][1]))
+
+    def test_plist(self):
         with fixtures.TempDir() as tmpdir:
             opts = {'out_dir': tmpdir, 'output_format': 'plist'}
             spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
-            self.assertTrue(os.path.exists(spy.arg['analyzer_output']))
-
-    def test_set_analyzer_output_delete_file(self):
-        opts = {'output_format': 'plist'}
-        spy = fixtures.Spy()
-        sut.set_analyzer_output(opts, spy.call)
-        self.assertFalse(os.path.exists(spy.arg['analyzer_output']))
+            self.assertTrue(os.path.exists(spy.arg['output'][1]))
+            self.assertTrue(os.path.isfile(spy.arg['output'][1]))
