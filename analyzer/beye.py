@@ -293,13 +293,15 @@ def run_analyzer(args, out_dir):
         commands = [cmd
                     for cmd
                     in pool.imap_unordered(
-                        create, wrap(json.load(handle), {
+                        create,
+                        wrap(json.load(handle), {
                             'clang': args['clang'],
                             'direct_args': analyzer_params(args)}))
                     if cmd is not None]
 
         for current in pool.imap_unordered(
-                run, wrap(commands, {
+                run,
+                wrap(commands, {
                     'out_dir': out_dir,
                     'report_failures': args['report_failures'],
                     'uname': uname()})):
@@ -321,11 +323,11 @@ def analyzer_params(args):
     if 'constraints_model' in opts:
         result.append(
             '-analyzer-constraints={0}'.format(opts['constraints_model']))
-    if 'internal_stats' in opts:
+    if 'internal_stats' in opts and opts['internal_stats']:
         result.append('-analyzer-stats')
-    if 'analyze_headers' in opts:
+    if 'analyze_headers' in opts and opts['analyze_headers']:
         result.append('-analyzer-opt-analyze-headers')
-    if 'stats' in opts:
+    if 'stats' in opts and opts['stats']:
         result.append('-analyzer-checker=debug.Stats')
     if 'maxloop' in opts:
         result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
