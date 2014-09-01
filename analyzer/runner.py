@@ -64,7 +64,7 @@ def report_failure(opts):
                                       dir=destination(opts))
     os.close(handle)
     cwd = opts['directory']
-    cmd = opts['report'] + ['-o', name]
+    cmd = get_arguments(cwd, opts['report'] + ['-o', name])
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     subprocess.call(cmd, cwd=cwd)
 

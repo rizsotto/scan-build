@@ -8,6 +8,7 @@ import subprocess
 import logging
 import re
 import shlex
+import itertools
 from analyzer.decorators import trace
 
 
@@ -70,7 +71,8 @@ def get_default_checkers(clang):
         return [pattern.match(arg).group(1)
                 for arg in get_arguments('.', cmd) if pattern.match(arg)]
 
-    return set(itertools.chain.from_iterable(
-               [checkers(language)
-                for language
-                in ['c', 'c++', 'objective-c', 'objective-c++']]))
+    return set(
+        itertools.chain.from_iterable(
+            [checkers(language)
+             for language
+             in ['c', 'c++', 'objective-c', 'objective-c++']]))

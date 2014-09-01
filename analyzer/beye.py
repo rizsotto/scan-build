@@ -8,9 +8,7 @@ import logging
 import multiprocessing
 import subprocess
 import json
-import itertools
 import functools
-import re
 import os
 from analyzer.decorators import trace, require
 from analyzer.command import create
@@ -283,6 +281,50 @@ def run_analyzer(args, out_dir):
     def uname():
         return subprocess.check_output(['uname', '-a']).decode('ascii')
 
+    def analyzer_params(args):
+        """ A group of command line arguments of 'beye' can mapped to command
+        line arguments of the analyzer. This method generates those. """
+        opts = {k: v for k, v in args.items() if v is not None}
+        result = []
+        if 'store_model' in opts:
+            result.append('-analyzer-store={0}'.format(opts['store_model']))
+        if 'constraints_model' in opts:
+            result.append(
+                '-analyzer-constraints={0}'.format(opts['constraints_model']))
+        if 'internal_stats' in opts and opts['internal_stats']:
+            result.append('-analyzer-stats')
+        if 'analyze_headers' in opts and opts['analyze_headers']:
+            result.append('-analyzer-opt-analyze-headers')
+        if 'stats' in opts and opts['stats']:
+            result.append('-analyzer-checker=debug.Stats')
+        if 'maxloop' in opts:
+            result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
+        if 'output_format' in opts:
+            result.append('-analyzer-output={0}'.format(opts['output_format']))
+        if 'analyzer_config' in opts:
+            result.append(opts['analyzer_config'])
+        if 'verbose' in opts and 2 <= opts['verbose']:
+            result.append('-analyzer-display-progress')
+        if 'plugins' in opts:
+            result = functools.reduce(
+                lambda acc, x: acc + ['-load', x],
+                opts['plugins'],
+                result)
+        if 'enable_checker' in opts:
+            result = functools.reduce(
+                lambda acc, x: acc + ['-analyzer-checker', x],
+                opts['enable_checker'],
+                result)
+        if 'disable_checker' in opts:
+            result = functools.reduce(
+                lambda acc, x: acc + ['-analyzer-disable-checker', x],
+                opts['disable_checker'],
+                result)
+        if 'ubiviz' in opts:  # TODO: never passed
+            result.append('-analyzer-viz-egraph-ubigraph')
+        return functools.reduce(
+            lambda acc, x: acc + ['-Xclang', x], result, [])
+
     def wrap(iterable, const):
         for current in iterable:
             current.update(const)
@@ -310,52 +352,6 @@ def run_analyzer(args, out_dir):
                     logging.info(line.rstrip())
         pool.close()
         pool.join()
-
-
-@trace
-def analyzer_params(args):
-    """ A group of command line arguments of 'beye' can mapped to command
-    line arguments of the analyzer. This method generates those. """
-    opts = {k: v for k, v in args.items() if v is not None}
-    result = []
-    if 'store_model' in opts:
-        result.append('-analyzer-store={0}'.format(opts['store_model']))
-    if 'constraints_model' in opts:
-        result.append(
-            '-analyzer-constraints={0}'.format(opts['constraints_model']))
-    if 'internal_stats' in opts and opts['internal_stats']:
-        result.append('-analyzer-stats')
-    if 'analyze_headers' in opts and opts['analyze_headers']:
-        result.append('-analyzer-opt-analyze-headers')
-    if 'stats' in opts and opts['stats']:
-        result.append('-analyzer-checker=debug.Stats')
-    if 'maxloop' in opts:
-        result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
-    if 'output_format' in opts:
-        result.append('-analyzer-output={0}'.format(opts['output_format']))
-    if 'analyzer_config' in opts:
-        result.append(opts['analyzer_config'])
-    if 'verbose' in opts and 2 <= opts['verbose']:
-        result.append('-analyzer-display-progress')
-    if 'plugins' in opts:
-        result = functools.reduce(
-            lambda acc, x: acc + ['-load', x],
-            opts['plugins'],
-            result)
-    if 'enable_checker' in opts:
-        result = functools.reduce(
-            lambda acc, x: acc + ['-analyzer-checker', x],
-            opts['enable_checker'],
-            result)
-    if 'disable_checker' in opts:
-        result = functools.reduce(
-            lambda acc, x: acc + ['-analyzer-disable-checker', x],
-            opts['disable_checker'],
-            result)
-    if 'ubiviz' in opts:  # TODO: never passed
-        result.append('-analyzer-viz-egraph-ubigraph')
-    return functools.reduce(
-        lambda acc, x: acc + ['-Xclang', x], result, [])
 
 
 @trace

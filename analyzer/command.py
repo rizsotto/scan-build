@@ -14,6 +14,12 @@ import shlex
 from analyzer.decorators import trace, require
 
 
+if 3 == sys.version_info[0]:
+    NEXT = next
+else:
+    NEXT = lambda x: x.next()
+
+
 @trace
 def create(opts):
     """ From a single compilation it creates a command to run the analyzer.
@@ -169,7 +175,7 @@ def parse(opts, continuation=filter_action):
     compilation command. Classifies the parameters into groups and throws
     away those which are not relevant. This method is doing that task.
     """
-    def match(state, it):
+    def match(state, iterator):
         """ This method contains a list of pattern and action tuples.
             The matching start from the top if the list, when the first
             match happens the action is executed.
@@ -177,17 +183,17 @@ def parse(opts, continuation=filter_action):
         def regex(pattern, action):
             regexp = re.compile(pattern)
 
-            def evaluate(it):
-                match = regexp.match(it.current)
+            def evaluate(iterator):
+                match = regexp.match(iterator.current)
                 if match:
-                    action(state, it, match)
+                    action(state, iterator, match)
                     return True
             return evaluate
 
         def anyof(opts, action):
-            def evaluate(it):
-                if it.current in frozenset(opts):
-                    action(state, it, None)
+            def evaluate(iterator):
+                if iterator.current in frozenset(opts):
+                    action(state, iterator, None)
                     return True
             return evaluate
 
@@ -259,7 +265,7 @@ def parse(opts, continuation=filter_action):
             regex(r'^-[fF](.+)$', take_one('compile_options'))
         ]
         for task in tasks:
-            if task(it):
+            if task(iterator):
                 return
 
     def extend(values, key, value):
@@ -268,12 +274,12 @@ def parse(opts, continuation=filter_action):
         else:
             values[key] = copy.copy(value)
 
-    def take_n(n=1, *keys):
-        def take(values, it, _match):
+    def take_n(count=1, *keys):
+        def take(values, iterator, _match):
             current = []
-            current.append(it.current)
-            for _ in range(n - 1):
-                current.append(it.next())
+            current.append(iterator.current)
+            for _ in range(count - 1):
+                current.append(iterator.next())
             for key in keys:
                 extend(values, key, current)
         return take
@@ -288,39 +294,39 @@ def parse(opts, continuation=filter_action):
         return take_n(4, *keys)
 
     def take_joined(*keys):
-        def take(values, it, match):
+        def take(values, iterator, match):
             current = []
-            current.append(it.current)
+            current.append(iterator.current)
             if not match.group(1):
-                current.append(it.next())
+                current.append(iterator.next())
             for key in keys:
                 extend(values, key, current)
         return take
 
     def take_from_file(*keys):
-        def take(values, it, _match):
-            with open(it.next()) as f:
-                current = [l.strip() for l in f.readlines()]
+        def take(values, iterator, _match):
+            with open(iterator.next()) as handle:
+                current = [line.strip() for line in handle.readlines()]
                 for key in keys:
                     values[key] = current
         return take
 
     def take_as(value, *keys):
-        def take(values, _it, _match):
+        def take(values, _iterator, _match):
             current = [value]
             for key in keys:
                 extend(values, key, current)
         return take
 
     def take_second(*keys):
-        def take(values, it, _match):
-            current = it.next()
+        def take(values, iterator, _match):
+            current = iterator.next()
             for key in keys:
                 values[key] = current
         return take
 
     def take_action(action):
-        def take(values, _it, _match):
+        def take(values, _iterator, _match):
             key = 'action'
             current = values[key]
             values[key] = max(current, action)
@@ -337,8 +343,7 @@ def parse(opts, continuation=filter_action):
             self.__it = iter(args)
 
         def next(self):
-            self.current = next(self.__it) if 3 == sys.version_info[0] \
-                else self.__it.next()
+            self.current = NEXT(self.__it)
             return self.current
 
     state = {'action': Action.Link}
@@ -350,10 +355,10 @@ def parse(opts, continuation=filter_action):
         # get the invocation intent
         state.update(is_cxx=is_cxx(command[0]))
         # iterate on arguments
-        it = ArgumentIterator(command[1:])
+        iterator = ArgumentIterator(command[1:])
         while True:
-            it.next()
-            match(state, it)
+            iterator.next()
+            match(state, iterator)
     except StopIteration:
         del opts['command']
         state.update(opts)

@@ -28,7 +28,7 @@ class TraceDecoratorTest(unittest.TestCase):
 
     def setUp(self):
         self.traces = []
-        sut.trace_method = lambda msg: self.traces.append(msg)
+        sut.TRACE_METHOD = lambda msg: self.traces.append(msg)
 
     def assertTraces(self, expected):
         self.assertEqual(self.traces, expected)

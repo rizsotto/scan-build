@@ -17,7 +17,7 @@ def _name(function):
         if dir(function).count('__qualname__') else function.__name__
 
 
-trace_method = _trace
+TRACE_METHOD = _trace
 
 
 def trace(function):
@@ -25,13 +25,13 @@ def trace(function):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
         try:
-            trace_method('entering {0}'.format(_name(function)))
+            TRACE_METHOD('entering {0}'.format(_name(function)))
             return function(*args, **kwargs)
         except:
-            trace_method('exception in {0}'.format(_name(function)))
+            TRACE_METHOD('exception in {0}'.format(_name(function)))
             raise
         finally:
-            trace_method('leaving {0}'.format(_name(function)))
+            TRACE_METHOD('leaving {0}'.format(_name(function)))
 
     return wrapper
 

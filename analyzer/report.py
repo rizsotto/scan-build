@@ -133,6 +133,7 @@ class ReportFragment(object):
 
     @trace
     def write(self, output_handle):
+        """ Append the fragment content to given file. """
         if self.count:
             with open(self.filename, 'r') as input_handle:
                 for line in input_handle:
@@ -320,7 +321,6 @@ def assembly_report(opts, *fragments):
     """ Put together the fragments into a final report. """
     import getpass
     import socket
-    import sys
     import datetime
 
     if 'html_title' not in opts or opts['html_title'] is None:
