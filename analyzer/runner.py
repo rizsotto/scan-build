@@ -10,27 +10,31 @@ import os
 import os.path
 import tempfile
 from analyzer.decorators import trace, require
-from analyzer.command import create
 from analyzer.clang import get_arguments, get_version
 
 
 @trace
+@require(['analyze', 'report', 'directory',
+          'out_dir', 'language',
+          'uname', 'file'])
 def run(opts):
-    cmds = create(opts)
-    cmds.update(opts)
-    return set_analyzer_output(cmds)
+    """ Execute given analyzer command.
+
+    Other modules prepared the command line arguments for analyzer execution.
+    The missing paramter related to the output of the anayzer. This method
+    assemble and execute the final analyzer command. """
+
+    try:
+        return set_analyzer_output(opts)
+    except Exception as exception:
+        logging.error(str(exception))
+        return None
 
 
 @trace
-@require(['report',
-          'directory',
-          'file',
-          'language',
-          'uname',
-          'out_dir',
-          'error_type',
-          'error_output',
-          'exit_code'])
+@require(['report', 'directory',
+          'out_dir', 'language',
+          'file', 'uname', 'error_type', 'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
 

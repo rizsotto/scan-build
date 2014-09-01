@@ -13,6 +13,7 @@ import functools
 import re
 import os
 from analyzer.decorators import trace, require
+from analyzer.command import create
 from analyzer.runner import run
 from analyzer.report import generate_report
 
@@ -24,8 +25,12 @@ def main():
     and generates report file (if that was also requested).
 
     Currently it takes a compilation database as input and run analyzer
-    against each files. The logic to run analyzer against a single file is
-    implemented in 'analyzer.driver' module.
+    against each files.
+
+    The logic to run analyzer against a single file is implemented in several
+    modules. One generates the command from a single compiler call. This is
+    in the 'analyzer.command' module. The 'analyzer.runner' executes the
+    command.
 
     Report generation logic is in a separate module called 'analyzer.report'.
     """
@@ -270,23 +275,13 @@ def parse_command_line():
 def run_analyzer(args, out_dir):
     """ Runs the analyzer.
 
-    The analyzer main method is written in the module 'driver:run'.
-    This function calls the analyzer for each module in the compilation
-    database. The method argument is a dictionary, comming from the database
-    entry plus some command line paramters. The analyzer result contains
-    (beside many others) the output of it, which is printed here to avoid
-    non-readable output. """
+    First it generates the command which will be executed. But not all
+    compilation database entry makes an analyzer call. Result of that
+    step contains enough information to run the analyzer (and the crash
+    report generation if that was requested). """
 
-    def common_params(opts):
-        def uname():
-            return subprocess.check_output(['uname', '-a']).decode('ascii')
-
-        return {
-            'clang': opts['clang'],
-            'direct_args': parameters_from_command_line(opts),
-            'out_dir': out_dir,  # FIXME: exec
-            'report_failures': opts['report_failures'],  # FIXME: exec
-            'uname': uname()}  # FIXME: exec
+    def uname():
+        return subprocess.check_output(['uname', '-a']).decode('ascii')
 
     def wrap(iterable, const):
         for current in iterable:
@@ -295,8 +290,19 @@ def run_analyzer(args, out_dir):
 
     with open(args['input'], 'r') as handle:
         pool = multiprocessing.Pool(1 if args['sequential'] else None)
+        commands = [cmd
+                    for cmd
+                    in pool.imap_unordered(
+                        create, wrap(json.load(handle), {
+                            'clang': args['clang'],
+                            'direct_args': analyzer_params(args)}))
+                    if cmd is not None]
+
         for current in pool.imap_unordered(
-                run, wrap(json.load(handle), common_params(args))):
+                run, wrap(commands, {
+                    'out_dir': out_dir,
+                    'report_failures': args['report_failures'],
+                    'uname': uname()})):
             if current is not None:
                 for line in current['error_output']:
                     logging.info(line.rstrip())
@@ -305,7 +311,7 @@ def run_analyzer(args, out_dir):
 
 
 @trace
-def parameters_from_command_line(args):
+def analyzer_params(args):
     """ A group of command line arguments of 'beye' can mapped to command
     line arguments of the analyzer. This method generates those. """
     opts = {k: v for k, v in args.items() if v is not None}
