@@ -42,25 +42,8 @@ def create(opts):
           'report': ... }
     """
 
-    def chain(conts):
-        """ Creates a single method from multiple continuations.
-
-        This method takes an array of those functions and build a single
-        method wich takes only one argument, the state. """
-        def bind(cs, acc):
-            return bind(cs[1:], lambda x: cs[0](x, acc)) if cs else acc
-
-        conts.reverse()
-        return bind(conts, lambda x: x)
-
-    method = chain([parse,
-                   filter_action,
-                   arch_loop,
-                   set_language,
-                   create_commands])
-
     try:
-        return method(opts)
+        return parse(opts)
     except Exception as exception:
         logging.error(str(exception))
         return None
@@ -72,8 +55,114 @@ class Action(object):
 
 
 @trace
+@require(['clang', 'directory', 'file', 'language', 'direct_args'])
+def create_commands(opts):
+    """ Create command to run analyzer or failure report generation.
+
+    If output is passed it returns failure report command.
+    If it's not given it returns the analyzer command. """
+    common = []
+    if 'arch' in opts:
+        common.extend(['-arch', opts['arch']])
+    if 'compile_options' in opts:
+        common.extend(opts['compile_options'])
+    common.extend(['-x', opts['language']])
+    common.append(opts['file'])
+
+    return {
+        'directory': opts['directory'],
+        'file': opts['file'],
+        'language': opts['language'],
+        'analyze': [opts['clang'], '--analyze'] + opts['direct_args'] + common,
+        'report': [opts['clang'], '-fsyntax-only', '-E'] + common}
+
+
+@trace
+@require(['file'])
+def set_language(opts, continuation=create_commands):
+    """ Find out the language from command line parameters or file name
+    extension. The decision also influenced by the compiler invocation. """
+    def from_filename(name, is_cxx):
+        mapping = {
+            '.c': 'c++' if is_cxx else 'c',
+            '.cp': 'c++',
+            '.cpp': 'c++',
+            '.cxx': 'c++',
+            '.txx': 'c++',
+            '.cc': 'c++',
+            '.C': 'c++',
+            '.ii': 'c++-cpp-output',
+            '.i': 'c++-cpp-output' if is_cxx else 'c-cpp-output',
+            '.m': 'objective-c',
+            '.mi': 'objective-c-cpp-output',
+            '.mm': 'objective-c++',
+            '.mii': 'objective-c++-cpp-output'
+        }
+        (_, extension) = os.path.splitext(os.path.basename(name))
+        return mapping.get(extension)
+
+    accepteds = [
+        'c',
+        'c++',
+        'objective-c',
+        'objective-c++',
+        'c-cpp-output',
+        'c++-cpp-output',
+        'objective-c-cpp-output'
+    ]
+
+    key = 'language'
+    language = opts[key] if key in opts else \
+        from_filename(opts['file'], opts.get('is_cxx'))
+    if language is None:
+        logging.debug('skip analysis, language not known')
+    elif language not in accepteds:
+        logging.debug('skip analysis, language not supported')
+    else:
+        logging.debug('analysis, language: {0}'.format(language))
+        opts.update({key: language})
+        return continuation(opts)
+    return None
+
+
+@trace
+@require([])
+def arch_loop(opts, continuation=set_language):
+    """ Do run analyzer through one of the given architectures. """
+    disableds = ['ppc', 'ppc64']
+
+    key = 'archs_seen'
+    if key in opts:
+        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
+        if not archs:
+            logging.debug('skip analysis, found not supported arch')
+            return None
+        else:
+            # There should be only one arch given (or the same multiple times)
+            # If there are multiple arch are given, and those are not the same
+            # those should not change the preprocessing step. (But that's the
+            # only pass we have before run the analyzer.)
+            arch = archs.pop()
+            logging.debug('analysis, on arch: {0}'.format(arch))
+
+            opts.update({'arch': arch})
+            del opts[key]
+            return continuation(opts)
+    else:
+        logging.debug('analysis, on default arch')
+        return continuation(opts)
+
+
+@trace
+@require(['action'])
+def filter_action(opts, continuation=arch_loop):
+    """ Continue analysis only if it compilation or link. """
+    return continuation(opts) if opts['action'] <= Action.Compile else None
+
+
+@trace
 @require(['command'])
-def parse(opts, continuation):
+def parse(opts, continuation=filter_action):
     """ Parses the command line arguments of the current invocation.
 
     To run analysis from a compilation command, first it disassembles the
@@ -269,109 +358,3 @@ def parse(opts, continuation):
         del opts['command']
         state.update(opts)
         return continuation(state)
-
-
-@trace
-@require(['action'])
-def filter_action(opts, continuation):
-    """ Continue analysis only if it compilation or link. """
-    return continuation(opts) if opts['action'] <= Action.Compile else None
-
-
-@trace
-@require([])
-def arch_loop(opts, continuation):
-    """ Do run analyzer through one of the given architectures. """
-    disableds = ['ppc', 'ppc64']
-
-    key = 'archs_seen'
-    if key in opts:
-        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
-        if not archs:
-            logging.debug('skip analysis, found not supported arch')
-            return None
-        else:
-            # There should be only one arch given (or the same multiple times)
-            # If there are multiple arch are given, and those are not the same
-            # those should not change the preprocessing step. (But that's the
-            # only pass we have before run the analyzer.)
-            arch = archs.pop()
-            logging.debug('analysis, on arch: {0}'.format(arch))
-
-            opts.update({'arch': arch})
-            del opts[key]
-            return continuation(opts)
-    else:
-        logging.debug('analysis, on default arch')
-        return continuation(opts)
-
-
-@trace
-@require(['file'])
-def set_language(opts, continuation):
-    """ Find out the language from command line parameters or file name
-    extension. The decision also influenced by the compiler invocation. """
-    def from_filename(name, is_cxx):
-        mapping = {
-            '.c': 'c++' if is_cxx else 'c',
-            '.cp': 'c++',
-            '.cpp': 'c++',
-            '.cxx': 'c++',
-            '.txx': 'c++',
-            '.cc': 'c++',
-            '.C': 'c++',
-            '.ii': 'c++-cpp-output',
-            '.i': 'c++-cpp-output' if is_cxx else 'c-cpp-output',
-            '.m': 'objective-c',
-            '.mi': 'objective-c-cpp-output',
-            '.mm': 'objective-c++',
-            '.mii': 'objective-c++-cpp-output'
-        }
-        (_, extension) = os.path.splitext(os.path.basename(name))
-        return mapping.get(extension)
-
-    accepteds = [
-        'c',
-        'c++',
-        'objective-c',
-        'objective-c++',
-        'c-cpp-output',
-        'c++-cpp-output',
-        'objective-c-cpp-output'
-    ]
-
-    key = 'language'
-    language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts.get('is_cxx'))
-    if language is None:
-        logging.debug('skip analysis, language not known')
-    elif language not in accepteds:
-        logging.debug('skip analysis, language not supported')
-    else:
-        logging.debug('analysis, language: {0}'.format(language))
-        opts.update({key: language})
-        return continuation(opts)
-    return None
-
-
-@trace
-@require(['clang', 'directory', 'file', 'language', 'direct_args'])
-def create_commands(opts, continuation):
-    """ Create command to run analyzer or failure report generation.
-
-    If output is passed it returns failure report command.
-    If it's not given it returns the analyzer command. """
-    common = []
-    if 'arch' in opts:
-        common.extend(['-arch', opts['arch']])
-    if 'compile_options' in opts:
-        common.extend(opts['compile_options'])
-    common.extend(['-x', opts['language']])
-    common.append(opts['file'])
-
-    return {
-        'directory': opts['directory'],
-        'file': opts['file'],
-        'language': opts['language'],
-        'analyze': [opts['clang'], '--analyze'] + opts['direct_args'] + common,
-        'report': [opts['clang'], '-fsyntax-only', '-E'] + common}
