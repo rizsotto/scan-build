@@ -14,6 +14,7 @@ from analyzer.decorators import trace, require
 from analyzer.command import create
 from analyzer.runner import run
 from analyzer.report import generate_report
+from analyzer.clang import get_checkers
 
 
 def main():
@@ -54,17 +55,25 @@ def main():
     logging.getLogger().setLevel(from_number_to_level(args['verbose']))
     logging.debug(args)
 
-    with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
-        run_analyzer(args, out_dir)
-        number_of_bugs = generate_report(
-            {'sequential': args['sequential'],
-             'out_dir': out_dir,
-             'prefix': get_prefix_from(args['input']),
-             'clang': args['clang'],
-             'html_title': args['html_title']})\
-            if needs_report_file(args) else 0
-        # TODO get result from bear if --status-bugs were not requested
-        return number_of_bugs if 'status_bugs' in args else 0
+    try:
+        if 'help_checkers' in args:
+            return print_checkers(args)
+
+        with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
+            run_analyzer(args, out_dir)
+            number_of_bugs = generate_report(
+                {'sequential': args['sequential'],
+                 'out_dir': out_dir,
+                 'prefix': get_prefix_from(args['input']),
+                 'clang': args['clang'],
+                 'html_title': args['html_title']})\
+                if needs_report_file(args) else 0
+            # TODO get result from bear if --status-bugs were not requested
+            return number_of_bugs if 'status_bugs' in args else 0
+
+    except Exception as exception:
+        print(str(exception))
+        return 127
 
 
 class ReportDirectory(object):
@@ -271,6 +280,13 @@ def parse_command_line():
         metavar='<checker name>',
         action='append',
         help='Disable specific checker.')
+    group3.add_argument(
+        '--help-checkers',
+        action='store_true',
+        help="""A default group of checkers is run unless explicitly disabled.
+              Exactly which checkers constitute the default group is a
+              function of the operating system in use. These can be printed
+              with this flag.""")
 
     return parser.parse_args().__dict__
 
@@ -384,3 +400,15 @@ def get_prefix_from(compilation_database):
                 yield os.path.dirname(entry['file'])
 
     return common(filenames())
+
+
+@trace
+def print_checkers(opts):
+    names = [k
+             for k, (_, active)
+             in get_checkers(opts['clang'], opts['plugins']).items()
+             if active]
+    names.sort()
+    for name in names:
+        print(name)
+    return 0

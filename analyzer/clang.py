@@ -9,6 +9,7 @@ import logging
 import re
 import shlex
 import itertools
+import functools
 from analyzer.decorators import trace
 
 
@@ -61,18 +62,73 @@ def get_arguments(cwd, command):
 
 
 @trace
-def get_default_checkers(clang):
+def _get_active_checkers(clang, plugins):
     """ To get the default plugins we execute Clang to print how this
     comilation would be called. For input file we specify stdin. And
     pass only language information. """
-    def checkers(language):
+    def checkers(language, load):
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
-        cmd = [clang, '--analyze', '-x', language, '-']
+        cmd = [clang, '--analyze'] + load + ['-x', language, '-']
         return [pattern.match(arg).group(1)
                 for arg in get_arguments('.', cmd) if pattern.match(arg)]
 
+    load = functools.reduce(
+        lambda acc, x: acc + ['-Xclang', '-load', '-Xclang', x],
+        plugins if plugins else [],
+        [])
+
     return set(
         itertools.chain.from_iterable(
-            [checkers(language)
+            [checkers(language, load)
              for language
              in ['c', 'c++', 'objective-c', 'objective-c++']]))
+
+
+@trace
+def get_checkers(clang, plugins):
+    def parse_checkers(stream):
+        # find checkers header
+        for line in stream:
+            if re.match(r'^CHECKERS:', line):
+                break
+        # find entries
+        result = {}
+        state = None
+        for line in stream:
+            if state and not re.match(r'^\s\s\S', line):
+                result.update({state: line.strip()})
+                state = None
+            elif re.match(r'^\s\s\S+$', line.rstrip()):
+                state = line.strip()
+            else:
+                pattern = re.compile(r'^\s\s(?P<key>\S*)\s*(?P<value>.*)')
+                match = pattern.match(line.rstrip())
+                if match:
+                    current = match.groupdict()
+                    result.update({current['key']: current['value']})
+        return result
+
+    def is_active(entry, actives):
+        for active in actives:
+            if re.match('^' + active + '(\.|$)', entry):
+                return True
+        return False
+
+    load = functools.reduce(
+        lambda acc, x: acc + ['-load', x],
+        plugins if plugins else [],
+        [])
+
+    cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']
+    logging.debug('exec command: {0}'.format(' '.join(cmd)))
+    child = subprocess.Popen(cmd,
+                             universal_newlines=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+    checkers = parse_checkers(child.stdout)
+    child.wait()
+    if 0 == child.returncode and len(checkers):
+        actives = _get_active_checkers(clang, plugins)
+        return {k: (v, is_active(k, actives)) for k, v in checkers.items()}
+    else:
+        raise Exception('Could not query Clang for available checkers.')
