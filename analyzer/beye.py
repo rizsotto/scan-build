@@ -246,6 +246,13 @@ def parse_command_line():
                 Switch the page naming to:\
                 report-<filename>-<function/method name>-<id>.html\
                 instead of report-XXXXXX.html")
+    group2.add_argument(
+        '--ubiviz',
+        action='store_true',
+        help="""Meant to display the analysis path graph (aka 'exploded graph')
+             as it gets explored by the analyzer. The ubigraph support is not
+             enabled in a release build of clang. And you also need the
+             'ubiviz' script in your path.""")
 
     group3 = parser.add_argument_group('controlling checkers')
     group3.add_argument(
@@ -320,7 +327,7 @@ def run_analyzer(args, out_dir):
                 lambda acc, x: acc + ['-analyzer-disable-checker', x],
                 opts['disable_checker'],
                 result)
-        if 'ubiviz' in opts:  # TODO: never passed
+        if 'ubiviz' in opts and opts['ubiviz']:
             result.append('-analyzer-viz-egraph-ubigraph')
         return functools.reduce(
             lambda acc, x: acc + ['-Xclang', x], result, [])
