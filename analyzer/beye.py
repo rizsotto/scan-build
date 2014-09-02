@@ -56,8 +56,10 @@ def main():
     logging.debug(args)
 
     try:
-        if 'help_checkers' in args:
+        if 'help_checkers' in args and args['help_checkers']:
             return print_checkers(args)
+        elif 'available_checkers' in args and args['available_checkers']:
+            return print_available_checkers(args)
 
         with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
             run_analyzer(args, out_dir)
@@ -287,6 +289,12 @@ def parse_command_line():
               Exactly which checkers constitute the default group is a
               function of the operating system in use. These can be printed
               with this flag.""")
+    group3.add_argument(
+        '--help-available-checkers',
+        action='store_true',
+        dest='available_checkers',
+        help="""Show all available checkers in the Clang static analyzer and
+             from the loaded plugins. """)
 
     return parser.parse_args().__dict__
 
@@ -404,7 +412,7 @@ def get_prefix_from(compilation_database):
 
 @trace
 def print_checkers(opts):
-    """ Print active checker names to std out. """
+    """ Print active checker names to stdout. """
     names = [k
              for k, (_, active)
              in get_checkers(opts['clang'], opts['plugins']).items()
@@ -412,4 +420,19 @@ def print_checkers(opts):
     names.sort()
     for name in names:
         print(name)
+    return 0
+
+
+@trace
+def print_available_checkers(opts):
+    """ Print available checkers to stdout. """
+    checkers = get_checkers(opts['clang'], opts['plugins'])
+    for name in sorted(checkers.keys()):
+        description, active = checkers[name]
+        prefix = '+' if active else ' '
+        if len(name) > 30:
+            print(' {0} {1}'.format(prefix, name))
+            print(' ' * 35 + description)
+        else:
+            print(' {0} {1: <30}  {2}'.format(prefix, name, description))
     return 0
