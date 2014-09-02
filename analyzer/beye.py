@@ -404,6 +404,7 @@ def get_prefix_from(compilation_database):
 
 @trace
 def print_checkers(opts):
+    """ Print active checker names to std out. """
     names = [k
              for k, (_, active)
              in get_checkers(opts['clang'], opts['plugins']).items()

@@ -67,6 +67,7 @@ def _get_active_checkers(clang, plugins):
     comilation would be called. For input file we specify stdin. And
     pass only language information. """
     def checkers(language, load):
+        """ Returns a list of active checkers for the given language. """
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
         return [pattern.match(arg).group(1)
@@ -86,7 +87,27 @@ def _get_active_checkers(clang, plugins):
 
 @trace
 def get_checkers(clang, plugins):
+    """ Get all the available checkers from default and from the plugins.
+
+    clang -- the compiler we are using
+    plugins -- list of plugins which was requested by the user
+
+    This method returns a dictionary of all available checkers and status.
+
+    {<plugin name>: (<plugin description>, <is active by default>)} """
+
     def parse_checkers(stream):
+        """ Parse clang -analyzer-checker-help output.
+
+        Below the line 'CHECKERS:' are there the name description pairs.
+        Many of them are in one line, but some long named plugins has the
+        name and the description in separate lines.
+
+        The plugin name is always prefixed with two space character. The
+        name contains no whitespaces. Then followed by newline (if it's
+        too long) or other space characters comes the description of the
+        plugin. The description ends with a newline character.
+        """
         # find checkers header
         for line in stream:
             if re.match(r'^CHECKERS:', line):
@@ -108,7 +129,15 @@ def get_checkers(clang, plugins):
                     result.update({current['key']: current['value']})
         return result
 
-    def is_active(entry, actives):
+    def is_active(actives, entry):
+        """ Returns true if plugin name is matching the active plugin names.
+
+        actives -- set of active plugin names (or prefixes).
+        entry -- the current plugin name to judge.
+
+        The active plugin names are specific plugin names or prefix of some
+        names. One example for prefix, when it say 'unix' and it shall match
+        on 'unix.API', 'unix.Malloc' and 'unix.MallocSizeof'. """
         for active in actives:
             if re.match('^' + active + '(\.|$)', entry):
                 return True
@@ -129,6 +158,6 @@ def get_checkers(clang, plugins):
     child.wait()
     if 0 == child.returncode and len(checkers):
         actives = _get_active_checkers(clang, plugins)
-        return {k: (v, is_active(k, actives)) for k, v in checkers.items()}
+        return {k: (v, is_active(actives, k)) for k, v in checkers.items()}
     else:
         raise Exception('Could not query Clang for available checkers.')
