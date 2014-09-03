@@ -107,7 +107,8 @@ def scan_crash(filename):
         lines = handler.readlines()
         return {'source': lines[0].rstrip(),
                 'problem': lines[1].rstrip(),
-                'preproc': name,
+                'file': name,
+                'info': name + '.info.txt',
                 'stderr': name + '.stderr.txt'}
 
 
@@ -146,7 +147,7 @@ def crash_fragment(iterator, out_dir, prefix):
         encode_value(opts, 'source', lambda x: chop(prefix, x))
         encode_value(opts, 'source', escape)
         encode_value(opts, 'problem', escape)
-        encode_value(opts, 'preproc', lambda x: escape(x, True))
+        encode_value(opts, 'file', lambda x: escape(x, True))
         encode_value(opts, 'stderr', lambda x: escape(x, True))
         return opts
 
@@ -174,12 +175,14 @@ def crash_fragment(iterator, out_dir, prefix):
         |    <tr>
         |      <td>{problem}</td>
         |      <td>{source}</td>
-        |      <td><a href="{preproc}">preprocessor output</a></td>
+        |      <td><a href="{file}">preprocessor output</a></td>
         |      <td><a href="{stderr}">analyzer std err</a></td>
         |    </tr>""", indent).format(**current))
+            handle.write(metaline('REPORTPROBLEM', current))
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
+        handle.write(metaline('REPORTCRASHES'))
     return ReportFragment(name, count)
 
 
@@ -235,6 +238,7 @@ def bug_fragment(iterator, out_dir, prefix):
         |    </tr>
         |  </thead>
         |  <tbody>""", indent))
+        handle.write(metaline('REPORTBUGCOL'))
         for current in iterator:
             bug_hash = hash_bug(current)
             if bug_hash not in uniques:
@@ -250,9 +254,12 @@ def bug_fragment(iterator, out_dir, prefix):
         |      <td class="Q">{bug_path_length}</td>
         |      <td><a href="{report_file}#EndPath">View Report</a></td>
         |    </tr>""", indent).format(**current))
+                handle.write(metaline('REPORTBUG',
+                                      {'id': current['report_file']}))
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
+        handle.write(metaline('REPORTBUGEND'))
     with ReportFragment(name, len(uniques)) as bugs:
         return summary_fragment(counters, out_dir, bugs)\
             if bugs.count else bugs
@@ -310,6 +317,7 @@ def summary_fragment(counters, out_dir, tail_fragment):
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
+        handle.write(metaline('SUMMARYBUGEND'))
         tail_fragment.write(handle)
     return ReportFragment(name, tail_fragment.count)
 
@@ -335,7 +343,9 @@ def assembly_report(opts, *fragments):
         |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
         |    <script type='text/javascript' src="sorttable.js"></script>
         |    <script type='text/javascript' src='selectable.js'></script>
-        |  </head>
+        |  </head>""", 0).format(html_title=opts['html_title']))
+        handle.write(metaline('SUMMARYENDHEAD'))
+        handle.write(reindent("""
         |  <body>
         |    <h1>{html_title}</h1>
         |    <table>
@@ -391,3 +401,12 @@ def reindent(text, indent):
         if len(line.strip()):
             result += ' ' * indent + line.split('|')[1] + os.linesep
     return result
+
+
+def metaline(name, opts=dict()):
+    """ Utility function to format meta information as comment. """
+    attributes = ''
+    for k, v in opts.items():
+        attributes += ' {0}="{1}"'.format(k, v)
+
+    return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)

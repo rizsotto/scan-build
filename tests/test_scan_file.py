@@ -69,8 +69,10 @@ class ScanFileTest(unittest.TestCase):
         result = run_crash_scan(content, 'file.i')
         self.assertEqual(result['source'], content[0].rstrip())
         self.assertEqual(result['problem'], content[1].rstrip())
-        self.assertEqual(os.path.basename(result['preproc']),
+        self.assertEqual(os.path.basename(result['file']),
                          'file.i')
+        self.assertEqual(os.path.basename(result['info']),
+                         'file.i.info.txt')
         self.assertEqual(os.path.basename(result['stderr']),
                          'file.i.stderr.txt')
 
@@ -104,5 +106,6 @@ class ScanFileTest(unittest.TestCase):
             result = sut.scan_crash(pp_file + '.info.txt')
             self.assertEqual(result['source'], filename)
             self.assertEqual(result['problem'], 'Other Error')
-            self.assertEqual(result['preproc'], pp_file)
+            self.assertEqual(result['file'], pp_file)
+            self.assertEqual(result['info'], pp_file + '.info.txt')
             self.assertEqual(result['stderr'], pp_file + '.stderr.txt')
