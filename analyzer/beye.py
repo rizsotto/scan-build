@@ -56,10 +56,9 @@ def main():
     logging.debug(args)
 
     try:
-        if 'help_checkers' in args and args['help_checkers']:
-            return print_checkers(args)
-        elif 'available_checkers' in args and args['available_checkers']:
-            return print_available_checkers(args)
+        if args['help_checkers'] or args['help_available_checkers']:
+            checkers = get_checkers(args['clang'], args['plugins'])
+            return print_checkers(checkers, only_actives=args['help_checkers'])
 
         with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
             run_analyzer(args, out_dir)
@@ -292,7 +291,6 @@ def parse_command_line():
     group3.add_argument(
         '--help-available-checkers',
         action='store_true',
-        dest='available_checkers',
         help="""Show all available checkers in the Clang static analyzer and
              from the loaded plugins. """)
 
@@ -411,28 +409,19 @@ def get_prefix_from(compilation_database):
 
 
 @trace
-def print_checkers(opts):
-    """ Print active checker names to stdout. """
-    names = [k
-             for k, (_, active)
-             in get_checkers(opts['clang'], opts['plugins']).items()
-             if active]
-    names.sort()
-    for name in names:
-        print(name)
-    return 0
-
-
-@trace
-def print_available_checkers(opts):
-    """ Print available checkers to stdout. """
-    checkers = get_checkers(opts['clang'], opts['plugins'])
+def print_checkers(checkers, **kwargs):
+    """ Print checker help to stdout. """
+    only_actives = kwargs['only_actives']
     for name in sorted(checkers.keys()):
         description, active = checkers[name]
-        prefix = '+' if active else ' '
-        if len(name) > 30:
-            print(' {0} {1}'.format(prefix, name))
-            print(' ' * 35 + description)
+        if only_actives:
+            if active:
+                print(name)
         else:
-            print(' {0} {1: <30}  {2}'.format(prefix, name, description))
+            prefix = '+' if active else ' '
+            if len(name) > 30:
+                print(' {0} {1}'.format(prefix, name))
+                print(' ' * 35 + description)
+            else:
+                print(' {0} {1: <30}  {2}'.format(prefix, name, description))
     return 0
