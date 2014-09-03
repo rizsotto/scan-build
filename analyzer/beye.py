@@ -50,15 +50,19 @@ def main():
         output_format = opts.get('output_format')
         return 'html' == output_format or 'plist-html' == output_format
 
-    args = parse_command_line()
-
-    logging.getLogger().setLevel(from_number_to_level(args['verbose']))
-    logging.debug(args)
-
     try:
-        if args['help_checkers'] or args['help_available_checkers']:
-            checkers = get_checkers(args['clang'], args['plugins'])
-            return print_checkers(checkers, only_actives=args['help_checkers'])
+        parser = create_command_line_parser()
+        args = parser.parse_args().__dict__
+
+        logging.getLogger().setLevel(from_number_to_level(args['verbose']))
+        logging.debug(args)
+
+        if args['help']:
+            parser.print_help()
+            return print_checkers(get_checkers(args['clang'], args['plugins']))
+        elif args['help_checkers']:
+            return print_checkers(get_checkers(args['clang'], args['plugins']),
+                                  True)
 
         with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
             run_analyzer(args, out_dir)
@@ -116,7 +120,7 @@ class ReportDirectory(object):
 
 
 @trace
-def parse_command_line():
+def create_command_line_parser():
     """ Parse command line and return a dictionary of given values.
 
     Command line parameters are defined by previous implementation, and
@@ -127,8 +131,14 @@ def parse_command_line():
     are also printed. """
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     parser = ArgumentParser(prog='beye',
+                            add_help=False,
                             formatter_class=ArgumentDefaultsHelpFormatter)
-    group1 = parser.add_argument_group('options')
+    group1 = parser.add_argument_group('OPTIONS')
+    group1.add_argument(
+        '--help', '-h',
+        action='store_true',
+        dest='help',
+        help="Print this message")
     group1.add_argument(
         '--input',
         metavar='<file>',
@@ -187,7 +197,7 @@ def parse_command_line():
               increases verbosity.")
     # TODO: implement '-view '
 
-    group2 = parser.add_argument_group('advanced options')
+    group2 = parser.add_argument_group('ADVANCED OPTIONS')
     group2.add_argument(
         '--keep-empty',
         action='store_true',
@@ -264,7 +274,7 @@ def parse_command_line():
              enabled in a release build of clang. And you also need the
              'ubiviz' script in your path.""")
 
-    group3 = parser.add_argument_group('controlling checkers')
+    group3 = parser.add_argument_group('CHECKER OPTIONS')
     group3.add_argument(
         '--load-plugin',
         metavar='<plugin library>',
@@ -288,13 +298,8 @@ def parse_command_line():
               Exactly which checkers constitute the default group is a
               function of the operating system in use. These can be printed
               with this flag.""")
-    group3.add_argument(
-        '--help-available-checkers',
-        action='store_true',
-        help="""Show all available checkers in the Clang static analyzer and
-             from the loaded plugins. """)
 
-    return parser.parse_args().__dict__
+    return parser
 
 
 @trace
@@ -409,9 +414,13 @@ def get_prefix_from(compilation_database):
 
 
 @trace
-def print_checkers(checkers, **kwargs):
+def print_checkers(checkers, only_actives=False):
     """ Print checker help to stdout. """
-    only_actives = kwargs['only_actives']
+    def dump(message):
+        if not only_actives:
+            print(os.linesep + message + os.linesep)
+
+    dump('AVAILABLE CHECKERS:')
     for name in sorted(checkers.keys()):
         description, active = checkers[name]
         if only_actives:
@@ -424,4 +433,6 @@ def print_checkers(checkers, **kwargs):
                 print(' ' * 35 + description)
             else:
                 print(' {0} {1: <30}  {2}'.format(prefix, name, description))
+    dump('NOTE: "+" indicates that an analysis is enabled by default.')
+
     return 0
