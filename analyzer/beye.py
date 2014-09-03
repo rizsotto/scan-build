@@ -10,6 +10,8 @@ import subprocess
 import json
 import functools
 import os
+import time
+import tempfile
 from analyzer.decorators import trace, require
 from analyzer.command import create
 from analyzer.runner import run
@@ -108,15 +110,15 @@ class ReportDirectory(object):
 
     @staticmethod
     def _create(hint):
-        if hint != '/tmp':
+        if tempdir() != hint:
             try:
                 os.mkdir(hint)
                 return hint
             except OSError:
                 raise
         else:
-            import tempfile
-            return tempfile.mkdtemp(prefix='beye-', suffix='.out')
+            stamp = time.strftime('%Y-%m-%d-%H%M%S', time.localtime())
+            return tempfile.mkdtemp(prefix='beye-{0}-'.format(stamp))
 
 
 @trace
@@ -147,10 +149,10 @@ def create_command_line_parser():
     group1.add_argument(
         '--output', '-o',
         metavar='<path>',
-        default='/tmp',
-        help='Specifies the output directory for analyzer reports.\
-              Subdirectories will be created as needed to represent separate\
-              "runs" of the analyzer.')
+        default=tempdir(),
+        help="""Specifies the output directory for analyzer reports.
+             Subdirectory will be created if default directory is targeted.
+             """)
     group1.add_argument(
         '--sequential',
         action='store_true',
@@ -436,3 +438,7 @@ def print_checkers(checkers, only_actives=False):
     dump('NOTE: "+" indicates that an analysis is enabled by default.')
 
     return 0
+
+
+def tempdir():
+    return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
