@@ -139,7 +139,7 @@ def get_checkers(clang, plugins):
         names. One example for prefix, when it say 'unix' and it shall match
         on 'unix.API', 'unix.Malloc' and 'unix.MallocSizeof'. """
         for active in actives:
-            if re.match('^' + active + '(\.|$)', entry):
+            if re.match(r'^' + active + r'(\.|$)', entry):
                 return True
         return False
 
