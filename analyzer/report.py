@@ -147,7 +147,11 @@ def crash_fragment(iterator, out_dir, prefix):
         encode_value(opts, 'source', lambda x: chop(prefix, x))
         encode_value(opts, 'source', escape)
         encode_value(opts, 'problem', escape)
+        encode_value(opts, 'file', lambda x: chop(out_dir, x))
         encode_value(opts, 'file', lambda x: escape(x, True))
+        encode_value(opts, 'info', lambda x: chop(out_dir, x))
+        encode_value(opts, 'info', lambda x: escape(x, True))
+        encode_value(opts, 'stderr', lambda x: chop(out_dir, x))
         encode_value(opts, 'stderr', lambda x: escape(x, True))
         return opts
 
@@ -214,6 +218,7 @@ def bug_fragment(iterator, out_dir, prefix):
         encode_value(opts, 'bug_category', escape)
         encode_value(opts, 'bug_type', escape)
         encode_value(opts, 'bug_type_class', lambda x: escape(x, True))
+        encode_value(opts, 'report_file', lambda x: chop(out_dir, x))
         return opts
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
