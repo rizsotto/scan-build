@@ -6,7 +6,7 @@
 
 import analyzer.command as sut
 import unittest
-import tests.fixtures as fixtures
+import tests.unit.fixtures as fixtures
 
 
 class AnalyzerTest(unittest.TestCase):

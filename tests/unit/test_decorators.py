@@ -6,7 +6,7 @@
 
 import analyzer.decorators as sut
 import unittest
-import tests.fixtures as fixtures
+import tests.unit.fixtures as fixtures
 
 
 @sut.trace
