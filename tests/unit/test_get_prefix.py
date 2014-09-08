@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 import analyzer.beye as sut
-import tests.unit.fixtures as fixtures
+from . import fixtures
 import os.path
 import json
 

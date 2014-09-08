@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 import analyzer.report as sut
-import tests.unit.fixtures as fixtures
+from . import fixtures
 import unittest
 import os
 import os.path
