@@ -100,6 +100,7 @@ def run_analyzer(opts, continuation=report_failure):
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
     output = child.stdout.readlines()
+    child.stdout.close()
     # do report details if it were asked
     child.wait()
     if 'report_failures' in opts and child.returncode:

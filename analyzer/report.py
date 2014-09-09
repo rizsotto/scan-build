@@ -129,7 +129,8 @@ class ReportFragment(object):
 
     @trace
     def __exit__(self, _type, _value, _traceback):
-        os.remove(self.filename)
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
 
     @trace
     def write(self, output_handle):

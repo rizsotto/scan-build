@@ -1,31 +1,31 @@
 [
 {
-  "directory": "{0}/src",
+  "directory": "${path}",
   "command": "g++ -c -o main.o main.cpp -Wall -DDEBUG -Dvariable=value",
-  "file": "{0}/src/main.cpp"
+  "file": "${path}/main.cpp"
 }
 ,
 {
-  "directory": "{0}/src",
+  "directory": "${path}",
   "command": "cc -c -o clean-one.o clean-one.c -Wall -DDEBUG \"-Dvariable=value with space\" -Iinclude",
-  "file": "{0}/src/clean-one.c"
+  "file": "${path}/clean-one.c"
 }
 ,
 {
-  "directory": "{0}/src",
+  "directory": "${path}",
   "command": "g++ -c -o clean-two.o clean-two.cpp -Wall -DDEBUG -Dvariable=value -I ./include",
-  "file": "{0}/src/clean-two.cpp"
+  "file": "${path}/clean-two.cpp"
 }
 ,
 {
-  "directory": "{0}/src",
+  "directory": "${path}",
   "command": "cc -c -o emit-one.o emit-one.c -Wall -DDEBUG \"-Dvariable=value with space\"",
-  "file": "{0}/src/emit-one.c"
+  "file": "${path}/emit-one.c"
 }
 ,
 {
-  "directory": "{0}/src",
+  "directory": "${path}",
   "command": "g++ -c -o emit-two.o emit-two.cpp -Wall -DDEBUG -Dvariable=value",
-  "file": "{0}/src/emit-two.cpp"
+  "file": "${path}/emit-two.cpp"
 }
 ]

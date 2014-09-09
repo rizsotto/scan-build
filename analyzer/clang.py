@@ -52,6 +52,7 @@ def get_arguments(cwd, command):
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
     line = lastline(child.stdout)
+    child.stdout.close()
     child.wait()
     if 0 == child.returncode:
         if re.match(r'^clang: error:', line):
@@ -155,6 +156,7 @@ def get_checkers(clang, plugins):
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
     checkers = parse_checkers(child.stdout)
+    child.stdout.close()
     child.wait()
     if 0 == child.returncode and len(checkers):
         actives = _get_active_checkers(clang, plugins)
