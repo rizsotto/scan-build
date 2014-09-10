@@ -10,6 +10,7 @@ import unittest
 import os.path
 import string
 import subprocess
+import glob
 
 
 def _prepare_compilation_db(target_file, target_dir):
@@ -102,12 +103,22 @@ class ExitCodeTest(unittest.TestCase):
 
 class OutputFormatTest(unittest.TestCase):
 
+    @staticmethod
+    def get_html_count(directory):
+        return len(glob.glob(os.path.join(directory, 'report-*.html')))
+
+    @staticmethod
+    def get_plist_count(directory):
+        return len(glob.glob(os.path.join(directory, 'report-*.plist')))
+
     def test_default_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_regular_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--input', cdb])
             self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
+            self.assertEqual(self.get_html_count(outdir), 2)
+            self.assertEqual(self.get_plist_count(outdir), 0)
 
     def test_plist_and_html_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
@@ -116,6 +127,8 @@ class OutputFormatTest(unittest.TestCase):
             exit_code, output = run_beye(outdir,
                                          ['--input', cdb, '--plist-html'])
             self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
+            self.assertEqual(self.get_html_count(outdir), 2)
+            self.assertEqual(self.get_plist_count(outdir), 5)
 
     def test_plist_does_not_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
@@ -125,6 +138,8 @@ class OutputFormatTest(unittest.TestCase):
                                          ['--input', cdb, '--plist'])
             self.assertFalse(
                 os.path.exists(os.path.join(outdir, 'index.html')))
+            self.assertEqual(self.get_html_count(outdir), 0)
+            self.assertEqual(self.get_plist_count(outdir), 5)
 
 
 class FailureReportTest(unittest.TestCase):
