@@ -57,7 +57,6 @@ class OutputDirectoryTest(unittest.TestCase):
             cdb = prepare_regular_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--input', cdb])
-            self.assertTrue(exit_code)
             self.assertTrue(os.path.isdir(outdir))
 
     def test_clear_deletes_report_dir(self):
@@ -65,7 +64,6 @@ class OutputDirectoryTest(unittest.TestCase):
             cdb = prepare_clean_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--input', cdb])
-            self.assertFalse(exit_code)
             self.assertFalse(os.path.isdir(outdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
@@ -74,8 +72,32 @@ class OutputDirectoryTest(unittest.TestCase):
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir,
                                          ['--input', cdb, '--keep-empty'])
-            self.assertFalse(exit_code)
             self.assertTrue(os.path.isdir(outdir))
+
+
+class ExitCodeTest(unittest.TestCase):
+
+    def test_regular_set_exit_code(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_regular_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir, ['--input', cdb])
+            self.assertTrue(exit_code)
+
+    def test_clear_does_not_set_exit_code(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_clean_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir, ['--input', cdb])
+            self.assertFalse(exit_code)
+
+    def test_regular_clear_exit_code(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_regular_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir,
+                                         ['--input', cdb, '--status-bugs'])
+            self.assertTrue(exit_code)
 
 
 class OutputFormatTest(unittest.TestCase):
