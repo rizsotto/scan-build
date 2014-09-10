@@ -327,11 +327,11 @@ def run_analyzer(args, out_dir):
         if 'constraints_model' in opts:
             result.append(
                 '-analyzer-constraints={0}'.format(opts['constraints_model']))
-        if 'internal_stats' in opts and opts['internal_stats']:
+        if opts.get('internal_stats', False):
             result.append('-analyzer-stats')
-        if 'analyze_headers' in opts and opts['analyze_headers']:
+        if opts.get('analyze_headers', False):
             result.append('-analyzer-opt-analyze-headers')
-        if 'stats' in opts and opts['stats']:
+        if opts.get('stats', False):
             result.append('-analyzer-checker=debug.Stats')
         if 'maxloop' in opts:
             result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
@@ -339,24 +339,21 @@ def run_analyzer(args, out_dir):
             result.append('-analyzer-output={0}'.format(opts['output_format']))
         if 'analyzer_config' in opts:
             result.append(opts['analyzer_config'])
-        if 'verbose' in opts and 2 <= opts['verbose']:
+        if 2 <= opts.get('verbose', 0):
             result.append('-analyzer-display-progress')
-        if 'plugins' in opts:
-            result = functools.reduce(
-                lambda acc, x: acc + ['-load', x],
-                opts['plugins'],
-                result)
-        if 'enable_checker' in opts:
-            result = functools.reduce(
-                lambda acc, x: acc + ['-analyzer-checker', x],
-                opts['enable_checker'],
-                result)
-        if 'disable_checker' in opts:
-            result = functools.reduce(
-                lambda acc, x: acc + ['-analyzer-disable-checker', x],
-                opts['disable_checker'],
-                result)
-        if 'ubiviz' in opts and opts['ubiviz']:
+        result = functools.reduce(
+            lambda acc, x: acc + ['-load', x],
+            opts.get('plugins', []),
+            result)
+        result = functools.reduce(
+            lambda acc, x: acc + ['-analyzer-checker', x],
+            opts.get('enable_checker', []),
+            result)
+        result = functools.reduce(
+            lambda acc, x: acc + ['-analyzer-disable-checker', x],
+            opts.get('disable_checker', []),
+            result)
+        if opts.get('ubiviz', False):
             result.append('-analyzer-viz-egraph-ubigraph')
         return functools.reduce(
             lambda acc, x: acc + ['-Xclang', x], result, [])
