@@ -348,10 +348,8 @@ def parse(opts, continuation=filter_action):
 
     state = {'action': Action.Link}
     try:
-        # split command line if needed
-        command = opts['command']
-        if isinstance(command, str):
-            command = shlex.split(command)
+        # split command line
+        command = shlex.split(opts['command'])
         # get the invocation intent
         state.update(is_cxx=is_cxx(command[0]))
         # iterate on arguments
