@@ -125,3 +125,21 @@ class OutputFormatTest(unittest.TestCase):
                                          ['--input', cdb, '--plist'])
             self.assertFalse(
                 os.path.exists(os.path.join(outdir, 'index.html')))
+
+
+class FailureReportTest(unittest.TestCase):
+
+    def test_broken_creates_failure_reports(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_broken_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir, ['--input', cdb])
+            self.assertTrue(os.path.isdir(os.path.join(outdir, 'failures')))
+
+    def test_broken_does_not_creates_failure_reports(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_broken_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(
+                outdir, ['--input', cdb, '--no-failure-reports'])
+            self.assertFalse(os.path.isdir(os.path.join(outdir, 'failures')))

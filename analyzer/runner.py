@@ -103,7 +103,7 @@ def run_analyzer(opts, continuation=report_failure):
     child.stdout.close()
     # do report details if it were asked
     child.wait()
-    if 'report_failures' in opts and child.returncode:
+    if opts.get('report_failures', False) and child.returncode:
         error_type = 'crash' if child.returncode & 127 else 'other_error'
         opts.update(
             {'error_type': error_type,
