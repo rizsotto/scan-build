@@ -12,14 +12,11 @@ import string
 import subprocess
 
 
-FILES = ['build_clean.json', 'build_regular.json', 'build_brokens.json']
-
-
-def prepare_compilation_db(target_file_idx, target_dir):
+def _prepare_compilation_db(target_file, target_dir):
     this_dir, _ = os.path.split(__file__)
     path = os.path.normpath(os.path.join(this_dir, '..', 'src'))
     source_dir = os.path.join(path, 'compilation_database')
-    source_file = os.path.join(source_dir, FILES[target_file_idx] + '.in')
+    source_file = os.path.join(source_dir, target_file + '.in')
     target_file = os.path.join(target_dir, 'compile_commands.json')
     with open(source_file, 'r') as in_handle:
         with open(target_file, 'w') as out_handle:
@@ -27,6 +24,18 @@ def prepare_compilation_db(target_file_idx, target_dir):
                 temp = string.Template(line)
                 out_handle.write(temp.substitute(path=path))
     return target_file
+
+
+def prepare_clean_cdb(target_dir):
+    return _prepare_compilation_db('build_clean.json', target_dir)
+
+
+def prepare_regular_cdb(target_dir):
+    return _prepare_compilation_db('build_regular.json', target_dir)
+
+
+def prepare_broken_cdb(target_dir):
+    return _prepare_compilation_db('build_brokens.json', target_dir)
 
 
 def run_beye(directory, args):
@@ -45,7 +54,7 @@ class OutputDirectoryTest(unittest.TestCase):
 
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_compilation_db(1, tmpdir)
+            cdb = prepare_regular_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--input', cdb])
             self.assertTrue(exit_code)
@@ -53,7 +62,7 @@ class OutputDirectoryTest(unittest.TestCase):
 
     def test_clear_deletes_report_dir(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_compilation_db(0, tmpdir)
+            cdb = prepare_clean_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--input', cdb])
             self.assertFalse(exit_code)
@@ -61,9 +70,36 @@ class OutputDirectoryTest(unittest.TestCase):
 
     def test_clear_keeps_report_dir_when_asked(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_compilation_db(0, tmpdir)
+            cdb = prepare_clean_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir,
                                          ['--input', cdb, '--keep-empty'])
             self.assertFalse(exit_code)
             self.assertTrue(os.path.isdir(outdir))
+
+
+class OutputFormatTest(unittest.TestCase):
+
+    def test_default_creates_html_report(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_regular_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir, ['--input', cdb])
+            self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
+
+    def test_plist_and_html_creates_html_report(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_regular_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir,
+                                         ['--input', cdb, '--plist-html'])
+            self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
+
+    def test_plist_does_not_creates_html_report(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_regular_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir,
+                                         ['--input', cdb, '--plist'])
+            self.assertFalse(
+                os.path.exists(os.path.join(outdir, 'index.html')))

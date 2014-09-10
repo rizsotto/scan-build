@@ -382,6 +382,7 @@ def run_analyzer(args, out_dir):
                 wrap(commands, {
                     'out_dir': out_dir,
                     'report_failures': args['report_failures'],
+                    'output_format': args['output_format'],
                     'uname': uname()})):
             if current is not None:
                 for line in current['error_output']:
