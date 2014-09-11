@@ -76,7 +76,7 @@ def scan_bug(result):
         re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
     endsign = re.compile(r'<!-- BUGMETAEND -->')
 
-    bug_info = dict()
+    bug_info = {'bug_function': 'n/a'}  # compatibility with < clang-3.5
     with open(result) as handler:
         for line in handler.readlines():
             # do not read the file further
@@ -87,6 +87,7 @@ def scan_bug(result):
                 match = regex.match(line.strip())
                 if match:
                     bug_info.update(match.groupdict())
+                    break
 
     # fix some default values
     bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
@@ -238,6 +239,7 @@ def bug_fragment(iterator, out_dir, prefix):
         |        <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
         |      </td>
         |      <td>File</td>
+        |      <td>Function/Method</td>
         |      <td class="Q">Line</td>
         |      <td class="Q">Path Length</td>
         |      <td class="sorttable_nosort"></td>
@@ -256,6 +258,7 @@ def bug_fragment(iterator, out_dir, prefix):
         |      <td class="DESC">{bug_category}</td>
         |      <td class="DESC">{bug_type}</td>
         |      <td>{bug_file}</td>
+        |      <td class="DESC">{bug_function}</td>
         |      <td class="Q">{bug_line}</td>
         |      <td class="Q">{bug_path_length}</td>
         |      <td><a href="{report_file}#EndPath">View Report</a></td>
