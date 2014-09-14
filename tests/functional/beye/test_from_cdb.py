@@ -158,3 +158,39 @@ class FailureReportTest(unittest.TestCase):
             exit_code, output = run_beye(
                 outdir, ['--input', cdb, '--no-failure-reports'])
             self.assertFalse(os.path.isdir(os.path.join(outdir, 'failures')))
+
+
+class TitleTest(unittest.TestCase):
+
+    def assertTitleEqual(self, directory, expected):
+        import re
+        patterns = [
+            re.compile(r'<title>(?P<page>.*)</title>'),
+            re.compile(r'<h1>(?P<head>.*)</h1>')]
+        result = dict()
+
+        index = os.path.join(directory, 'result', 'index.html')
+        with open(index, 'r') as handler:
+            for line in handler.readlines():
+                for regex in patterns:
+                    match = regex.match(line.strip())
+                    if match:
+                        result.update(match.groupdict())
+                        break
+        self.assertEqual(result['page'], result['head'])
+        self.assertEqual(result['page'], expected)
+
+    def test_default_title_in_report(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_broken_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(outdir, ['--input', cdb])
+            self.assertTitleEqual(tmpdir, 'src - analyzer results')
+
+    def test_given_title_in_report(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_broken_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(
+                outdir, ['--input', cdb, '--html-title', 'this is the title'])
+            self.assertTitleEqual(tmpdir, 'this is the title')

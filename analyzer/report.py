@@ -340,7 +340,8 @@ def assembly_report(opts, *fragments):
     import datetime
 
     if 'html_title' not in opts or opts['html_title'] is None:
-        opts['html_title'] = opts['prefix'] + ' - analyzer results'
+        opts['html_title'] = os.path.basename(opts['prefix']) +\
+            ' - analyzer results'
 
     output = os.path.join(opts['out_dir'], 'index.html')
     with open(output, 'w') as handle:
