@@ -90,10 +90,10 @@ def scan_bug(result):
                     break
 
     # fix some default values
+    bug_info['report_file'] = result
     bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
     bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
     bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
-    bug_info['report_file'] = result
     bug_info['bug_type_class'] = classname(bug_info)
 
     return bug_info
