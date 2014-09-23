@@ -11,6 +11,7 @@ import os.path
 import sys
 import shutil
 import glob
+import pkg_resources
 from analyzer.decorators import trace, require
 from analyzer.clang import get_version
 
@@ -382,11 +383,9 @@ def assembly_report(opts, *fragments):
 @trace
 def copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
-    this_dir, _ = os.path.split(__file__)
-    resources_dir = os.path.join(this_dir, 'resources')
-    shutil.copy(os.path.join(resources_dir, 'scanview.css'), out_dir)
-    shutil.copy(os.path.join(resources_dir, 'sorttable.js'), out_dir)
-    shutil.copy(os.path.join(resources_dir, 'selectable.js'), out_dir)
+    resources_dir = pkg_resources.resource_filename(__package__, 'resources')
+    for resource in pkg_resources.resource_listdir(__package__, 'resources'):
+        shutil.copy(os.path.join(resources_dir, resource), out_dir)
 
 
 def encode_value(container, key, encode):
