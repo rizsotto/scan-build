@@ -22,14 +22,13 @@ class ReportFailureTest(fixtures.TestCase):
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
-            uname_msg = 'this is my uname\n'
+            uname_msg = ' '.join(os.uname()) + os.linesep
             error_msg = 'this is my error output'
             # execute test
             opts = {'directory': os.getcwd(),
                     'file': filename,
                     'report': ['clang', '-fsyntax-only', '-E', filename],
                     'language': 'c',
-                    'uname': uname_msg,
                     'out_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': error_msg,

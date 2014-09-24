@@ -314,9 +314,6 @@ def run_analyzer(args, out_dir):
     step contains enough information to run the analyzer (and the crash
     report generation if that was requested). """
 
-    def uname():
-        return subprocess.check_output(['uname', '-a']).decode('ascii')
-
     def analyzer_params(args):
         """ A group of command line arguments of 'beye' can mapped to command
         line arguments of the analyzer. This method generates those. """
@@ -379,8 +376,7 @@ def run_analyzer(args, out_dir):
                 wrap(commands, {
                     'out_dir': out_dir,
                     'report_failures': args['report_failures'],
-                    'output_format': args['output_format'],
-                    'uname': uname()})):
+                    'output_format': args['output_format']})):
             if current is not None:
                 for line in current['error_output']:
                     logging.info(line.rstrip())

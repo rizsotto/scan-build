@@ -16,7 +16,7 @@ from analyzer.clang import get_arguments, get_version
 @trace
 @require(['analyze', 'report', 'directory',
           'out_dir', 'language',
-          'uname', 'file'])
+          'file'])
 def run(opts):
     """ Execute given analyzer command.
 
@@ -34,7 +34,7 @@ def run(opts):
 @trace
 @require(['report', 'directory',
           'out_dir', 'language',
-          'file', 'uname', 'error_type', 'error_output', 'exit_code'])
+          'file', 'error_type', 'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
 
@@ -72,7 +72,7 @@ def report_failure(opts):
         handle.write(opts['file'] + os.linesep)
         handle.write(error.title().replace('_', ' ') + os.linesep)
         handle.write(' '.join(cmd) + os.linesep)
-        handle.write(opts['uname'])
+        handle.write(' '.join(os.uname()) + os.linesep)
         handle.write(get_version(cmd[0]))
         handle.close()
 

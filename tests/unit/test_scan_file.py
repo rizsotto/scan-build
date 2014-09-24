@@ -88,7 +88,6 @@ class ScanFileTest(unittest.TestCase):
                     'file': filename,
                     'report': ['clang', '-fsyntax-only', '-E', filename],
                     'language': 'c',
-                    'uname': 'this is my uname\n',
                     'out_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': 'some output',
