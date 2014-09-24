@@ -32,27 +32,18 @@
 
 #include <dlfcn.h>
 
-
-#ifdef __APPLE__
-# define ENV_PRELOAD "DYLD_INSERT_LIBRARIES"
-# define ENV_FLAT    "DYLD_FORCE_FLAT_NAMESPACE"
-# define EXEC_LOOP_ON_EXECVE
-#else
-# define ENV_PRELOAD "LD_PRELOAD"
-#endif
-
-#define ENV_OUTPUT "BEAR_OUTPUT"
-
-
 #if defined HAVE_POSIX_SPAWN || defined HAVE_POSIX_SPAWNP
 #include <spawn.h>
 #endif
 
 
+#ifdef __APPLE__
+# define EXEC_LOOP_ON_EXECVE
+#endif
+
 static char const * * update_environment(char * const envp[]);
 
 static void report_call(char const * fun, char const * const argv[]);
-
 
 #ifdef EXEC_LOOP_ON_EXECVE
     static int already_reported = 0;

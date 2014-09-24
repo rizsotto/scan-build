@@ -36,6 +36,7 @@ class CreateConfig(config):
 
     def run(self):
         with open('libear/config.h', 'w+') as handle:
+            from analyzer.bear import ENVIRONMENTS
             from os import linesep
             handle.write('#pragma once' + linesep)
             for key, value in self.defines.items():
@@ -44,6 +45,10 @@ class CreateConfig(config):
                 else:
                     handle.write('#undef {0}'.format(key))
                 handle.write(linesep)
+            for key, value in ENVIRONMENTS:
+                handle.write('#define {0} "{1}"'.format(key, value))
+                handle.write(linesep)
+
         config.run(self)
 
 

@@ -16,6 +16,15 @@ import pkg_resources
 from analyzer.decorators import trace
 
 
+if 'darwin' == sys.platform:
+    ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
+                    ("ENV_PRELOAD", "DYLD_INSERT_LIBRARIES"),
+                    ("ENV_FLAT", "DYLD_FORCE_FLAT_NAMESPACE")]
+else:
+    ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
+                    ("ENV_PRELOAD", "LD_PRELOAD")]
+
+
 if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
     from tempfile import TemporaryDirectory
 else:
