@@ -131,11 +131,23 @@ def run_build(command, destination):
             value = destination
         environment.update({key: value})
 
-    child = subprocess.Popen(command, env=environment)
+    child = subprocess.Popen(command, env=environment, shell=True)
     child.wait()
     return child.returncode
 
 
 @trace
 def merge(filtering, destination):
-    return []
+    def parse(filename):
+        RS = chr(0x1e)
+        US = chr(0x1f)
+        with open(filename, 'r') as handler:
+            content = handler.read()
+            records = content.split(RS)
+            return {'pid': records[0],
+                    'ppid': records[1],
+                    'function': records[2],
+                    'directory': records[3],
+                    'command': records[4].split(US)[:-1]}
+
+    return [parse(fn) for fn in glob.glob(os.path.join(destination, '*.pid'))]

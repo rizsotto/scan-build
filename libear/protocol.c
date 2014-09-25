@@ -41,7 +41,6 @@ void bear_write_message(int fd, bear_message_t const * e)
     {
         dprintf(fd, "%s%c", e->cmd[it], US);
     }
-    dprintf(fd, "%c", RS);
 }
 
 void bear_send_message(char const * destination, bear_message_t const * msg)
