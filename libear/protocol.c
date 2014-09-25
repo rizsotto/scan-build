@@ -20,90 +20,45 @@
 #include "protocol.h"
 #include "stringarray.h"
 
-#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
+#include <fcntl.h>
 
-
-static int init_socket(char const * file, struct sockaddr_un * addr);
-
-static ssize_t socket_write(int fd, uint8_t const * buf, ssize_t nbyte)
-{
-    ssize_t sum = 0;
-    while (sum != nbyte)
-    {
-        ssize_t const cur = write(fd, buf + sum, nbyte - sum);
-        if (-1 == cur)
-        {
-            return cur;
-        }
-        sum += cur;
-    }
-    return sum;
-}
-
-static void write_pid(int fd, pid_t pid)
-{
-    socket_write(fd, (uint8_t const *)&pid, sizeof(pid_t));
-}
-
-static void write_string(int fd, char const * message)
-{
-    size_t const length = (message) ? strlen(message) : 0;
-    socket_write(fd, (uint8_t const *)&length, sizeof(size_t));
-    if (length > 0)
-    {
-        socket_write(fd, (uint8_t const *)message, length);
-    }
-}
-
-static void write_string_array(int fd, char const * const * message)
-{
-    size_t const length = bear_strings_length(message);
-    socket_write(fd, (uint8_t const *)&length, sizeof(size_t));
-    for (size_t it = 0; it < length; ++it)
-    {
-        write_string(fd, message[it]);
-    }
-}
 
 void bear_write_message(int fd, bear_message_t const * e)
 {
-    write_pid(fd, e->pid);
-    write_pid(fd, e->ppid);
-    write_string(fd, e->fun);
-    write_string(fd, e->cwd);
-    write_string_array(fd, e->cmd);
+    static int const RS = 0x1e;
+    static int const US = 0x1f;
+    dprintf(fd, "%d%c", e->pid, RS);
+    dprintf(fd, "%d%c", e->ppid, RS);
+    dprintf(fd, "%s%c", e->fun, RS);
+    dprintf(fd, "%s%c", e->cwd, RS);
+    size_t const length = bear_strings_length(e->cmd);
+    for (size_t it = 0; it < length; ++it)
+    {
+        dprintf(fd, "%s%c", e->cmd[it], US);
+    }
+    dprintf(fd, "%c", RS);
 }
 
-void bear_send_message(char const * file, bear_message_t const * msg)
+void bear_send_message(char const * destination, bear_message_t const * msg)
 {
-    struct sockaddr_un addr;
-    int s = init_socket(file, &addr);
-    if (-1 == connect(s, (struct sockaddr *)&addr, sizeof(struct sockaddr_un)))
+    char * filename = 0;
+    if (-1 == asprintf(&filename, "%s/%d.pid", destination, msg->pid))
     {
-        perror("bear: connect");
+        perror("bear: asprintf");
         exit(EXIT_FAILURE);
     }
-    bear_write_message(s, msg);
-    close(s);
-}
-
-static int init_socket(char const * file, struct sockaddr_un * addr)
-{
-    int const s = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (-1 == s)
+    int fd = open(filename, O_CREAT | O_WRONLY | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    free((void *)filename);
+    if (-1 == fd)
     {
-        perror("bear: socket");
+        perror("bear: open");
         exit(EXIT_FAILURE);
     }
-    memset((void *)addr, 0, sizeof(struct sockaddr_un));
-    addr->sun_family = AF_UNIX;
-    strncpy(addr->sun_path, file, sizeof(addr->sun_path) - 1);
-    return s;
+    bear_write_message(fd, msg);
+    close(fd);
 }

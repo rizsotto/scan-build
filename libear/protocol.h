@@ -32,4 +32,4 @@ typedef struct bear_message_t
 
 void bear_write_message(int fd, bear_message_t const * e);
 
-void bear_send_message(char const * socket, bear_message_t const * e);
+void bear_send_message(char const * destination, bear_message_t const * e);

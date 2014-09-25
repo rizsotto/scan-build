@@ -364,9 +364,9 @@ static char const * * update_environment(char * const envp[])
     return result;
 }
 
-typedef void (*send_message)(char const * socket, bear_message_t const *);
+typedef void (*send_message)(char const * destination, bear_message_t const *);
 
-static void report(send_message fp, char const * socket, char const * fun, char const * const argv[])
+static void report(send_message fp, char const * destination, char const * fun, char const * const argv[])
 {
     bear_message_t const msg =
     {
@@ -376,18 +376,18 @@ static void report(send_message fp, char const * socket, char const * fun, char 
         getcwd(NULL, 0),
         (char const **)argv
     };
-    (*fp)(socket, &msg);
+    (*fp)(destination, &msg);
     free((void *)msg.cwd);
 }
 
 static void report_call(char const * fun, char const * const argv[])
 {
-    char * const socket = getenv(ENV_OUTPUT);
-    if (0 == socket)
+    char * const destination = getenv(ENV_OUTPUT);
+    if (0 == destination)
     {
         perror("bear: getenv");
         exit(EXIT_FAILURE);
     }
 
-    report(bear_send_message, socket, fun, argv);
+    report(bear_send_message, destination, fun, argv);
 }
