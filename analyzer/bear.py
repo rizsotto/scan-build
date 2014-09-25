@@ -6,6 +6,7 @@
 
 import logging
 import multiprocessing
+import subprocess
 import argparse
 import json
 import os
@@ -67,12 +68,13 @@ def main():
         logging.getLogger().setLevel(from_number_to_level(args.verbose))
         logging.debug(args)
 
+        exit_code = 0
         with TemporaryDirectory(prefix='bear-') as tmpdir:
-            run_build(args.build, tmpdir)
+            exit_code = run_build(args.build, tmpdir)
             commands = merge(not args.filtering, tmpdir)
             with open(args.output, 'w+') as handle:
                 json.dump(commands, handle, sort_keys=True, indent=4)
-        return 0
+        return exit_code
 
     except Exception as exception:
         print(str(exception))
@@ -120,9 +122,18 @@ def run_build(command, destination):
         candidates = glob.glob(os.path.join(path, 'ear.*.so'))
         return candidates[0] if len(candidates) else None
 
-    spy = get_ear_so_file()
-    logging.debug('our spy is here: {0}'.format(spy))
-    pass
+    environment = dict(os.environ)
+    for alias, key in ENVIRONMENTS:
+        value = '1'
+        if alias == 'ENV_PRELOAD':
+            value = get_ear_so_file()
+        elif alias == 'ENV_OUTPUT':
+            value = destination
+        environment.update({key: value})
+
+    child = subprocess.Popen(command, env=environment)
+    child.wait()
+    return child.returncode
 
 
 @trace
