@@ -71,7 +71,7 @@ def main():
         exit_code = 0
         with TemporaryDirectory(prefix='bear-') as tmpdir:
             exit_code = run_build(args.build, tmpdir)
-            commands = merge(not args.filtering, tmpdir)
+            commands = collect(not args.filtering, tmpdir)
             with open(args.output, 'w+') as handle:
                 json.dump(commands, handle, sort_keys=True, indent=4)
         return exit_code
@@ -108,8 +108,8 @@ def create_command_line_parser():
     group2 = parser.add_argument_group('ADVANCED OPTIONS')
     group2.add_argument(
         '-n', '--disable-filter',
-        action='store_true',
         dest='filtering',
+        action='store_true',
         help="""Disable filter, unformated output.""")
 
     return parser
@@ -137,7 +137,7 @@ def run_build(command, destination):
 
 
 @trace
-def merge(filtering, destination):
+def collect(filtering, destination):
     def parse(filename):
         RS = chr(0x1e)
         US = chr(0x1f)
@@ -150,4 +150,4 @@ def merge(filtering, destination):
                     'directory': records[3],
                     'command': records[4].split(US)[:-1]}
 
-    return [parse(fn) for fn in glob.glob(os.path.join(destination, '*.pid'))]
+    return [parse(fn) for fn in glob.glob(os.path.join(destination, 'cmd.*'))]

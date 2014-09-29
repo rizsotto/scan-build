@@ -46,12 +46,12 @@ void bear_write_message(int fd, bear_message_t const * e)
 void bear_send_message(char const * destination, bear_message_t const * msg)
 {
     char * filename = 0;
-    if (-1 == asprintf(&filename, "%s/%d.pid", destination, msg->pid))
+    if (-1 == asprintf(&filename, "%s/cmd.XXXXXX", destination))
     {
         perror("bear: asprintf");
         exit(EXIT_FAILURE);
     }
-    int fd = open(filename, O_CREAT | O_WRONLY | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int fd = mkstemp(filename);
     free((void *)filename);
     if (-1 == fd)
     {
