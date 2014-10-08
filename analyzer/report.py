@@ -35,25 +35,25 @@ def generate_report(opts):
 
     Copy stylesheet(s) and javascript file(s) are also part of this method.
     """
-    pool = multiprocessing.Pool(1 if opts['sequential'] else None)
+    out_dir = opts['out_dir']
+
     result = 0
-    with bug_fragment(
-            pool.imap_unordered(scan_bug,
-                                glob.iglob(os.path.join(opts['out_dir'],
-                                                        '*.html'))),
-            opts['out_dir'],
-            opts['prefix']) as bugs:
-        with crash_fragment(
-                pool.imap_unordered(scan_crash,
-                                    glob.iglob(os.path.join(opts['out_dir'],
-                                                            'failures',
-                                                            '*.info.txt'))),
-                opts['out_dir'],
-                opts['prefix']) as crashes:
+    pool = multiprocessing.Pool(1 if opts['sequential'] else None)
+
+    bug_generator = pool.imap_unordered(
+        scan_bug,
+        glob.iglob(os.path.join(out_dir, '*.html')))
+    crash_generator = pool.imap_unordered(
+        scan_crash,
+        glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
+
+    mk_fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
+    with mk_fragment(bug_fragment, bug_generator) as bugs:
+        with mk_fragment(crash_fragment, crash_generator) as crashes:
             result = bugs.count + crashes.count
             if result > 0:
                 assembly_report(opts, bugs, crashes)
-                copy_resource_files(opts['out_dir'])
+                copy_resource_files(out_dir)
     pool.close()
     pool.join()
     return result
