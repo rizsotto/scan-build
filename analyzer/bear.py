@@ -212,7 +212,7 @@ def collect(filtering, destination):
                 for filename in atoms['files']:
                     yield {'directory': record['directory'],
                            'command': join_command(record['command']),
-                           'file': filename}
+                           'file': os.path.abspath(filename)}
 
     chain = lambda x: format_record(general_filter(x))
 
