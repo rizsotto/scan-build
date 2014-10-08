@@ -12,7 +12,7 @@ class ParseTest(unittest.TestCase):
 
     def test_action(self):
         def test(expected, cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             self.assertEqual(expected, opts['action'])
 
         Info = sut.Action.Info
@@ -33,7 +33,7 @@ class ParseTest(unittest.TestCase):
 
     def test_optimalizations(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('compile_options', [])
 
         self.assertEqual(['-O1'], test(['clang', '-c', 'source.c', '-O']))
@@ -44,7 +44,7 @@ class ParseTest(unittest.TestCase):
 
     def test_language(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('language')
 
         self.assertEqual(None, test(['clang', '-c', 'source.c']))
@@ -53,7 +53,7 @@ class ParseTest(unittest.TestCase):
 
     def test_arch(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('archs_seen', [])
 
         eq = self.assertEqual
@@ -66,7 +66,7 @@ class ParseTest(unittest.TestCase):
 
     def test_input_file(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('files', [])
 
         eq = self.assertEqual
@@ -77,7 +77,7 @@ class ParseTest(unittest.TestCase):
 
     def test_output_file(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('output', None)
 
         eq = self.assertEqual
@@ -88,8 +88,7 @@ class ParseTest(unittest.TestCase):
 
     def test_include(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
-            self.assertEqual(None, opts.get('link_options'))
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('compile_options', [])
 
         eq = self.assertEqual
@@ -110,8 +109,7 @@ class ParseTest(unittest.TestCase):
 
     def test_define(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
-            self.assertEqual(None, opts.get('link_options'))
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('compile_options', [])
 
         eq = self.assertEqual
@@ -123,13 +121,13 @@ class ParseTest(unittest.TestCase):
            test(['clang', '-c', 'src.c', '-UNDEBUG']))
         eq(['-Dvar1=val1', '-Dvar2=val2'],
            test(['clang', '-c', 'src.c', '-Dvar1=val1', '-Dvar2=val2']))
-        eq(['-Dvar=val ues'],
+        eq(['-Dvar="val ues"'],
            test(['clang', '-c', 'src.c', '-Dvar="val ues"']))
 
     def test_ignored_flags(self):
         def test(cmd):
             salt = ['-I.', '-D_THIS']
-            opts = sut.parse({'command': ' '.join(cmd + salt)}, lambda x: x)
+            opts = sut.parse({'command': cmd + salt}, lambda x: x)
             self.assertEqual(salt, opts.get('compile_options'))
             return opts.get('link_options', [])
 
@@ -144,8 +142,7 @@ class ParseTest(unittest.TestCase):
 
     def test_compile_only_flags(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
-            self.assertEqual(None, opts.get('link_options'))
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('compile_options', [])
 
         eq = self.assertEqual
@@ -174,7 +171,7 @@ class ParseTest(unittest.TestCase):
 
     def test_compile_and_link_flags(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('compile_options', [])
 
         eq = self.assertEqual
@@ -196,7 +193,7 @@ class ParseTest(unittest.TestCase):
 
     def test_detect_cxx_from_compiler_name(self):
         def test(cmd):
-            opts = sut.parse({'command': ' '.join(cmd)}, lambda x: x)
+            opts = sut.parse({'command': cmd}, lambda x: x)
             return opts.get('is_cxx')
 
         eq = self.assertEqual

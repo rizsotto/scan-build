@@ -16,6 +16,7 @@ import sys
 import glob
 import pkg_resources
 from analyzer.decorators import trace
+import analyzer.command as command
 
 
 if 'darwin' == sys.platform:
@@ -72,7 +73,7 @@ def main():
         exit_code = 0
         with TemporaryDirectory(prefix='bear-') as tmpdir:
             exit_code = run_build(args.build, tmpdir)
-            commands = list(collect(not args.filtering, tmpdir))
+            commands = collect(not args.filtering, tmpdir)
             with open(args.output, 'w+') as handle:
                 json.dump(commands, handle, sort_keys=True, indent=4)
         return exit_code
@@ -151,35 +152,50 @@ def collect(filtering, destination):
                     'directory': records[3],
                     'command': records[4].split(US)[:-1]}
 
-    def match_compiler(record):
-        patterns = [
-            re.compile(r'^([^/]*/)*c(c|\+\+)$'),
-            re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-[34].[0-9])?$'),
-            re.compile(r'^([^/]*/)*clang(\+\+)?(-[23].[0-9])?$'),
-            re.compile(r'^([^/]*/)*llvm-g(cc|\+\+)$'),
-        ]
-        executable = record['command'][0]
-        for pattern in patterns:
-            if pattern.match(executable):
-                return record
-        return None
-
-    def match_cancel(record):
-        patterns = [
-            re.compile(r'^-cc1$')
-        ]
-        for arg in record['command']:
+    def general_filter(iterator):
+        def known_compiler(command):
+            patterns = [
+                re.compile(r'^([^/]*/)*c(c|\+\+)$'),
+                re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-[34].[0-9])?$'),
+                re.compile(r'^([^/]*/)*clang(\+\+)?(-[23].[0-9])?$'),
+                re.compile(r'^([^/]*/)*llvm-g(cc|\+\+)$'),
+            ]
+            executable = command[0]
             for pattern in patterns:
-                if pattern.match(arg):
-                    return None
-        return record
+                if pattern.match(executable):
+                    return True
+            return False
 
-    generator = glob.iglob(os.path.join(destination, 'cmd.*'))
-    functions = [parse, match_compiler, match_cancel] if filtering else [parse]
-    for element in generator:
-        for function in functions:
-            element = function(element)
-            if element is None:
-                break
-        if element is not None:
-            yield element
+        def cancel_parameter(command):
+            patterns = [
+                re.compile(r'^-cc1$')
+            ]
+            for pattern in patterns:
+                for arg in command[1:]:
+                    if pattern.match(arg):
+                        return True
+            return False
+
+        for record in iterator:
+            command = record['command']
+            if known_compiler(command) and not cancel_parameter(command):
+                yield record
+
+    def format_record(iterator):
+        def join_command(args):
+            return ' '.join(args)
+
+        for record in iterator:
+            atoms = command.parse({'command': record['command']}, lambda x: x)
+            if atoms['action'] == command.Action.Compile:
+                for fn in atoms['files']:
+                    yield {'directory': record['directory'],
+                           'command': join_command(record['command']),
+                           'file': fn}
+
+    chain = lambda x: format_record(general_filter(x))
+
+    generator = [parse(record)
+                 for record
+                 in glob.iglob(os.path.join(destination, 'cmd.*'))]
+    return list(chain(generator)) if filtering else generator

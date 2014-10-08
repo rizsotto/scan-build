@@ -49,6 +49,7 @@ def create(opts):
     """
 
     try:
+        opts.update({'command': shlex.split(opts['command'])})
         return parse(opts)
     except Exception as exception:
         logging.error(str(exception))
@@ -348,8 +349,7 @@ def parse(opts, continuation=filter_action):
 
     state = {'action': Action.Link}
     try:
-        # split command line
-        command = shlex.split(opts['command'])
+        command = opts['command']
         # get the invocation intent
         state.update(is_cxx=is_cxx(command[0]))
         # iterate on arguments
