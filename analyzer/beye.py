@@ -12,7 +12,7 @@ import functools
 import os
 import time
 import tempfile
-from analyzer.decorators import trace, require
+from analyzer.decorators import to_logging_level, trace, require
 from analyzer.command import create
 from analyzer.runner import run
 from analyzer.report import generate_report
@@ -38,16 +38,6 @@ def main():
     multiprocessing.freeze_support()
     logging.basicConfig(format='beye: %(message)s')
 
-    def from_number_to_level(num):
-        if 0 == num:
-            return logging.WARNING
-        elif 1 == num:
-            return logging.INFO
-        elif 2 == num:
-            return logging.DEBUG
-        else:
-            return 5  # used by the trace decorator
-
     def needs_report_file(opts):
         output_format = opts.get('output_format')
         return 'html' == output_format or 'plist-html' == output_format
@@ -56,7 +46,7 @@ def main():
         parser = create_command_line_parser()
         args = parser.parse_args().__dict__
 
-        logging.getLogger().setLevel(from_number_to_level(args['verbose']))
+        logging.getLogger().setLevel(to_logging_level(args['verbose']))
         logging.debug(args)
 
         if args['help']:

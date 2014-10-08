@@ -15,7 +15,7 @@ import os.path
 import sys
 import glob
 import pkg_resources
-from analyzer.decorators import trace
+from analyzer.decorators import to_logging_level, trace
 import analyzer.command as commands
 
 
@@ -70,21 +70,11 @@ def main():
     multiprocessing.freeze_support()
     logging.basicConfig(format='bear: %(message)s')
 
-    def from_number_to_level(num):
-        if 0 == num:
-            return logging.WARNING
-        elif 1 == num:
-            return logging.INFO
-        elif 2 == num:
-            return logging.DEBUG
-        else:
-            return 5  # used by the trace decorator
-
     try:
         parser = create_command_line_parser()
         args = parser.parse_args()
 
-        logging.getLogger().setLevel(from_number_to_level(args.verbose))
+        logging.getLogger().setLevel(to_logging_level(args.verbose))
         logging.debug(args)
 
         exit_code = 0

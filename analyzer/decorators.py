@@ -8,8 +8,11 @@ import logging
 import functools
 
 
+TRACE_LEVEL = 5
+
+
 def _trace(message):
-    logging.log(5, message)
+    logging.log(TRACE_LEVEL, message)
 
 
 def _name(function):
@@ -18,6 +21,17 @@ def _name(function):
 
 
 TRACE_METHOD = _trace
+
+
+def to_logging_level(num):
+    if 0 == num:
+        return logging.WARNING
+    elif 1 == num:
+        return logging.INFO
+    elif 2 == num:
+        return logging.DEBUG
+    else:
+        return TRACE_LEVEL  # used by the trace decorator
 
 
 def trace(function):
