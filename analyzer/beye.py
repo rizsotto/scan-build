@@ -7,6 +7,7 @@
 import logging
 import multiprocessing
 import subprocess
+import argparse
 import json
 import functools
 import os
@@ -71,44 +72,6 @@ def main():
         return 127
 
 
-class ReportDirectory(object):
-    """ Responsible for the report directory.
-
-    hint -- could specify the parent directory of the output directory.
-    keep -- a boolean value to keep or delete the empty report directory. """
-
-    def __init__(self, hint, keep):
-        self.name = ReportDirectory._create(hint)
-        self.keep = keep
-
-    def __enter__(self):
-        return self.name
-
-    @trace
-    def __exit__(self, _type, _value, _traceback):
-        if os.listdir(self.name):
-            msg = "Run 'scan-view {0}' to examine bug reports."
-        else:
-            if self.keep:
-                msg = "Report directory '{0}' contans no report, but kept."
-            else:
-                os.rmdir(self.name)
-                msg = "Removing directory '{0}' because it contains no report."
-        logging.warning(msg.format(self.name))
-
-    @staticmethod
-    def _create(hint):
-        if tempdir() != hint:
-            try:
-                os.mkdir(hint)
-                return hint
-            except OSError:
-                raise
-        else:
-            stamp = time.strftime('%Y-%m-%d-%H%M%S', time.localtime())
-            return tempfile.mkdtemp(prefix='beye-{0}-'.format(stamp))
-
-
 @trace
 def create_command_line_parser():
     """ Parse command line and return a dictionary of given values.
@@ -119,16 +82,16 @@ def create_command_line_parser():
 
     The help message is generated from this parse method. Default values
     are also printed. """
-    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-    parser = ArgumentParser(prog='beye',
-                            add_help=False,
-                            formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog='beye',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        add_help=False)
     group1 = parser.add_argument_group('OPTIONS')
     group1.add_argument(
         '--help', '-h',
         action='store_true',
         dest='help',
-        help="Print this message")
+        help="show this help message and exit")
     group1.add_argument(
         '--input',
         metavar='<file>',
@@ -417,6 +380,44 @@ def print_checkers(checkers, only_actives=False):
     dump('NOTE: "+" indicates that an analysis is enabled by default.')
 
     return 0
+
+
+class ReportDirectory(object):
+    """ Responsible for the report directory.
+
+    hint -- could specify the parent directory of the output directory.
+    keep -- a boolean value to keep or delete the empty report directory. """
+
+    def __init__(self, hint, keep):
+        self.name = ReportDirectory._create(hint)
+        self.keep = keep
+
+    def __enter__(self):
+        return self.name
+
+    @trace
+    def __exit__(self, _type, _value, _traceback):
+        if os.listdir(self.name):
+            msg = "Run 'scan-view {0}' to examine bug reports."
+        else:
+            if self.keep:
+                msg = "Report directory '{0}' contans no report, but kept."
+            else:
+                os.rmdir(self.name)
+                msg = "Removing directory '{0}' because it contains no report."
+        logging.warning(msg.format(self.name))
+
+    @staticmethod
+    def _create(hint):
+        if tempdir() != hint:
+            try:
+                os.mkdir(hint)
+                return hint
+            except OSError:
+                raise
+        else:
+            stamp = time.strftime('%Y-%m-%d-%H%M%S', time.localtime())
+            return tempfile.mkdtemp(prefix='beye-{0}-'.format(stamp))
 
 
 def tempdir():

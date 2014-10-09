@@ -28,32 +28,6 @@ else:
                     ("ENV_PRELOAD", "LD_PRELOAD")]
 
 
-if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
-    from tempfile import TemporaryDirectory
-else:
-    class TemporaryDirectory(object):
-        """ This function creates a temporary directory using mkdtemp() (the
-        supplied arguments are passed directly to the underlying function).
-        The resulting object can be used as a context manager. On completion
-        of the context or destruction of the temporary directory object the
-        newly created temporary directory and all its contents are removed
-        from the filesystem. """
-        def __init__(self, **kwargs):
-            from tempfile import mkdtemp
-            self.name = mkdtemp(*kwargs)
-
-        def __enter__(self):
-            return self.name
-
-        def __exit__(self, _type, _value, _traceback):
-            self.cleanup()
-
-        def cleanup(self):
-            from shutil import rmtree
-            if self.name is not None:
-                rmtree(self.name)
-
-
 def main():
     """ Entry point for 'bear'.
 
@@ -220,3 +194,29 @@ def collect(filtering, destination):
                  for record
                  in glob.iglob(os.path.join(destination, 'cmd.*'))]
     return list(chain(generator)) if filtering else generator
+
+
+if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
+    from tempfile import TemporaryDirectory
+else:
+    class TemporaryDirectory(object):
+        """ This function creates a temporary directory using mkdtemp() (the
+        supplied arguments are passed directly to the underlying function).
+        The resulting object can be used as a context manager. On completion
+        of the context or destruction of the temporary directory object the
+        newly created temporary directory and all its contents are removed
+        from the filesystem. """
+        def __init__(self, **kwargs):
+            from tempfile import mkdtemp
+            self.name = mkdtemp(*kwargs)
+
+        def __enter__(self):
+            return self.name
+
+        def __exit__(self, _type, _value, _traceback):
+            self.cleanup()
+
+        def cleanup(self):
+            from shutil import rmtree
+            if self.name is not None:
+                rmtree(self.name)
