@@ -83,7 +83,6 @@ def create_command_line_parser():
     The help message is generated from this parse method. Default values
     are also printed. """
     parser = argparse.ArgumentParser(
-        prog='beye',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=False)
     group1 = parser.add_argument_group('OPTIONS')
@@ -91,41 +90,41 @@ def create_command_line_parser():
         '--help', '-h',
         action='store_true',
         dest='help',
-        help="show this help message and exit")
+        help="""show this help message and exit""")
     group1.add_argument(
         '--input',
         metavar='<file>',
         default="compile_commands.json",
-        help="The JSON compilation database.")
+        help="""The JSON compilation database.""")
     group1.add_argument(
         '--output', '-o',
         metavar='<path>',
         default=tempdir(),
         help="""Specifies the output directory for analyzer reports.
-             Subdirectory will be created if default directory is targeted.
-             """)
+                Subdirectory will be created if default directory is targeted.
+                """)
     group1.add_argument(
         '--sequential',
         action='store_true',
-        help="Execute analyzer sequentialy.")
+        help="""Execute analyzer sequentialy.""")
     group1.add_argument(
         '--status-bugs',
         action='store_true',
-        help='By default, the exit status of ‘beye’ is the same as the\
-              executed build command. Specifying this option causes the exit\
-              status of ‘beye’ to be 1 if it found potential bugs and 0\
-              otherwise.')
+        help="""By default, the exit status of ‘%(prog)s’ is the same as the
+                executed build command. Specifying this option causes the exit
+                status of ‘%(prog)s’ to be 1 if it found potential bugs and 0
+                otherwise.""")
     group1.add_argument(
         '--html-title',
         metavar='<title>',
-        help='Specify the title used on generated HTML pages.\
-              If not specified, a default title will be used.')
+        help="""Specify the title used on generated HTML pages.
+                If not specified, a default title will be used.""")
     group1.add_argument(
         '--analyze-headers',
         action='store_true',
-        help='Also analyze functions in #included files. By default,\
-              such functions are skipped unless they are called by\
-              functions within the main source file.')
+        help="""Also analyze functions in #included files. By default, such
+                functions are skipped unless they are called by functions
+                within the main source file.""")
     format_group = group1.add_mutually_exclusive_group()
     format_group.add_argument(
         '--plist',
@@ -133,99 +132,101 @@ def create_command_line_parser():
         const='plist',
         default='html',
         action='store_const',
-        help='This option outputs the results as a set of .plist files.')
+        help="""This option outputs the results as a set of .plist files.""")
     format_group.add_argument(
         '--plist-html',
         dest='output_format',
         const='plist-html',
         default='html',
         action='store_const',
-        help='This option outputs the results as a set of HTML and .plist\
-              files.')
+        help="""This option outputs the results as a set of HTML and .plist
+                files.""")
     group1.add_argument(
         '--verbose', '-v',
         action='count',
         default=0,
-        help="Enable verbose output from ‘beye’. A second and third '-v'\
-              increases verbosity.")
+        help="""Enable verbose output from ‘%(prog)s’. A second and third
+                '-v' increases verbosity.""")
     # TODO: implement '-view '
 
     group2 = parser.add_argument_group('ADVANCED OPTIONS')
     group2.add_argument(
         '--keep-empty',
         action='store_true',
-        help="Don't remove the build results directory even if no issues were\
-              reported.")
+        help="""Don't remove the build results directory even if no issues
+                were reported.""")
     group2.add_argument(
         '--no-failure-reports',
         dest='report_failures',
         action='store_false',
-        help="Do not create a 'failures' subdirectory that includes analyzer\
-              crash reports and preprocessed source files.")
+        help="""Do not create a 'failures' subdirectory that includes analyzer
+                crash reports and preprocessed source files.""")
     group2.add_argument(
         '--stats',
         action='store_true',
-        help='Generates visitation statistics for the project being analyzed.')
+        help="""Generates visitation statistics for the project being analyzed.
+                """)
     group2.add_argument(
         '--internal-stats',
         action='store_true',
-        help='Generate internal analyzer statistics.')
+        help="""Generate internal analyzer statistics.""")
     group2.add_argument(
         '--maxloop',
         metavar='<loop count>',
         type=int,
         default=4,
-        help='Specifiy the number of times a block can be visited before\
-              giving up. Increase for more comprehensive coverage at a cost\
-              of speed.')
+        help="""Specifiy the number of times a block can be visited before
+                giving up. Increase for more comprehensive coverage at a cost
+                of speed.""")
     group2.add_argument(
         '--store',
         metavar='<model>',
         dest='store_model',
         default='region',
         choices=['region', 'basic'],
-        help='Specify the store model used by the analyzer.\
-              ‘region’ specifies a field- sensitive store model.\
-              ‘basic’ which is far less precise but can more quickly\
-              analyze code. ‘basic’ was the default store model for\
-              checker-0.221 and earlier.')
+        help="""Specify the store model used by the analyzer.
+                ‘region’ specifies a field- sensitive store model.
+                ‘basic’ which is far less precise but can more quickly
+                analyze code. ‘basic’ was the default store model for
+                checker-0.221 and earlier.""")
     group2.add_argument(
         '--constraints',
         metavar='<model>',
         dest='constraints_model',
         default='range',
         choices=['range', 'basic'],
-        help='Specify the contraint engine used by the analyzer. Specifying\
-              ‘basic’ uses a simpler, less powerful constraint model used by\
-              checker-0.160 and earlier.')
+        help="""Specify the contraint engine used by the analyzer. Specifying
+                ‘basic’ uses a simpler, less powerful constraint model used by
+                checker-0.160 and earlier.""")
     group2.add_argument(
         '--use-analyzer',
         metavar='<path>',
         dest='clang',
         default='clang',
-        help="‘beye’ uses the ‘clang’ executable relative to itself for\
-              static analysis. One can override this behavior with this\
-              option by using the ‘clang’ packaged with Xcode (on OS X) or\
-              from the PATH.")
+        help="""‘%(prog)s’ uses the ‘clang’ executable relative to itself for
+                static analysis. One can override this behavior with this
+                option by using the ‘clang’ packaged with Xcode (on OS X) or
+                from the PATH.""")
     group2.add_argument(
         '--analyzer-config',
         metavar='<options>',
-        help="Provide options to pass through to the analyzer's\
-              -analyzer-config flag. Several options are separated with comma:\
-              'key1=val1,key2=val2'\
-              \
-              Available options:\
-                stable-report-filename=true or false (default)\
-                Switch the page naming to:\
-                report-<filename>-<function/method name>-<id>.html\
-                instead of report-XXXXXX.html")
+        help="""Provide options to pass through to the analyzer's
+                -analyzer-config flag. Several options are separated with
+                comma: 'key1=val1,key2=val2'
+
+                Available options:
+                    stable-report-filename=true or false (default)
+
+                Switch the page naming to:
+                report-<filename>-<function/method name>-<id>.html
+                instead of report-XXXXXX.html""")
     group2.add_argument(
         '--ubiviz',
         action='store_true',
         help="""Meant to display the analysis path graph (aka 'exploded graph')
-             as it gets explored by the analyzer. The ubigraph support is not
-             enabled in a release build of clang. And you also need the
-             'ubiviz' script in your path.""")
+                as it gets explored by the analyzer. The ubigraph support is
+                not enabled in a release build of clang. And you also need the
+                'ubiviz' script in your path.""")
 
     group3 = parser.add_argument_group('CHECKER OPTIONS')
     group3.add_argument(
@@ -233,24 +234,24 @@ def create_command_line_parser():
         metavar='<plugin library>',
         dest='plugins',
         action='append',
-        help='Loading external checkers using the clang plugin interface.')
+        help="""Loading external checkers using the clang plugin interface.""")
     group3.add_argument(
         '--enable-checker',
         metavar='<checker name>',
         action='append',
-        help='Enable specific checker.')
+        help="""Enable specific checker.""")
     group3.add_argument(
         '--disable-checker',
         metavar='<checker name>',
         action='append',
-        help='Disable specific checker.')
+        help="""Disable specific checker.""")
     group3.add_argument(
         '--help-checkers',
         action='store_true',
         help="""A default group of checkers is run unless explicitly disabled.
-              Exactly which checkers constitute the default group is a
-              function of the operating system in use. These can be printed
-              with this flag.""")
+                Exactly which checkers constitute the default group is a
+                function of the operating system in use. These can be printed
+                with this flag.""")
 
     return parser
 
@@ -266,7 +267,7 @@ def run_analyzer(args, out_dir):
     report generation if that was requested). """
 
     def analyzer_params(args):
-        """ A group of command line arguments of 'beye' can mapped to command
+        """ A group of command line arguments can mapped to command
         line arguments of the analyzer. This method generates those. """
         result = []
 

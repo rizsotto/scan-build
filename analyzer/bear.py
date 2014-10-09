@@ -68,7 +68,6 @@ def main():
 def create_command_line_parser():
     """ Parse command line and return a dictionary of given values. """
     parser = argparse.ArgumentParser(
-        prog='bear',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '-o', '--output',
@@ -76,13 +75,14 @@ def create_command_line_parser():
         dest='output',
         default="compile_commands.json",
         help="""Specifies the output directory for analyzer reports.
-             Subdirectory will be created if default directory is targeted.""")
+                Subdirectory will be created if default directory is targeted.
+                """)
     parser.add_argument(
         '-v', '--verbose',
         action='count',
         default=0,
-        help="""Enable verbose output from ‘bear’. A second and third '-v'
-             increases verbosity.""")
+        help="""Enable verbose output from %(prog)s. A second and third '-v'
+                increases verbosity.""")
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
