@@ -5,17 +5,16 @@
 # License. See LICENSE.TXT for details.
 
 import logging
-import multiprocessing
 import subprocess
 import argparse
 import json
-import re
+import sys
 import os
 import os.path
-import sys
+import re
 import glob
 import pkg_resources
-from analyzer.decorators import to_logging_level, trace
+from analyzer.decorators import to_logging_level, trace, entry
 import analyzer.command as commands
 
 
@@ -28,6 +27,7 @@ else:
                     ("ENV_PRELOAD", "LD_PRELOAD")]
 
 
+@entry
 def main():
     """ Entry point for 'bear'.
 
@@ -41,27 +41,20 @@ def main():
     intercept the exec calls issued by the build tool. To achieve that,
     'bear' uses the LD_PRELOAD or DYLD_INSERT_LIBRARIES mechanisms provided by
     the dynamic linker. """
-    multiprocessing.freeze_support()
-    logging.basicConfig(format='bear: %(message)s')
 
-    try:
-        parser = create_command_line_parser()
-        args = parser.parse_args()
+    parser = create_command_line_parser()
+    args = parser.parse_args()
 
-        logging.getLogger().setLevel(to_logging_level(args.verbose))
-        logging.debug(args)
+    logging.getLogger().setLevel(to_logging_level(args.verbose))
+    logging.debug(args)
 
-        exit_code = 0
-        with TemporaryDirectory(prefix='bear-') as tmpdir:
-            exit_code = run_build(args.build, tmpdir)
-            commands = collect(not args.filtering, tmpdir)
-            with open(args.output, 'w+') as handle:
-                json.dump(commands, handle, sort_keys=True, indent=4)
-        return exit_code
-
-    except Exception as exception:
-        print(str(exception))
-        return 127
+    exit_code = 0
+    with TemporaryDirectory(prefix='bear-') as tmpdir:
+        exit_code = run_build(args.build, tmpdir)
+        commands = collect(not args.filtering, tmpdir)
+        with open(args.output, 'w+') as handle:
+            json.dump(commands, handle, sort_keys=True, indent=4)
+    return exit_code
 
 
 @trace

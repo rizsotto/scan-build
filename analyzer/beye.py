@@ -5,21 +5,23 @@
 # License. See LICENSE.TXT for details.
 
 import logging
-import multiprocessing
 import subprocess
 import argparse
 import json
-import functools
+import sys
 import os
 import time
+import functools
 import tempfile
-from analyzer.decorators import to_logging_level, trace, require
+import multiprocessing
+from analyzer.decorators import to_logging_level, trace, require, entry
 from analyzer.command import create
 from analyzer.runner import run
 from analyzer.report import generate_report
 from analyzer.clang import get_checkers
 
 
+@entry
 def main():
     """ Entry point for 'beye'.
 
@@ -36,40 +38,32 @@ def main():
 
     Report generation logic is in a separate module called 'analyzer.report'.
     """
-    multiprocessing.freeze_support()
-    logging.basicConfig(format='beye: %(message)s')
-
     def needs_report_file(output_format):
         return 'html' == output_format or 'plist-html' == output_format
 
-    try:
-        parser = create_command_line_parser()
-        args = parser.parse_args()
+    parser = create_command_line_parser()
+    args = parser.parse_args()
 
-        logging.getLogger().setLevel(to_logging_level(args.verbose))
-        logging.debug(args)
+    logging.getLogger().setLevel(to_logging_level(args.verbose))
+    logging.debug(args)
 
-        if args.help:
-            parser.print_help()
-            return print_checkers(get_checkers(args.clang, args.plugins))
-        elif args.help_checkers:
-            return print_checkers(get_checkers(args.clang, args.plugins), True)
+    if args.help:
+        parser.print_help()
+        return print_checkers(get_checkers(args.clang, args.plugins))
+    elif args.help_checkers:
+        return print_checkers(get_checkers(args.clang, args.plugins), True)
 
-        with ReportDirectory(args.output, args.keep_empty) as out_dir:
-            run_analyzer(args, out_dir)
-            number_of_bugs = generate_report(
-                {'sequential': args.sequential,
-                 'out_dir': out_dir,
-                 'prefix': get_prefix_from(args.input),
-                 'clang': args.clang,
-                 'html_title': args.html_title}) \
-                if needs_report_file(args.output_format) else 0
-            # TODO get result from bear if --status-bugs were not requested
-            return number_of_bugs if 'status_bugs' in args else 0
-
-    except Exception as exception:
-        print(str(exception))
-        return 127
+    with ReportDirectory(args.output, args.keep_empty) as out_dir:
+        run_analyzer(args, out_dir)
+        number_of_bugs = generate_report(
+            {'sequential': args.sequential,
+             'out_dir': out_dir,
+             'prefix': get_prefix_from(args.input),
+             'clang': args.clang,
+             'html_title': args.html_title}) \
+            if needs_report_file(args.output_format) else 0
+        # TODO get result from bear if --status-bugs were not requested
+        return number_of_bugs if 'status_bugs' in args else 0
 
 
 @trace

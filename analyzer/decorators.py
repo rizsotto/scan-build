@@ -24,6 +24,7 @@ TRACE_METHOD = _trace
 
 
 def to_logging_level(num):
+    """ Convert the count of verbose flags to logging level. """
     if 0 == num:
         return logging.WARNING
     elif 1 == num:
@@ -69,3 +70,24 @@ def require(required):
         return wrapper
 
     return decorator
+
+
+def entry(function):
+    """ Decorator for program entry points. """
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        from multiprocessing import freeze_support
+        freeze_support()
+
+        from sys import argv
+        from os.path import basename
+        program = basename(argv[0])
+        logging.basicConfig(format='{0}: %(message)s'.format(program))
+
+        try:
+            return function(*args, **kwargs)
+        except Exception as exception:
+            logging.error(str(exception))
+            return 127
+
+    return wrapper
