@@ -63,7 +63,7 @@ def main():
              'html_title': args.html_title}) \
             if needs_report_file(args.output_format) else 0
         # TODO get result from bear if --status-bugs were not requested
-        return number_of_bugs if 'status_bugs' in args else 0
+        return number_of_bugs if args.status_bugs else 0
 
 
 @trace
@@ -106,8 +106,8 @@ def create_command_line_parser():
         action='store_true',
         help="""By default, the exit status of ‘%(prog)s’ is the same as the
                 executed build command. Specifying this option causes the exit
-                status of ‘%(prog)s’ to be 1 if it found potential bugs and 0
-                otherwise.""")
+                status of ‘%(prog)s’ to be non zero if it found potential bugs
+                and zero otherwise.""")
     group1.add_argument(
         '--html-title',
         metavar='<title>',

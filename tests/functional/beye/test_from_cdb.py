@@ -83,7 +83,7 @@ class ExitCodeTest(unittest.TestCase):
             cdb = prepare_regular_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--input', cdb])
-            self.assertTrue(exit_code)
+            self.assertFalse(exit_code)
 
     def test_clear_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
