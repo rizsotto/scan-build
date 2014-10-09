@@ -12,6 +12,7 @@ import sys
 import shutil
 import glob
 import pkg_resources
+import plistlib
 from analyzer.decorators import trace, require
 from analyzer.clang import get_version
 
@@ -383,8 +384,8 @@ def assembly_report(opts, *fragments):
 @trace
 def copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
-    resources_dir = pkg_resources.resource_filename(__package__, 'resources')
-    for resource in pkg_resources.resource_listdir(__package__, 'resources'):
+    resources_dir = pkg_resources.resource_filename('analyzer', 'resources')
+    for resource in pkg_resources.resource_listdir('analyzer', 'resources'):
         shutil.copy(os.path.join(resources_dir, resource), out_dir)
 
 
@@ -419,3 +420,25 @@ def metaline(name, opts=dict()):
         attributes += ' {0}="{1}"'.format(k, v)
 
     return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)
+
+
+@trace
+def count_bugs(out_dir):
+    """ Count the number of bugs from .plist files. """
+    result = sum(glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
+
+    pool = multiprocessing.Pool()
+    result += sum(
+        pool.imap_unordered(
+            scan_plist,
+            glob.iglob(os.path.join(out_dir, '*.plist'))))
+    pool.close()
+    pool.join()
+
+    return result
+
+
+@trace
+def scan_plist(filename):
+    content = plistlib.readPlist(filename)
+    return len(content['diagnostics']) if 'diagnostics' in content else 0

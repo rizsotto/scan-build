@@ -17,7 +17,7 @@ import multiprocessing
 from analyzer.decorators import to_logging_level, trace, require, entry
 from analyzer.command import create
 from analyzer.runner import run
-from analyzer.report import generate_report
+from analyzer.report import generate_report, count_bugs
 from analyzer.clang import get_checkers
 
 
@@ -61,7 +61,7 @@ def main():
              'prefix': get_prefix_from(args.input),
              'clang': args.clang,
              'html_title': args.html_title}) \
-            if needs_report_file(args.output_format) else 0
+            if needs_report_file(args.output_format) else count_bugs(out_dir)
         # TODO get result from bear if --status-bugs were not requested
         return number_of_bugs if args.status_bugs else 0
 

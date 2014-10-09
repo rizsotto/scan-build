@@ -78,7 +78,7 @@ class OutputDirectoryTest(unittest.TestCase):
 
 class ExitCodeTest(unittest.TestCase):
 
-    def test_regular_set_exit_code(self):
+    def test_regular_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_regular_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
@@ -92,13 +92,37 @@ class ExitCodeTest(unittest.TestCase):
             exit_code, output = run_beye(outdir, ['--input', cdb])
             self.assertFalse(exit_code)
 
-    def test_regular_clear_exit_code(self):
+    def test_regular_sets_exit_code_if_asked(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_regular_cdb(tmpdir)
             outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_beye(outdir,
-                                         ['--input', cdb, '--status-bugs'])
+            exit_code, output = run_beye(
+                outdir, ['--input', cdb, '--status-bugs'])
             self.assertTrue(exit_code)
+
+    def test_clear_does_not_set_exit_code_if_asked(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_clean_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(
+                outdir, ['--input', cdb, '--status-bugs'])
+            self.assertFalse(exit_code)
+
+    def test_regular_sets_exit_code_if_asked_from_plist(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_regular_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(
+                outdir, ['--plist', '--input', cdb, '--status-bugs'])
+            self.assertTrue(exit_code)
+
+    def test_clear_does_not_set_exit_code_if_asked_from_plist(self):
+        with fixtures.TempDir() as tmpdir:
+            cdb = prepare_clean_cdb(tmpdir)
+            outdir = os.path.join(tmpdir, 'result')
+            exit_code, output = run_beye(
+                outdir, ['--plist', '--input', cdb, '--status-bugs'])
+            self.assertFalse(exit_code)
 
 
 class OutputFormatTest(unittest.TestCase):
