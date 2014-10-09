@@ -38,33 +38,31 @@ def main():
     multiprocessing.freeze_support()
     logging.basicConfig(format='beye: %(message)s')
 
-    def needs_report_file(opts):
-        output_format = opts.get('output_format')
+    def needs_report_file(output_format):
         return 'html' == output_format or 'plist-html' == output_format
 
     try:
         parser = create_command_line_parser()
-        args = parser.parse_args().__dict__
+        args = parser.parse_args()
 
-        logging.getLogger().setLevel(to_logging_level(args['verbose']))
+        logging.getLogger().setLevel(to_logging_level(args.verbose))
         logging.debug(args)
 
-        if args['help']:
+        if args.help:
             parser.print_help()
-            return print_checkers(get_checkers(args['clang'], args['plugins']))
-        elif args['help_checkers']:
-            return print_checkers(get_checkers(args['clang'], args['plugins']),
-                                  True)
+            return print_checkers(get_checkers(args.clang, args.plugins))
+        elif args.help_checkers:
+            return print_checkers(get_checkers(args.clang, args.plugins), True)
 
-        with ReportDirectory(args['output'], args['keep_empty']) as out_dir:
+        with ReportDirectory(args.output, args.keep_empty) as out_dir:
             run_analyzer(args, out_dir)
             number_of_bugs = generate_report(
-                {'sequential': args['sequential'],
+                {'sequential': args.sequential,
                  'out_dir': out_dir,
-                 'prefix': get_prefix_from(args['input']),
-                 'clang': args['clang'],
-                 'html_title': args['html_title']})\
-                if needs_report_file(args) else 0
+                 'prefix': get_prefix_from(args.input),
+                 'clang': args.clang,
+                 'html_title': args.html_title}) \
+                if needs_report_file(args.output_format) else 0
             # TODO get result from bear if --status-bugs were not requested
             return number_of_bugs if 'status_bugs' in args else 0
 
@@ -307,40 +305,37 @@ def run_analyzer(args, out_dir):
     def analyzer_params(args):
         """ A group of command line arguments of 'beye' can mapped to command
         line arguments of the analyzer. This method generates those. """
-        opts = {k: v for k, v in args.items() if v is not None}
         result = []
-        if 'store_model' in opts:
-            result.append('-analyzer-store={0}'.format(opts['store_model']))
-        if 'constraints_model' in opts:
+
+        extend_result = lambda pieces, prefix: \
+            functools.reduce(lambda acc, x: acc + [prefix, x], pieces, result)
+
+        if args.store_model:
+            result.append('-analyzer-store={0}'.format(args.store_model))
+        if args.constraints_model:
             result.append(
-                '-analyzer-constraints={0}'.format(opts['constraints_model']))
-        if opts.get('internal_stats', False):
+                '-analyzer-constraints={0}'.format(args.constraints_model))
+        if args.internal_stats:
             result.append('-analyzer-stats')
-        if opts.get('analyze_headers', False):
+        if args.analyze_headers:
             result.append('-analyzer-opt-analyze-headers')
-        if opts.get('stats', False):
+        if args.stats:
             result.append('-analyzer-checker=debug.Stats')
-        if 'maxloop' in opts:
-            result.extend(['-analyzer-max-loop', str(opts['maxloop'])])
-        if 'output_format' in opts:
-            result.append('-analyzer-output={0}'.format(opts['output_format']))
-        if 'analyzer_config' in opts:
-            result.append(opts['analyzer_config'])
-        if 2 <= opts.get('verbose', 0):
+        if args.maxloop:
+            result.extend(['-analyzer-max-loop', str(args.maxloop)])
+        if args.output_format:
+            result.append('-analyzer-output={0}'.format(args.output_format))
+        if args.analyzer_config:
+            result.append(args.analyzer_config)
+        if 2 <= args.verbose:
             result.append('-analyzer-display-progress')
-        result = functools.reduce(
-            lambda acc, x: acc + ['-load', x],
-            opts.get('plugins', []),
-            result)
-        result = functools.reduce(
-            lambda acc, x: acc + ['-analyzer-checker', x],
-            opts.get('enable_checker', []),
-            result)
-        result = functools.reduce(
-            lambda acc, x: acc + ['-analyzer-disable-checker', x],
-            opts.get('disable_checker', []),
-            result)
-        if opts.get('ubiviz', False):
+        if args.plugins:
+            extend_result(args.plugins, '-load')
+        if args.enable_checker:
+            extend_result(args.enable_checker, '-analyzer-checker')
+        if args.disable_checker:
+            extend_result(args.disable_checker, '-analyzer-disable-checker')
+        if args.ubiviz:
             result.append('-analyzer-viz-egraph-ubigraph')
         return functools.reduce(
             lambda acc, x: acc + ['-Xclang', x], result, [])
@@ -350,14 +345,14 @@ def run_analyzer(args, out_dir):
             current.update(const)
             yield current
 
-    with open(args['input'], 'r') as handle:
-        pool = multiprocessing.Pool(1 if args['sequential'] else None)
+    with open(args.input, 'r') as handle:
+        pool = multiprocessing.Pool(1 if args.sequential else None)
         commands = [cmd
                     for cmd
                     in pool.imap_unordered(
                         create,
                         wrap(json.load(handle), {
-                            'clang': args['clang'],
+                            'clang': args.clang,
                             'direct_args': analyzer_params(args)}))
                     if cmd is not None]
 
@@ -365,8 +360,8 @@ def run_analyzer(args, out_dir):
                 run,
                 wrap(commands, {
                     'out_dir': out_dir,
-                    'report_failures': args['report_failures'],
-                    'output_format': args['output_format']})):
+                    'report_failures': args.report_failures,
+                    'output_format': args.output_format})):
             if current is not None:
                 for line in current['error_output']:
                     logging.info(line.rstrip())
