@@ -15,7 +15,8 @@ import re
 import glob
 import pkg_resources
 from analyzer.decorators import to_logging_level, trace, entry
-import analyzer.command as commands
+from analyzer.command import parse as cmdparse
+from analyzer.command import Action
 
 
 if 'darwin' == sys.platform:
@@ -52,7 +53,7 @@ def main():
     with TemporaryDirectory(prefix='bear-') as tmpdir:
         exit_code = run_build(args.build, tmpdir)
         commands = collect(not args.filtering, tmpdir)
-        with open(args.output, 'w+') as handle:
+        with open(args.cdb, 'w+') as handle:
             json.dump(commands, handle, sort_keys=True, indent=4)
     return exit_code
 
@@ -63,27 +64,28 @@ def create_command_line_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '-o', '--output',
-        metavar='<file>',
-        dest='output',
-        default="compile_commands.json",
-        help="""Specifies the output directory for analyzer reports.
-                Subdirectory will be created if default directory is targeted.
-                """)
-    parser.add_argument(
-        '-v', '--verbose',
+        '--verbose', '-v',
         action='count',
         default=0,
-        help="""Enable verbose output from %(prog)s. A second and third '-v'
-                increases verbosity.""")
+        help="""Enable verbose output from ‘%(prog)s’. A second and third
+                '-v' increases verbosity.""")
+    parser.add_argument(
+        '--sequential',
+        action='store_true',
+        help="""Execute analyzer sequentialy.""")
+    parser.add_argument(
+        '--cdb',
+        metavar='<file>',
+        default="compile_commands.json",
+        help="""The JSON compilation database.""")
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
         help="""Command to run.""")
 
-    group2 = parser.add_argument_group('ADVANCED OPTIONS')
-    group2.add_argument(
-        '-n', '--disable-filter',
+    advanced = parser.add_argument_group('advanced options')
+    advanced.add_argument(
+        '--disable-filter', '-n',
         dest='filtering',
         action='store_true',
         help="""Disable filter, unformated output.""")
@@ -174,8 +176,8 @@ def collect(filtering, destination):
             return ' '.join(args)
 
         for record in iterator:
-            atoms = commands.parse({'command': record['command']}, lambda x: x)
-            if atoms['action'] == commands.Action.Compile:
+            atoms = cmdparse({'command': record['command']}, lambda x: x)
+            if atoms['action'] == Action.Compile:
                 for filename in atoms['files']:
                     yield {'directory': record['directory'],
                            'command': join_command(record['command']),

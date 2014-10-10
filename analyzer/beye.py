@@ -58,7 +58,7 @@ def main():
         number_of_bugs = generate_report(
             {'sequential': args.sequential,
              'out_dir': out_dir,
-             'prefix': get_prefix_from(args.input),
+             'prefix': get_prefix_from(args.cdb),
              'clang': args.clang,
              'html_title': args.html_title}) \
             if needs_report_file(args.output_format) else count_bugs(out_dir)
@@ -79,47 +79,53 @@ def create_command_line_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=False)
-    group1 = parser.add_argument_group('OPTIONS')
-    group1.add_argument(
+    parser.add_argument(
         '--help', '-h',
         action='store_true',
         dest='help',
         help="""show this help message and exit""")
-    group1.add_argument(
-        '--input',
+    parser.add_argument(
+        '--verbose', '-v',
+        action='count',
+        default=0,
+        help="""Enable verbose output from ‘%(prog)s’. A second and third
+                '-v' increases verbosity.""")
+    parser.add_argument(
+        '--sequential',
+        action='store_true',
+        help="""Execute analyzer sequentialy.""")
+    parser.add_argument(
+        '--cdb',
         metavar='<file>',
         default="compile_commands.json",
         help="""The JSON compilation database.""")
-    group1.add_argument(
+
+    parser.add_argument(
         '--output', '-o',
         metavar='<path>',
         default=tempdir(),
         help="""Specifies the output directory for analyzer reports.
                 Subdirectory will be created if default directory is targeted.
                 """)
-    group1.add_argument(
-        '--sequential',
-        action='store_true',
-        help="""Execute analyzer sequentialy.""")
-    group1.add_argument(
+    parser.add_argument(
         '--status-bugs',
         action='store_true',
         help="""By default, the exit status of ‘%(prog)s’ is the same as the
                 executed build command. Specifying this option causes the exit
                 status of ‘%(prog)s’ to be non zero if it found potential bugs
                 and zero otherwise.""")
-    group1.add_argument(
+    parser.add_argument(
         '--html-title',
         metavar='<title>',
         help="""Specify the title used on generated HTML pages.
                 If not specified, a default title will be used.""")
-    group1.add_argument(
+    parser.add_argument(
         '--analyze-headers',
         action='store_true',
         help="""Also analyze functions in #included files. By default, such
                 functions are skipped unless they are called by functions
                 within the main source file.""")
-    format_group = group1.add_mutually_exclusive_group()
+    format_group = parser.add_mutually_exclusive_group()
     format_group.add_argument(
         '--plist',
         dest='output_format',
@@ -135,36 +141,30 @@ def create_command_line_parser():
         action='store_const',
         help="""This option outputs the results as a set of HTML and .plist
                 files.""")
-    group1.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from ‘%(prog)s’. A second and third
-                '-v' increases verbosity.""")
     # TODO: implement '-view '
 
-    group2 = parser.add_argument_group('ADVANCED OPTIONS')
-    group2.add_argument(
+    advanced = parser.add_argument_group('advanced options')
+    advanced.add_argument(
         '--keep-empty',
         action='store_true',
         help="""Don't remove the build results directory even if no issues
                 were reported.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--no-failure-reports',
         dest='report_failures',
         action='store_false',
         help="""Do not create a 'failures' subdirectory that includes analyzer
                 crash reports and preprocessed source files.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--stats',
         action='store_true',
         help="""Generates visitation statistics for the project being analyzed.
                 """)
-    group2.add_argument(
+    advanced.add_argument(
         '--internal-stats',
         action='store_true',
         help="""Generate internal analyzer statistics.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--maxloop',
         metavar='<loop count>',
         type=int,
@@ -172,7 +172,7 @@ def create_command_line_parser():
         help="""Specifiy the number of times a block can be visited before
                 giving up. Increase for more comprehensive coverage at a cost
                 of speed.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--store',
         metavar='<model>',
         dest='store_model',
@@ -183,7 +183,7 @@ def create_command_line_parser():
                 ‘basic’ which is far less precise but can more quickly
                 analyze code. ‘basic’ was the default store model for
                 checker-0.221 and earlier.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--constraints',
         metavar='<model>',
         dest='constraints_model',
@@ -192,7 +192,7 @@ def create_command_line_parser():
         help="""Specify the contraint engine used by the analyzer. Specifying
                 ‘basic’ uses a simpler, less powerful constraint model used by
                 checker-0.160 and earlier.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--use-analyzer',
         metavar='<path>',
         dest='clang',
@@ -201,7 +201,7 @@ def create_command_line_parser():
                 static analysis. One can override this behavior with this
                 option by using the ‘clang’ packaged with Xcode (on OS X) or
                 from the PATH.""")
-    group2.add_argument(
+    advanced.add_argument(
         '--analyzer-config',
         metavar='<options>',
         help="""Provide options to pass through to the analyzer's
@@ -214,7 +214,7 @@ def create_command_line_parser():
                 Switch the page naming to:
                 report-<filename>-<function/method name>-<id>.html
                 instead of report-XXXXXX.html""")
-    group2.add_argument(
+    advanced.add_argument(
         '--ubiviz',
         action='store_true',
         help="""Meant to display the analysis path graph (aka 'exploded graph')
@@ -222,24 +222,24 @@ def create_command_line_parser():
                 not enabled in a release build of clang. And you also need the
                 'ubiviz' script in your path.""")
 
-    group3 = parser.add_argument_group('CHECKER OPTIONS')
-    group3.add_argument(
+    plugins = parser.add_argument_group('checker options')
+    plugins.add_argument(
         '--load-plugin',
         metavar='<plugin library>',
         dest='plugins',
         action='append',
         help="""Loading external checkers using the clang plugin interface.""")
-    group3.add_argument(
+    plugins.add_argument(
         '--enable-checker',
         metavar='<checker name>',
         action='append',
         help="""Enable specific checker.""")
-    group3.add_argument(
+    plugins.add_argument(
         '--disable-checker',
         metavar='<checker name>',
         action='append',
         help="""Disable specific checker.""")
-    group3.add_argument(
+    plugins.add_argument(
         '--help-checkers',
         action='store_true',
         help="""A default group of checkers is run unless explicitly disabled.
@@ -251,7 +251,7 @@ def create_command_line_parser():
 
 
 @trace
-@require(['input', 'sequential'])
+@require(['cdb', 'sequential'])
 def run_analyzer(args, out_dir):
     """ Runs the analyzer.
 
@@ -303,7 +303,7 @@ def run_analyzer(args, out_dir):
             current.update(const)
             yield current
 
-    with open(args.input, 'r') as handle:
+    with open(args.cdb, 'r') as handle:
         pool = multiprocessing.Pool(1 if args.sequential else None)
         commands = [cmd
                     for cmd
@@ -359,7 +359,7 @@ def print_checkers(checkers, only_actives=False):
         if not only_actives:
             print(os.linesep + message + os.linesep)
 
-    dump('AVAILABLE CHECKERS:')
+    dump('available checkers:')
     for name in sorted(checkers.keys()):
         description, active = checkers[name]
         if only_actives:
