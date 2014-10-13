@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+
 """
 This module responsible to run the Clang static analyzer against any build
 and generate reports.
@@ -91,3 +97,33 @@ analyzer/command.py
 analyzer/runner.py
    run an analyzer execution.
 """
+
+import argparse
+
+
+def create_parser():
+    """ create parser for all entry points. """
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        add_help=False)
+    parser.add_argument(
+        '--help', '-h',
+        action='store_true',
+        dest='help',
+        help="""show this help message and exit""")
+    parser.add_argument(
+        '--verbose', '-v',
+        action='count',
+        default=0,
+        help="""Enable verbose output from ‘%(prog)s’. A second and third
+                '-v' increases verbosity.""")
+    parser.add_argument(
+        '--sequential',
+        action='store_true',
+        help="""Execute analyzer sequentialy.""")
+    parser.add_argument(
+        '--cdb',
+        metavar='<file>',
+        default="compile_commands.json",
+        help="""The JSON compilation database.""")
+    return parser

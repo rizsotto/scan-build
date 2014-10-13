@@ -14,6 +14,7 @@ import os.path
 import re
 import glob
 import pkg_resources
+from analyzer import create_parser
 from analyzer.decorators import to_logging_level, trace, entry
 from analyzer.command import parse as cmdparse
 from analyzer.command import Action
@@ -29,7 +30,28 @@ else:
 
 
 @entry
-def main():
+def bear():
+    parser = initialize_command_line(create_parser())
+    advanced = parser.add_argument_group('advanced options')
+    advanced.add_argument(
+        '--disable-filter', '-n',
+        dest='filtering',
+        action='store_true',
+        help="""Disable filter, unformated output.""")
+
+    args = parser.parse_args()
+
+    logging.getLogger().setLevel(to_logging_level(args.verbose))
+    logging.debug(args)
+
+    if args.help or 0 == len(args.build):
+        parser.print_help()
+        return 0
+
+    return main(args)
+
+
+def main(args):
     """ Entry point for 'bear'.
 
     'bear' is a tool that generates a compilation database for clang tooling.
@@ -43,52 +65,23 @@ def main():
     'bear' uses the LD_PRELOAD or DYLD_INSERT_LIBRARIES mechanisms provided by
     the dynamic linker. """
 
-    parser = create_command_line_parser()
-    args = parser.parse_args()
-
-    logging.getLogger().setLevel(to_logging_level(args.verbose))
-    logging.debug(args)
-
     exit_code = 0
     with TemporaryDirectory(prefix='bear-') as tmpdir:
         exit_code = run_build(args.build, tmpdir)
-        commands = collect(not args.filtering, tmpdir)
+        filtering = 'filtering' in args and args['filtering']
+        commands = collect(not filtering, tmpdir)
         with open(args.cdb, 'w+') as handle:
             json.dump(commands, handle, sort_keys=True, indent=4)
     return exit_code
 
 
 @trace
-def create_command_line_parser():
+def initialize_command_line(parser):
     """ Parse command line and return a dictionary of given values. """
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from ‘%(prog)s’. A second and third
-                '-v' increases verbosity.""")
-    parser.add_argument(
-        '--sequential',
-        action='store_true',
-        help="""Execute analyzer sequentialy.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
         help="""Command to run.""")
-
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
-        '--disable-filter', '-n',
-        dest='filtering',
-        action='store_true',
-        help="""Disable filter, unformated output.""")
 
     return parser
 

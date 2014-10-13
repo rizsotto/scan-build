@@ -73,8 +73,9 @@ setup(
     package_data={'analyzer': ['resources/*']},
     entry_points={
         'console_scripts': [
-            'beye = analyzer.beye:main',
-            'bear = analyzer.bear:main'
+            'scan-build = analyzer.beye:scanbuild',
+            'beye = analyzer.beye:beye',
+            'bear = analyzer.bear:bear'
         ]
     },
     ext_modules=[

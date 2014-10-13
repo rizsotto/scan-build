@@ -14,6 +14,7 @@ import time
 import functools
 import tempfile
 import multiprocessing
+from analyzer import create_parser
 from analyzer.decorators import to_logging_level, trace, require, entry
 from analyzer.command import create
 from analyzer.runner import run
@@ -22,7 +23,20 @@ from analyzer.clang import get_checkers
 
 
 @entry
-def main():
+def scanbuild():
+    from analyzer.bear import main as run_bear
+    from analyzer.bear import initialize_command_line as bear_command_init
+    parser = bear_command_init(initialize_command_line(create_parser()))
+    return main(parser, run_bear)
+
+
+@entry
+def beye():
+    parser = initialize_command_line(create_parser())
+    return main(parser, lambda x: 0)
+
+
+def main(parser, build_ear):
     """ Entry point for 'beye'.
 
     'beye' is orchestrating to run the analyzer against the given project
@@ -41,7 +55,6 @@ def main():
     def needs_report_file(output_format):
         return 'html' == output_format or 'plist-html' == output_format
 
-    parser = create_command_line_parser()
     args = parser.parse_args()
 
     logging.getLogger().setLevel(to_logging_level(args.verbose))
@@ -53,6 +66,7 @@ def main():
     elif args.help_checkers:
         return print_checkers(get_checkers(args.clang, args.plugins), True)
 
+    exit_code = build_ear(args)
     with ReportDirectory(args.output, args.keep_empty) as out_dir:
         run_analyzer(args, out_dir)
         number_of_bugs = generate_report(
@@ -62,12 +76,12 @@ def main():
              'clang': args.clang,
              'html_title': args.html_title}) \
             if needs_report_file(args.output_format) else count_bugs(out_dir)
-        # TODO get result from bear if --status-bugs were not requested
-        return number_of_bugs if args.status_bugs else 0
+
+        return number_of_bugs if args.status_bugs else exit_code
 
 
 @trace
-def create_command_line_parser():
+def initialize_command_line(parser):
     """ Parse command line and return a dictionary of given values.
 
     Command line parameters are defined by previous implementation, and
@@ -76,30 +90,6 @@ def create_command_line_parser():
 
     The help message is generated from this parse method. Default values
     are also printed. """
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        add_help=False)
-    parser.add_argument(
-        '--help', '-h',
-        action='store_true',
-        dest='help',
-        help="""show this help message and exit""")
-    parser.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from ‘%(prog)s’. A second and third
-                '-v' increases verbosity.""")
-    parser.add_argument(
-        '--sequential',
-        action='store_true',
-        help="""Execute analyzer sequentialy.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
-
     parser.add_argument(
         '--output', '-o',
         metavar='<path>',
