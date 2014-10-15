@@ -5,10 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 import logging
-import subprocess
-import argparse
 import json
-import sys
 import os
 import time
 import functools
@@ -336,8 +333,8 @@ def get_prefix_from(compilation_database):
 
     def filenames():
         with open(compilation_database, 'r') as handle:
-            for entry in json.load(handle):
-                yield os.path.dirname(entry['file'])
+            for element in json.load(handle):
+                yield os.path.dirname(element['file'])
 
     return common(filenames())
 
