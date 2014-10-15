@@ -4,6 +4,10 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+""" This module is responsible for to transform the arguments of a compilation
+into an analyzer invocation. """
+
+
 import logging
 import re
 import os
@@ -147,7 +151,7 @@ def arch_loop(opts, continuation=set_language):
         else:
             # There should be only one arch given (or the same multiple times)
             # If there are multiple arch are given, and those are not the same
-            # those should not change the preprocessing step. (But that's the
+            # those should not change the pre-processing step. (But that's the
             # only pass we have before run the analyzer.)
             arch = archs.pop()
             logging.debug('analysis, on arch: {0}'.format(arch))

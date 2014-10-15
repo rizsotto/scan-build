@@ -4,6 +4,11 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+""" This module is responsible for the Clang executable.
+
+Since Clang command line interface is so reach, but this project is using only
+a subset of that, it makes sense to create a function specific wrapper. """
+
 import subprocess
 import logging
 import re
@@ -25,12 +30,12 @@ def get_arguments(cwd, command):
     """ Capture Clang invocation.
 
     Clang can be executed directly (when you just ask specific action to
-    execute) or indidect way (whey you first ask Clang to print the command
+    execute) or indirect way (whey you first ask Clang to print the command
     to run for that compilation, and then execute the given command).
 
     This method receives the full command line for direct compilation. And
-    it generates the command for indirect compilation.
-    """
+    it generates the command for indirect compilation. """
+
     def lastline(stream):
         last = None
         for line in stream:
@@ -65,8 +70,9 @@ def get_arguments(cwd, command):
 @trace
 def _get_active_checkers(clang, plugins):
     """ To get the default plugins we execute Clang to print how this
-    comilation would be called. For input file we specify stdin. And
+    compilation would be called. For input file we specify stdin. And
     pass only language information. """
+
     def checkers(language, load):
         """ Returns a list of active checkers for the given language. """
         pattern = re.compile(r'^-analyzer-checker=(.*)$')

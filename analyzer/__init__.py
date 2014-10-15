@@ -102,7 +102,11 @@ import argparse
 
 
 def create_parser():
-    """ create parser for all entry points. """
+    """ Create parser for all entry points.
+
+    The help message is generated from this parse method.
+    Default values are printed.
+    """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=False)

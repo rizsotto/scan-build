@@ -4,6 +4,23 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+""" This module is responsible to capture the compiler invocation of any
+build process. The result of that should be a compilation database.
+
+This implementation is using the LD_PRELOAD or DYLD_INSERT_LIBRARIES
+mechanisms provided by the dynamic linker. The related library is implemented
+in C language and can be found under 'libear' directory.
+
+The 'libear' library is capturing all child process creation and logging the
+relevant information about it into separate files in a specified directory.
+The input of the library is therefore the output directory which is passed
+as an environment variable.
+
+This module implements the build command execution with the 'libear' library
+and the post-processing of the output files, which will condensates into a
+(might be empty) compilation database. """
+
+
 import logging
 import subprocess
 import argparse
@@ -31,6 +48,10 @@ else:
 
 @entry
 def bear():
+    """ Entry point for 'bear'.
+
+        This part initializes some parts and forwards to the main method. """
+
     parser = initialize_command_line(create_parser())
     advanced = parser.add_argument_group('advanced options')
     advanced.add_argument(
@@ -52,18 +73,10 @@ def bear():
 
 
 def main(args):
-    """ Entry point for 'bear'.
+    """ The reusable entry point of 'bear'.
 
-    'bear' is a tool that generates a compilation database for clang tooling.
-
-    The JSON compilation database is used in the clang project to provide
-    information on how a single compilation unit is processed. With this,
-    it is easy to re-run the compilation with alternate programs.
-
-    The concept behind 'bear' is to execute the original build command and
-    intercept the exec calls issued by the build tool. To achieve that,
-    'bear' uses the LD_PRELOAD or DYLD_INSERT_LIBRARIES mechanisms provided by
-    the dynamic linker. """
+        The 'scan-build' and 'bear' are the two entry points of this code.
+        Both provide the parsed argument object as input for this job. """
 
     exit_code = 0
     with TemporaryDirectory(prefix='bear-') as tmpdir:
@@ -77,7 +90,7 @@ def main(args):
 
 @trace
 def initialize_command_line(parser):
-    """ Parse command line and return a dictionary of given values. """
+    """ Add task related argument to the command line parser. """
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
@@ -91,8 +104,8 @@ def run_build(command, destination):
     """ Runs the original build command.
 
     It sets the required environment variables and execute the given command.
-    The exec calls will be logged by the 'libear' preloaded library. And
-    placed into the output directory. """
+    The exec calls will be logged by the 'libear' preloaded library. """
+
     def get_ear_so_file():
         path = pkg_resources.get_distribution('beye').location
         candidates = glob.glob(os.path.join(path, 'ear*.so'))
@@ -133,8 +146,8 @@ def collect(filtering, destination):
         def known_compiler(command):
             patterns = [
                 re.compile(r'^([^/]*/)*c(c|\+\+)$'),
-                re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-[34].[0-9])?$'),
-                re.compile(r'^([^/]*/)*clang(\+\+)?(-[23].[0-9])?$'),
+                re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-[2345].[0-9])?$'),
+                re.compile(r'^([^/]*/)*([^-]*-)*clang(\+\+)?(-[23].[0-9])?$'),
                 re.compile(r'^([^/]*/)*llvm-g(cc|\+\+)$'),
             ]
             executable = command[0]
@@ -163,7 +176,7 @@ def collect(filtering, destination):
         def join_command(args):
             """ Create a single string from list.
 
-            The major challange, which is not solved yet, to deal with white
+            The major challenge, which is not solved yet, to deal with white
             spaces. Which are used by the shell as separator.
             (Eg.: -D_KEY="Value with spaces") """
             return ' '.join(args)

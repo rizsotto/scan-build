@@ -4,6 +4,13 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+""" This module is responsible to generate the "cover" report.
+
+The input for this step is the output directory, where individual reports
+could be found. It parses those reports and generates a final HTML "cover"
+report. """
+
+
 import multiprocessing
 import re
 import os
@@ -27,8 +34,8 @@ else:
 def generate_report(opts):
     """ Report is generated from .html files, and it's a .html file itself.
 
-    Two major parts: bug reports (comming from 'report-*.html' files) and
-    crash reports (comming from 'failures' directory content). Each parts
+    Two major parts: bug reports (coming from 'report-*.html' files) and
+    crash reports (coming from 'failures' directory content). Each parts
     are tables (or multiple tables) with rows. To reduce the memory footprint
     of the report generation, these tables are generated before the final
     report. Those called fragments (because they are fragments). The
@@ -48,9 +55,9 @@ def generate_report(opts):
         scan_crash,
         glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
 
-    mk_fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
-    with mk_fragment(bug_fragment, bug_generator) as bugs:
-        with mk_fragment(crash_fragment, crash_generator) as crashes:
+    fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
+    with fragment(bug_fragment, bug_generator) as bugs:
+        with fragment(crash_fragment, crash_generator) as crashes:
             result = bugs.count + crashes.count
             if result > 0:
                 assembly_report(opts, bugs, crashes)
@@ -146,6 +153,7 @@ class ReportFragment(object):
 
 @trace
 def crash_fragment(iterator, out_dir, prefix):
+    """ Creates a fragment from the compiler crashes. """
     def pretty(opts):
         """ Make safe this values to embed into HTML. """
         encode_value(opts, 'source', lambda x: chop(prefix, x))
@@ -196,6 +204,7 @@ def crash_fragment(iterator, out_dir, prefix):
 
 @trace
 def bug_fragment(iterator, out_dir, prefix):
+    """ Creates a fragment from the analyzer reports. """
     def hash_bug(bug):
         """ Make a unique hash for bugs to detect duplicates. """
         return str(bug['bug_line']) + ':' +\
@@ -440,5 +449,6 @@ def count_bugs(out_dir):
 
 @trace
 def scan_plist(filename):
+    """ Returns the number of bugs from a single .plist file. """
     content = plistlib.readPlist(filename)
     return len(content['diagnostics']) if 'diagnostics' in content else 0

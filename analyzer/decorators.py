@@ -32,7 +32,7 @@ def to_logging_level(num):
     elif 2 == num:
         return logging.DEBUG
     else:
-        return TRACE_LEVEL  # used by the trace decorator
+        return TRACE_LEVEL
 
 
 def trace(function):

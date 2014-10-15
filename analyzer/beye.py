@@ -4,6 +4,17 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+""" This module is responsible to run the analyzer against a compilation
+database.
+
+This is done by revisit each entry in the database and run only the analyzer
+against that file. The output of the analyzer is directed into a result folder,
+which is post-processed for a "cover" generation. (There is a bit terminology
+confusion here. I would rather say the 'scan-build' generates a report on the
+build. While 'clang' is also generates report on individual files. To avoid
+confusion the 'scan-build' generated report I call "cover".) """
+
+
 import logging
 import json
 import os
@@ -21,6 +32,11 @@ from analyzer.clang import get_checkers
 
 @entry
 def scanbuild():
+    """ Entry point for 'scan-build' command.
+
+    This method combines the 'bear' and 'beye' commands to imitate the
+    original Perl implementation of 'scan-build' command. """
+
     from analyzer.bear import main as run_bear
     from analyzer.bear import initialize_command_line as bear_command_init
     parser = bear_command_init(initialize_command_line(create_parser()))
@@ -29,27 +45,26 @@ def scanbuild():
 
 @entry
 def beye():
+    """ Entry point for 'beye' command.
+
+    It takes a compilation database as input and run analyzer against each
+    files. The logic to run analyzer against a single file is implemented in
+    several modules. One generates the command from a single compiler call.
+    This is in the 'analyzer.command' module. The 'analyzer.runner' executes
+    the command. Report generation logic is in a separate module called
+    'analyzer.report'. """
+
     parser = initialize_command_line(create_parser())
     return main(parser, lambda x: 0)
 
 
 def main(parser, build_ear):
-    """ Entry point for 'beye'.
+    """ The reusable entry point of 'beye'.
 
-    'beye' is orchestrating to run the analyzer against the given project
-    and generates report file (if that was also requested).
+    The 'scan-build' and 'beye' are the two entry points of this code. """
 
-    Currently it takes a compilation database as input and run analyzer
-    against each files.
-
-    The logic to run analyzer against a single file is implemented in several
-    modules. One generates the command from a single compiler call. This is
-    in the 'analyzer.command' module. The 'analyzer.runner' executes the
-    command.
-
-    Report generation logic is in a separate module called 'analyzer.report'.
-    """
     def needs_report_file(output_format):
+        """ Cover report can be generated only from html files. """
         return 'html' == output_format or 'plist-html' == output_format
 
     args = parser.parse_args()
@@ -79,14 +94,11 @@ def main(parser, build_ear):
 
 @trace
 def initialize_command_line(parser):
-    """ Parse command line and return a dictionary of given values.
+    """ Add task related argument to the command line parser.
 
     Command line parameters are defined by previous implementation, and
     influence either the analyzer behaviour or the report generation.
-    The paramters are grouped together according their functionality.
-
-    The help message is generated from this parse method. Default values
-    are also printed. """
+    The paramters are grouped together according their functionality. """
     parser.add_argument(
         '--output', '-o',
         metavar='<path>',
@@ -403,4 +415,5 @@ class ReportDirectory(object):
 
 
 def tempdir():
+    """ Return the defatul temorary directory. """
     return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))

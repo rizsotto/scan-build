@@ -4,6 +4,9 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+""" This module is responsible to run the analyzer commands. """
+
+
 import subprocess
 import logging
 import os
@@ -21,7 +24,7 @@ def run(opts):
     """ Execute given analyzer command.
 
     Other modules prepared the command line arguments for analyzer execution.
-    The missing paramter related to the output of the anayzer. This method
+    The missing parameter related to the output of the analyzer. This method
     assemble and execute the final analyzer command. """
 
     try:
