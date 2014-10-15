@@ -115,7 +115,7 @@ def create_parser():
         '--verbose', '-v',
         action='count',
         default=0,
-        help="""Enable verbose output from ‘%(prog)s’. A second and third
+        help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
     parser.add_argument(
         '--sequential',

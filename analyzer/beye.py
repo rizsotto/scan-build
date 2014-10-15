@@ -100,9 +100,9 @@ def initialize_command_line(parser):
     parser.add_argument(
         '--status-bugs',
         action='store_true',
-        help="""By default, the exit status of ‘%(prog)s’ is the same as the
+        help="""By default, the exit status of '%(prog)s' is the same as the
                 executed build command. Specifying this option causes the exit
-                status of ‘%(prog)s’ to be non zero if it found potential bugs
+                status of '%(prog)s' to be non zero if it found potential bugs
                 and zero otherwise.""")
     parser.add_argument(
         '--html-title',
@@ -169,9 +169,9 @@ def initialize_command_line(parser):
         default='region',
         choices=['region', 'basic'],
         help="""Specify the store model used by the analyzer.
-                ‘region’ specifies a field- sensitive store model.
-                ‘basic’ which is far less precise but can more quickly
-                analyze code. ‘basic’ was the default store model for
+                'region' specifies a field- sensitive store model.
+                'basic' which is far less precise but can more quickly
+                analyze code. 'basic' was the default store model for
                 checker-0.221 and earlier.""")
     advanced.add_argument(
         '--constraints',
@@ -180,16 +180,16 @@ def initialize_command_line(parser):
         default='range',
         choices=['range', 'basic'],
         help="""Specify the contraint engine used by the analyzer. Specifying
-                ‘basic’ uses a simpler, less powerful constraint model used by
+                'basic' uses a simpler, less powerful constraint model used by
                 checker-0.160 and earlier.""")
     advanced.add_argument(
         '--use-analyzer',
         metavar='<path>',
         dest='clang',
         default='clang',
-        help="""‘%(prog)s’ uses the ‘clang’ executable relative to itself for
+        help="""'%(prog)s' uses the 'clang' executable relative to itself for
                 static analysis. One can override this behavior with this
-                option by using the ‘clang’ packaged with Xcode (on OS X) or
+                option by using the 'clang' packaged with Xcode (on OS X) or
                 from the PATH.""")
     advanced.add_argument(
         '--analyzer-config',
