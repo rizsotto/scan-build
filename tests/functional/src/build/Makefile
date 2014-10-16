@@ -1,6 +1,7 @@
 PROGRAM = prg
 
 GOODS = ../main.o ../clean-one.o ../clean-two.o ../emit-one.o ../emit-two.o
+CLEANS = ../main.o ../clean-one.o ../clean-two.o
 BADS = ../main.o ../broken-one.o ../broken-two.o
 
 
@@ -17,9 +18,11 @@ LDFLAGS =
 $(PROGRAM): $(GOODS)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
-clean:
-	rm -rf $(PROGRAM) $(GOODS) $(BADS)
+reset:
+	rm -rf $(PROGRAM) $(GOODS) $(BADS) $(CLEANS)
 
-regular: clean $(GOODS) $(PROGRAM)
+regular: reset $(GOODS) $(PROGRAM)
 
-broken: clean $(BADS)
+clean: reset $(CLEANS)
+
+broken: reset $(BADS)
