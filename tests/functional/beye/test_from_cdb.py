@@ -13,7 +13,8 @@ import subprocess
 import glob
 
 
-def _prepare_compilation_db(target_file, target_dir):
+def prepare_cdb(name, target_dir):
+    target_file = 'build_{0}.json'.format(name)
     this_dir, _ = os.path.split(__file__)
     path = os.path.normpath(os.path.join(this_dir, '..', 'src'))
     source_dir = os.path.join(path, 'compilation_database')
@@ -25,18 +26,6 @@ def _prepare_compilation_db(target_file, target_dir):
                 temp = string.Template(line)
                 out_handle.write(temp.substitute(path=path))
     return target_file
-
-
-def prepare_clean_cdb(target_dir):
-    return _prepare_compilation_db('build_clean.json', target_dir)
-
-
-def prepare_regular_cdb(target_dir):
-    return _prepare_compilation_db('build_regular.json', target_dir)
-
-
-def prepare_broken_cdb(target_dir):
-    return _prepare_compilation_db('build_brokens.json', target_dir)
 
 
 def run_beye(directory, args):
@@ -55,21 +44,21 @@ class OutputDirectoryTest(unittest.TestCase):
 
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertTrue(os.path.isdir(outdir))
 
     def test_clear_deletes_report_dir(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_clean_cdb(tmpdir)
+            cdb = prepare_cdb('clean', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertFalse(os.path.isdir(outdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_clean_cdb(tmpdir)
+            cdb = prepare_cdb('clean', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir,
                                          ['--cdb', cdb, '--keep-empty'])
@@ -80,21 +69,21 @@ class ExitCodeTest(unittest.TestCase):
 
     def test_regular_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertFalse(exit_code)
 
     def test_clear_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_clean_cdb(tmpdir)
+            cdb = prepare_cdb('clean', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertFalse(exit_code)
 
     def test_regular_sets_exit_code_if_asked(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--status-bugs'])
@@ -102,7 +91,7 @@ class ExitCodeTest(unittest.TestCase):
 
     def test_clear_does_not_set_exit_code_if_asked(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_clean_cdb(tmpdir)
+            cdb = prepare_cdb('clean', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--status-bugs'])
@@ -110,7 +99,7 @@ class ExitCodeTest(unittest.TestCase):
 
     def test_regular_sets_exit_code_if_asked_from_plist(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--status-bugs', '--plist'])
@@ -118,7 +107,7 @@ class ExitCodeTest(unittest.TestCase):
 
     def test_clear_does_not_set_exit_code_if_asked_from_plist(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_clean_cdb(tmpdir)
+            cdb = prepare_cdb('clean', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--status-bugs', '--plist'])
@@ -137,7 +126,7 @@ class OutputFormatTest(unittest.TestCase):
 
     def test_default_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
@@ -146,7 +135,7 @@ class OutputFormatTest(unittest.TestCase):
 
     def test_plist_and_html_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--plist-html'])
@@ -156,7 +145,7 @@ class OutputFormatTest(unittest.TestCase):
 
     def test_plist_does_not_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_regular_cdb(tmpdir)
+            cdb = prepare_cdb('regular', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--plist'])
@@ -170,14 +159,14 @@ class FailureReportTest(unittest.TestCase):
 
     def test_broken_creates_failure_reports(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_broken_cdb(tmpdir)
+            cdb = prepare_cdb('broken', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertTrue(os.path.isdir(os.path.join(outdir, 'failures')))
 
     def test_broken_does_not_creates_failure_reports(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_broken_cdb(tmpdir)
+            cdb = prepare_cdb('broken', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--no-failure-reports'])
@@ -206,14 +195,14 @@ class TitleTest(unittest.TestCase):
 
     def test_default_title_in_report(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_broken_cdb(tmpdir)
+            cdb = prepare_cdb('broken', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(outdir, ['--cdb', cdb])
             self.assertTitleEqual(tmpdir, 'src - analyzer results')
 
     def test_given_title_in_report(self):
         with fixtures.TempDir() as tmpdir:
-            cdb = prepare_broken_cdb(tmpdir)
+            cdb = prepare_cdb('broken', tmpdir)
             outdir = os.path.join(tmpdir, 'result')
             exit_code, output = run_beye(
                 outdir, ['--cdb', cdb, '--html-title', 'this is the title'])
