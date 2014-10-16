@@ -21,6 +21,7 @@ import os
 import time
 import functools
 import tempfile
+import shutil
 import multiprocessing
 from analyzer import create_parser
 from analyzer.decorators import to_logging_level, trace, require, entry
@@ -79,15 +80,17 @@ def main(parser, build_ear):
         return print_checkers(get_checkers(args.clang, args.plugins), True)
 
     exit_code = build_ear(args)
-    with ReportDirectory(args.output, args.keep_empty) as out_dir:
-        run_analyzer(args, out_dir)
+    with ReportDirectory(args.output, args.keep_empty) as target_dir:
+        target_dir.copy_to(args.cdb)
+        run_analyzer(args, target_dir.name)
         number_of_bugs = generate_report(
             {'sequential': args.sequential,
-             'out_dir': out_dir,
+             'out_dir': target_dir.name,
              'prefix': get_prefix_from(args.cdb),
              'clang': args.clang,
              'html_title': args.html_title}) \
-            if needs_report_file(args.output_format) else count_bugs(out_dir)
+            if needs_report_file(args.output_format) else \
+            count_bugs(target_dir.name)
 
         return number_of_bugs if args.status_bugs else exit_code
 
@@ -385,21 +388,32 @@ class ReportDirectory(object):
     def __init__(self, hint, keep):
         self.name = ReportDirectory._create(hint)
         self.keep = keep
+        self.additions = []
 
     def __enter__(self):
-        return self.name
+        return self
 
     @trace
     def __exit__(self, _type, _value, _traceback):
         if os.listdir(self.name):
             msg = "Run 'scan-view {0}' to examine bug reports."
+            self.keep = True
         else:
             if self.keep:
                 msg = "Report directory '{0}' contans no report, but kept."
             else:
-                os.rmdir(self.name)
                 msg = "Removing directory '{0}' because it contains no report."
         logging.warning(msg.format(self.name))
+
+        if self.keep:
+            for addition in self.additions:
+                shutil.copy(addition, self.name)
+        else:
+            os.rmdir(self.name)
+
+    @trace
+    def copy_to(self, item):
+        self.additions.append(item)
 
     @staticmethod
     def _create(hint):
@@ -411,7 +425,7 @@ class ReportDirectory(object):
                 raise
         else:
             stamp = time.strftime('%Y-%m-%d-%H%M%S', time.localtime())
-            return tempfile.mkdtemp(prefix='beye-{0}-'.format(stamp))
+            return tempfile.mkdtemp(prefix='scan-build-{0}-'.format(stamp))
 
 
 def tempdir():
