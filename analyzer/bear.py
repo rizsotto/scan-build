@@ -81,7 +81,7 @@ def main(args):
     exit_code = 0
     with TemporaryDirectory(prefix='bear-') as tmpdir:
         exit_code = run_build(args.build, tmpdir)
-        filtering = 'filtering' in args and args['filtering']
+        filtering = 'filtering' in args and args.filtering
         commands = collect(not filtering, tmpdir)
         with open(args.cdb, 'w+') as handle:
             json.dump(commands, handle, sort_keys=True, indent=4)

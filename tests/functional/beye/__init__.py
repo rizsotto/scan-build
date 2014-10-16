@@ -5,8 +5,10 @@
 # License. See LICENSE.TXT for details.
 
 from . import test_from_cdb
+from . import test_create_cdb
 
 
 def load_tests(loader, suite, pattern):
     suite.addTests(loader.loadTestsFromModule(test_from_cdb))
+    suite.addTests(loader.loadTestsFromModule(test_create_cdb))
     return suite
