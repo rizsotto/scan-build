@@ -108,3 +108,13 @@ class ScanFileTest(unittest.TestCase):
             self.assertEqual(result['file'], pp_file)
             self.assertEqual(result['info'], pp_file + '.info.txt')
             self.assertEqual(result['stderr'], pp_file + '.stderr.txt')
+
+
+class ReportMethodTest(unittest.TestCase):
+
+    def test_chop(self):
+        self.assertEqual('file', sut.chop('/prefix', '/prefix/file'))
+        self.assertEqual('file', sut.chop('/prefix/', '/prefix/file'))
+        self.assertEqual('lib/file', sut.chop('/prefix/', '/prefix/lib/file'))
+        self.assertEqual('/prefix/file', sut.chop('', '/prefix/file'))
+        self.assertEqual('/prefix/file', sut.chop('apple', '/prefix/file'))

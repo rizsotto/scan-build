@@ -407,10 +407,12 @@ def encode_value(container, key, encode):
 
 def chop(prefix, filename):
     """ Create 'filename' from '/prefix/filename' """
-    if len(prefix) and prefix[-1] != os.path.sep:
+    if not len(prefix):
+        return filename
+    if prefix[-1] != os.path.sep:
         prefix += os.path.sep
     split = filename.split(prefix, 1)
-    return split[1] if len(split) == 2 else split[1]
+    return split[1] if len(split) == 2 else split[0]
 
 
 def reindent(text, indent):
