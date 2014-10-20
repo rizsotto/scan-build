@@ -35,7 +35,7 @@ class CompilationDatabaseTest(unittest.TestCase):
             with open(result, 'r') as handler:
                 import json
                 content = json.load(handler)
-                self.assertEqual(5, len(content))
+                self.assertEqual(4, len(content))
 
     def test_not_successful_build(self):
         with fixtures.TempDir() as tmpdir:
@@ -61,3 +61,28 @@ class ExitCodeTest(unittest.TestCase):
             result = os.path.join(tmpdir, 'cdb.json')
             exit_code, _ = run_bear(result, ['make', 'broken'])
             self.assertTrue(exit_code)
+
+
+class ResumeFeatureTest(unittest.TestCase):
+
+    def test_overwrite_existing_cdb(self):
+        with fixtures.TempDir() as tmpdir:
+            result = os.path.join(tmpdir, 'cdb.json')
+            run_bear(result, ['make', 'clean'])
+            run_bear(result, ['make', 'regular'])
+            self.assertTrue(os.path.isfile(result))
+            with open(result, 'r') as handler:
+                import json
+                content = json.load(handler)
+                self.assertEqual(4, len(content))
+
+    def test_append_to_existing_cdb(self):
+        with fixtures.TempDir() as tmpdir:
+            result = os.path.join(tmpdir, 'cdb.json')
+            run_bear(result, ['make', 'clean'])
+            run_bear(result, ['--append', 'make', 'regular'])
+            self.assertTrue(os.path.isfile(result))
+            with open(result, 'r') as handler:
+                import json
+                content = json.load(handler)
+                self.assertEqual(5, len(content))

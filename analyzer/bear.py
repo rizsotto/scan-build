@@ -55,6 +55,10 @@ def bear():
     parser = initialize_command_line(create_parser())
     advanced = parser.add_argument_group('advanced options')
     advanced.add_argument(
+        '--append',
+        action='store_true',
+        help="""Append new entries to existing compilation database.""")
+    advanced.add_argument(
         '--disable-filter', '-n',
         dest='filtering',
         action='store_true',
@@ -78,11 +82,21 @@ def main(args):
         The 'scan-build' and 'bear' are the two entry points of this code.
         Both provide the parsed argument object as input for this job. """
 
+    def load_current_cdb(filename):
+        """ Load existing cdb elements when cdb file is readable. """
+        if os.path.exists(filename):
+            with open(filename) as handle:
+                return json.load(handle)
+        else:
+            return []
+
     exit_code = 0
     with TemporaryDirectory(prefix='bear-') as tmpdir:
         exit_code = run_build(args.build, tmpdir)
+        append = 'append' in args and args.append
+        currents = load_current_cdb(args.cdb) if append else []
         filtering = 'filtering' in args and args.filtering
-        commands = collect(not filtering, tmpdir)
+        commands = merge(currents, collect(not filtering, tmpdir))
         with open(args.cdb, 'w+') as handle:
             json.dump(commands, handle, sort_keys=True, indent=4)
     return exit_code
@@ -195,6 +209,26 @@ def collect(filtering, destination):
                  for record
                  in glob.iglob(os.path.join(destination, 'cmd.*'))]
     return list(chain(generator)) if filtering else generator
+
+
+@trace
+def merge(old, new):
+    """ Merge two list of commands into one. """
+    def duplicate(state, entry):
+        """ Find out repetition amongst the merged items. """
+        def hash_cdb(entry):
+            """ Make a unique hash for cdb entries to detect duplicates. """
+            return entry['file'][::-1] + '<>' + entry['command']
+
+        if os.path.exists(entry['file']):
+            entry_hash = hash_cdb(entry)
+            if entry_hash not in state:
+                state.add(entry_hash)
+                return False
+        return True
+
+    state = set()
+    return [entry for entry in old + new if not duplicate(state, entry)]
 
 
 if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
