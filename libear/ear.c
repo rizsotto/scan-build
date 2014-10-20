@@ -5,40 +5,77 @@
 // License. See LICENSE.TXT for details.
 */
 
-#include "config.h"
+/**
+This file implements a shared library. This library can be pre-loaded by
+the dynamic linker of the Operating System (OS). It implements a few function
+related to process creation. By pre-load this library the executed process
+uses these functions instead of those from the standard library.
 
-#include "stringarray.h"
-#include "environ.h"
-#include "protocol.h"
+The idea here is to inject a logic before call the real methods. The logic is
+to dump the call into a file. To call the real method this library is doing
+the job of the dynamic linker.
+
+The only input for the log writing is about the destination directory.
+This is passed as environment variable.
+*/
+
+#include "config.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ctype.h>
+#include <stddef.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
-
+#include <fcntl.h>
 #include <dlfcn.h>
 
 #if defined HAVE_POSIX_SPAWN || defined HAVE_POSIX_SPAWNP
 #include <spawn.h>
 #endif
 
+#ifdef HAVE_NSGETENVIRON
+#include <crt_externs.h>
+#else
+extern char **environ;
+#endif
 
 #ifdef __APPLE__
 # define EXEC_LOOP_ON_EXECVE
 #endif
 
-static char const * * update_environment(char * const envp[]);
 
-static void report_call(char const * fun, char const * const argv[]);
+typedef struct
+{
+    pid_t pid;
+    pid_t ppid;
+    char const * fun;
+    char const * cwd;
+    char const * * cmd;
+} bear_message_t;
+
+static char const * * bear_update_environment(char * const envp[]);
+static void bear_report_call(char const * fun, char const * const argv[]);
+static void bear_write_message(int fd, bear_message_t const * e);
+static void bear_send_message(char const * destination, bear_message_t const * e);
+static char const * * bear_update_environ(char const * * in, char const * key);
+static char * * bear_get_environ(void);
+static char const ** bear_strings_build(char const * arg, va_list *ap);
+static char const ** bear_strings_copy(char const ** const in);
+static char const ** bear_strings_append(char const ** in, char const * e);
+static size_t bear_strings_length(char const * const * in);
+static void bear_strings_release(char const **);
+
 
 #ifdef EXEC_LOOP_ON_EXECVE
     static int already_reported = 0;
 # define REPORT_CALL(ARGV_) \
     int const report_state = already_reported; \
     if (!already_reported) { \
-      report_call(__func__, (char const * const *)ARGV_); \
+      bear_report_call(__func__, (char const * const *)ARGV_); \
       already_reported = 1; \
     }
 # define REPORT_FAILED_CALL(RESULT_) \
@@ -46,7 +83,7 @@ static void report_call(char const * fun, char const * const argv[]);
       already_reported = 0; \
     }
 #else
-# define REPORT_CALL(ARGV_) report_call(__func__, (char const * const *)ARGV_);
+# define REPORT_CALL(ARGV_) bear_report_call(__func__, (char const * const *)ARGV_);
 # define REPORT_FAILED_CALL(RESULT_)
 #endif
 
@@ -89,6 +126,9 @@ static int call_posix_spawnp(pid_t *restrict pid,
                             char * const envp[restrict]);
 #endif
 
+
+/* These are the methods we are try to hijack.
+ */
 
 #if defined HAVE_VFORK && defined EXEC_LOOP_ON_EXECVE
 pid_t vfork(void)
@@ -249,6 +289,8 @@ int posix_spawnp(pid_t *restrict pid,
 }
 #endif
 
+/* These are the methods which forward the call to the standard implementation. */
+
 #ifdef HAVE_EXECVE
 static int call_execve(const char * path, char * const argv[], char * const envp[])
 {
@@ -256,7 +298,7 @@ static int call_execve(const char * path, char * const argv[], char * const envp
 
     DLSYM(func, fp, "execve");
 
-    char const ** const menvp = update_environment(envp);
+    char const ** const menvp = bear_update_environment(envp);
     int const result = (*fp)(path, argv, (char * const *)menvp);
     bear_strings_release(menvp);
     return result;
@@ -270,7 +312,7 @@ static int call_execvpe(const char * file, char * const argv[], char * const env
 
     DLSYM(func, fp, "execvpe");
 
-    char const ** const menvp = update_environment(envp);
+    char const ** const menvp = bear_update_environment(envp);
     int const result = (*fp)(file, argv, (char * const *)menvp);
     bear_strings_release(menvp);
     return result;
@@ -341,7 +383,73 @@ static int call_posix_spawnp(pid_t *restrict pid,
 }
 #endif
 
-static char const * * update_environment(char * const envp[])
+/* these methods are for to write log about the process creation. */
+
+static void bear_report_call(char const * fun, char const * const argv[])
+{
+    char * const destination = getenv(ENV_OUTPUT);
+    if (0 == destination)
+    {
+        perror("bear: getenv");
+        exit(EXIT_FAILURE);
+    }
+    const char * cwd = getcwd(NULL, 0);
+    if (0 == cwd)
+    {
+        perror("bear: getcwd");
+        exit(EXIT_FAILURE);
+    }
+
+    bear_message_t const msg =
+    {
+        getpid(),
+        getppid(),
+        fun,
+        cwd,
+        (char const **)argv
+    };
+    bear_send_message(destination, &msg);
+
+    free((void *)cwd);
+}
+
+static void bear_write_message(int fd, bear_message_t const * e)
+{
+    static int const RS = 0x1e;
+    static int const US = 0x1f;
+    dprintf(fd, "%d%c", e->pid, RS);
+    dprintf(fd, "%d%c", e->ppid, RS);
+    dprintf(fd, "%s%c", e->fun, RS);
+    dprintf(fd, "%s%c", e->cwd, RS);
+    size_t const length = bear_strings_length(e->cmd);
+    for (size_t it = 0; it < length; ++it)
+    {
+        dprintf(fd, "%s%c", e->cmd[it], US);
+    }
+}
+
+static void bear_send_message(char const * destination, bear_message_t const * msg)
+{
+    char * filename = 0;
+    if (-1 == asprintf(&filename, "%s/cmd.XXXXXX", destination))
+    {
+        perror("bear: asprintf");
+        exit(EXIT_FAILURE);
+    }
+    int fd = mkstemp(filename);
+    free((void *)filename);
+    if (-1 == fd)
+    {
+        perror("bear: open");
+        exit(EXIT_FAILURE);
+    }
+    bear_write_message(fd, msg);
+    close(fd);
+}
+
+/* update environment assure that chilren processes will copy the desired behaviour */
+
+static char const * * bear_update_environment(char * const envp[])
 {
     char const ** result = bear_strings_copy((char const * *)envp);
     result = bear_update_environ(result, ENV_PRELOAD);
@@ -352,30 +460,144 @@ static char const * * update_environment(char * const envp[])
     return result;
 }
 
-typedef void (*send_message)(char const * destination, bear_message_t const *);
-
-static void report(send_message fp, char const * destination, char const * fun, char const * const argv[])
+static char const * * bear_update_environ(char const * envs[], char const * key)
 {
-    bear_message_t const msg =
-    {
-        getpid(),
-        getppid(),
-        fun,
-        getcwd(NULL, 0),
-        (char const **)argv
-    };
-    (*fp)(destination, &msg);
-    free((void *)msg.cwd);
-}
-
-static void report_call(char const * fun, char const * const argv[])
-{
-    char * const destination = getenv(ENV_OUTPUT);
-    if (0 == destination)
+    char const * const value = getenv(key);
+    if (0 == value)
     {
         perror("bear: getenv");
         exit(EXIT_FAILURE);
     }
+    // find the key if it's there
+    size_t const key_length = strlen(key);
+    char const * * it = envs;
+    for (; (it) && (*it); ++it)
+    {
+        if ((0 == strncmp(*it, key, key_length)) &&
+            (strlen(*it) > key_length) &&
+            ('=' == (*it)[key_length]))
+            break;
+    }
+    // check the value might already correct
+    char const * * result = envs;
+    if ((0 != it) && ((0 == *it) || (strcmp(*it + key_length + 1, value))))
+    {
+        char * env = 0;
+        if (-1 == asprintf(&env, "%s=%s", key, value))
+        {
+            perror("bear: asprintf");
+            exit(EXIT_FAILURE);
+        }
+        if (*it)
+        {
+            free((void *)*it);
+            *it = env;
+        }
+        else
+            result = bear_strings_append(envs, env);
+    }
+    return result;
+}
 
-    report(bear_send_message, destination, fun, argv);
+static char * * bear_get_environ(void)
+{
+#ifdef HAVE_NSGETENVIRON
+    // environ is not available for shared libraries have to use _NSGetEnviron()
+    return *_NSGetEnviron();
+#else
+    return environ;
+#endif
+}
+
+/* util methods to deal with string arrays. environment and process arguments
+are both represented as string arrays. */
+
+static char const ** bear_strings_build(char const * const arg, va_list *args)
+{
+    char const ** result = 0;
+    size_t size = 0;
+    for (char const * it = arg; it; it = va_arg(*args, char const *))
+    {
+        result = realloc(result, (size + 1) * sizeof(char const *));
+        if (0 == result)
+        {
+            perror("bear: realloc");
+            exit(EXIT_FAILURE);
+        }
+        char const * copy = strdup(it);
+        if (0 == copy)
+        {
+            perror("bear: strdup");
+            exit(EXIT_FAILURE);
+        }
+        result[size++] = copy;
+    }
+    result = realloc(result, (size + 1) * sizeof(char const *));
+    if (0 == result)
+    {
+        perror("bear: realloc");
+        exit(EXIT_FAILURE);
+    }
+    result[size++] = 0;
+
+    return result;
+}
+
+static char const ** bear_strings_copy(char const ** const in)
+{
+    size_t const size = bear_strings_length(in);
+
+    char const ** const result = malloc((size + 1) * sizeof(char const *));
+    if (0 == result)
+    {
+        perror("bear: malloc");
+        exit(EXIT_FAILURE);
+    }
+
+    char const ** out_it = result;
+    for (char const * const * in_it = in; (in_it) && (*in_it); ++in_it, ++out_it)
+    {
+        *out_it = strdup(*in_it);
+        if (0 == *out_it)
+        {
+            perror("bear: strdup");
+            exit(EXIT_FAILURE);
+        }
+    }
+    *out_it = 0;
+    return result;
+}
+
+static char const ** bear_strings_append(char const ** const in, char const * const e)
+{
+    if (0 == e)
+        return in;
+
+    size_t size = bear_strings_length(in);
+    char const ** result = realloc(in, (size + 2) * sizeof(char const *));
+    if (0 == result)
+    {
+        perror("bear: realloc");
+        exit(EXIT_FAILURE);
+    }
+    result[size++] = e;
+    result[size++] = 0;
+    return result;
+}
+
+static size_t bear_strings_length(char const * const * const in)
+{
+    size_t result = 0;
+    for (char const * const * it = in; (it) && (*it); ++it)
+        ++result;
+    return result;
+}
+
+static void bear_strings_release(char const ** in)
+{
+    for (char const * const * it = in; (it) && (*it); ++it)
+    {
+        free((void *)*it);
+    }
+    free((void *)in);
 }
