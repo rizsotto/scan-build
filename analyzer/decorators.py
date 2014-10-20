@@ -86,6 +86,8 @@ def entry(function):
 
         try:
             return function(*args, **kwargs)
+        except KeyboardInterrupt:
+            return 1
         except Exception as exception:
             logging.error(str(exception))
             return 127
