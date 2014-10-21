@@ -53,7 +53,7 @@ class ExitCodeTest(unittest.TestCase):
     def test_successful_build(self):
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
-            exit_code, _ = run_bear(result, ['make', 'regular'])
+            exit_code, _ = run_bear(result, ['make', 'clean'])
             self.assertFalse(exit_code)
 
     def test_not_successful_build(self):
