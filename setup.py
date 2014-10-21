@@ -6,6 +6,7 @@ from setuptools import Extension
 from distutils.command.config import config
 from distutils.command.build_ext import build_ext
 from distutils.ccompiler import new_compiler
+from platform import system
 
 
 class CreateConfig(config):
@@ -86,7 +87,7 @@ setup(
             sources=['libear/ear.c'],
             include_dirs=[],
             define_macros=[('_GNU_SOURCE', None)],
-            libraries=['dl'],
+            libraries=['dl'] if 'Linux' == system() else [],
             extra_compile_args=['-std=c99',
                                 '-Wno-error=declaration-after-statement'])],
     cmdclass={'build_ext': BuildExt, 'configure': CreateConfig},
