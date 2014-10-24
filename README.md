@@ -42,10 +42,11 @@ How to use
 ----------
 
 This package contains 3 executable scripts. One called `bear` which takes
-a build command as argument and produce a compilation database file. Which
-is a JSON file described [here][JCDB]. The second called `beye` which takes
-a compilation database and run the analyzer against it and generates a report.
-The third called `scan-build` which does what `bear` and `beye` together do.
+a build command as argument and produce a compilation database file.
+(Compilation database is a JSON file described [here][JCDB].) The second
+called `beye` which takes a compilation database and run the analyzer
+against it and generates a report. The third called `scan-build` which does
+what `bear` and `beye` together do.
 
 After installation the usage is like this:
 

@@ -141,7 +141,7 @@ def initialize_command_line(parser):
         const='plist-html',
         default='html',
         action='store_const',
-        help="""This option outputs the results as a set of HTML and .plist
+        help="""This option outputs the results as a set of .html and .plist
                 files.""")
     # TODO: implement '-view '
 
