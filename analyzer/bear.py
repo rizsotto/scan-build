@@ -123,7 +123,7 @@ def run_build(command, destination):
 
     def get_ear_so_file():
         path = pkg_resources.get_distribution('beye').location
-        candidates = glob.glob(os.path.join(path, 'ear*.so'))
+        candidates = glob.glob(os.path.join(path, 'libear.*'))
         return candidates[0] if len(candidates) else None
 
     environment = dict(os.environ)

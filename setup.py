@@ -2,61 +2,31 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup
-from setuptools import Extension
-from distutils.command.config import config
-from distutils.command.build_ext import build_ext
-from distutils.ccompiler import new_compiler
-from platform import system
+from subprocess import check_call
+from distutils import log
+from distutils.dir_util import mkpath
+from distutils.file_util import copy_file
+from distutils.command.build import build
 
 
-class CreateConfig(config):
-    def finalize_options(self):
-        self.compiler = new_compiler()
-        self.compiler.define_macro('_GNU_SOURCE')
-        self.dump_source=None
-        self.verbose=None
-        self.noisy=None
-
-        self.defines = {
-            'HAVE_DLOPEN': self.check_func(func='dlopen', headers=['dlfcn.h'], libraries=['dl']),
-            'HAVE_DLSYM': self.check_func(func='dlsym', headers=['dlfcn.h'], libraries=['dl']),
-            'HAVE_REALPATH': self.check_func(func='realpath', headers=['stdlib.h']),
-            'HAVE_VFORK': self.check_func(func='vfork', headers=['unistd.h']),
-            'HAVE_EXECVE': self.check_func(func='execve', headers=['unistd.h']),
-            'HAVE_EXECV': self.check_func(func='execv', headers=['unistd.h']),
-            'HAVE_EXECVPE': self.check_func(func='execvpe', headers=['unistd.h']),
-            'HAVE_EXECVP': self.check_func(func='execvp', headers=['unistd.h']),
-            'HAVE_EXECVP2': self.check_func(func='execvP', headers=['unistd.h']),
-            'HAVE_EXECL': self.check_func(func='execl', headers=['unistd.h']),
-            'HAVE_EXECLP': self.check_func(func='execlp', headers=['unistd.h']),
-            'HAVE_EXECLE': self.check_func(func='execle', headers=['unistd.h']),
-            'HAVE_POSIX_SPAWN': self.check_func(func='posix_spawn', headers=['spawn.h']),
-            'HAVE_POSIX_SPAWNP': self.check_func(func='posix_spawnp', headers=['spawn.h']),
-            'HAVE_NSGETENVIRON': self.check_func(func='_NSGetEnviron', headers=['crt_externs.h'])}
-        config.finalize_options(self)
+class Build(build):
 
     def run(self):
-        with open('libear/config.h', 'w+') as handle:
-            from analyzer.bear import ENVIRONMENTS
-            from os import linesep
-            handle.write('#pragma once' + linesep)
-            for key, value in self.defines.items():
-                if value:
-                    handle.write('#define {0}'.format(key))
-                else:
-                    handle.write('#undef {0}'.format(key))
-                handle.write(linesep)
-            for key, value in ENVIRONMENTS:
-                handle.write('#define {0} "{1}"'.format(key, value))
-                handle.write(linesep)
+        import os
+        import os.path
 
-        config.run(self)
+        mkpath(self.build_temp)
 
+        source_dir = os.path.join(os.getcwd(), 'libear')
+        dest_dir = os.path.abspath(self.build_lib)
 
-class BuildExt(build_ext):
-    def run(self):
-        self.run_command('configure')
-        build_ext.run(self)
+        cmd = ['cmake', '-DCMAKE_INSTALL_PREFIX=' + dest_dir, source_dir]
+        check_call(cmd, cwd=self.build_temp)
+
+        cmd = ['make', 'install']
+        check_call(cmd, cwd=self.build_temp)
+
+        build.run(self)
 
 
 setup(
@@ -79,18 +49,7 @@ setup(
             'bear = analyzer.bear:bear'
         ]
     },
-    ext_modules=[
-        Extension(
-            'ear',
-            language='c',
-            depends=['libear/config.h'],
-            sources=['libear/ear.c'],
-            include_dirs=[],
-            define_macros=[('_GNU_SOURCE', None)],
-            libraries=['dl'] if 'Linux' == system() else [],
-            extra_compile_args=['-std=c99',
-                                '-Wno-error=declaration-after-statement'])],
-    cmdclass={'build_ext': BuildExt, 'configure': CreateConfig},
+    cmdclass={'build': Build},
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",

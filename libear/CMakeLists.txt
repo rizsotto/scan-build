@@ -36,6 +36,8 @@ target_link_libraries(ear ${CMAKE_DL_LIBS})
 set_target_properties(ear PROPERTIES
     COMPILE_FLAGS "-std=c99")
 
-include(GNUInstallDirs)
-install(TARGETS ear
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS ear LIBRARY DESTINATION .)
+
+add_executable(exec_anatomy exec_anatomy.c)
+set_target_properties(exec_anatomy PROPERTIES
+    COMPILE_FLAGS "-std=c99")
