@@ -30,6 +30,7 @@ import os
 import os.path
 import re
 import glob
+import shlex
 import pkg_resources
 from analyzer import create_parser
 from analyzer.decorators import to_logging_level, trace, entry
@@ -218,7 +219,15 @@ def merge(old, new):
         """ Find out repetition amongst the merged items. """
         def hash_cdb(entry):
             """ Make a unique hash for cdb entries to detect duplicates. """
-            return entry['file'][::-1] + '<>' + entry['command']
+            # On OS X the 'cc' and 'c++' compilers are wrappers for 'clang'
+            # therefore both call would be logged. To avoid this the hash does
+            # not contain the first word of the command.
+            command = ' '.join(shlex.split(entry['command'])[1:])
+            # For faster lookup in set filename is reverted
+            filename = entry['file'][::-1]
+            # For faster lookup in set directory is reverted
+            directory = entry['directory'][::-1]
+            return '<>'.join([filename, directory, command])
 
         if os.path.exists(entry['file']):
             entry_hash = hash_cdb(entry)
