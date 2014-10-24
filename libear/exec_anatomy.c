@@ -24,8 +24,7 @@
 extern char **environ;
 #endif
 
-char ** getenviron()
-{
+char **getenviron() {
 #ifdef NEED_NSGETENVIRON
     return *_NSGetEnviron();
 #else
@@ -35,16 +34,14 @@ char ** getenviron()
 // ..:: environment access fixer - end ::..
 
 // ..:: test fixtures - begin ::..
-static char const * cwd = NULL;
-static FILE * fd = NULL;
+static char const *cwd = NULL;
+static FILE *fd = NULL;
 static int need_comma = 0;
 
-void expected_out_open(const char * expected)
-{
+void expected_out_open(const char *expected) {
     cwd = getcwd(NULL, 0);
     fd = fopen(expected, "w");
-    if (!fd)
-    {
+    if (!fd) {
         perror("fopen");
         exit(EXIT_FAILURE);
     }
@@ -52,8 +49,7 @@ void expected_out_open(const char * expected)
     need_comma = 0;
 }
 
-void expected_out_close()
-{
+void expected_out_close() {
     fprintf(fd, "]\n");
     fclose(fd);
     fd = NULL;
@@ -62,8 +58,7 @@ void expected_out_close()
     cwd = NULL;
 }
 
-void expected_out(const char *cmd, const char *file)
-{
+void expected_out(const char *cmd, const char *file) {
     if (need_comma)
         fprintf(fd, ",\n");
     else
@@ -76,11 +71,9 @@ void expected_out(const char *cmd, const char *file)
     fprintf(fd, "}\n");
 }
 
-void create_source(char * file)
-{
-    FILE * fd = fopen(file, "w");
-    if (!fd)
-    {
+void create_source(char *file) {
+    FILE *fd = fopen(file, "w");
+    if (!fd) {
         perror("fopen");
         exit(EXIT_FAILURE);
     }
@@ -88,57 +81,40 @@ void create_source(char * file)
     fclose(fd);
 }
 
-
 typedef void (*exec_fun)();
 
-void wait_for(pid_t child)
-{
+void wait_for(pid_t child) {
     int status;
-    if (-1 == waitpid(child, &status, 0))
-    {
+    if (-1 == waitpid(child, &status, 0)) {
         perror("wait");
         exit(EXIT_FAILURE);
     }
-    if (WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE)
-    {
+    if (WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE) {
         fprintf(stderr, "children process has non zero exit code\n");
         exit(EXIT_FAILURE);
     }
 }
 
-#define FORK(FUNC) \
-{ \
-    pid_t child = fork(); \
-    if (-1 == child) \
-    { \
-        perror("fork"); \
-        exit(EXIT_FAILURE); \
-    } \
-    else if (0 == child) \
-    { \
-        FUNC \
-        fprintf(stderr, "children process failed to exec\n"); \
-        exit(EXIT_FAILURE); \
-    } \
-    else \
-    { \
-        wait_for(child); \
-    } \
-}
+#define FORK(FUNC)                                                             \
+    {                                                                          \
+        pid_t child = fork();                                                  \
+        if (-1 == child) {                                                     \
+            perror("fork");                                                    \
+            exit(EXIT_FAILURE);                                                \
+        } else if (0 == child) {                                               \
+            FUNC fprintf(stderr, "children process failed to exec\n");         \
+            exit(EXIT_FAILURE);                                                \
+        } else {                                                               \
+            wait_for(child);                                                   \
+        }                                                                      \
+    }
 // ..:: test fixtures - end ::..
 
 #ifdef HAVE_EXECV
-void call_execv()
-{
-    char * const file = "execv.c";
-    char * const compiler = "/usr/bin/cc";
-    char * const argv[] =
-    {
-        "cc",
-        "-c",
-        file,
-        0
-    };
+void call_execv() {
+    char *const file = "execv.c";
+    char *const compiler = "/usr/bin/cc";
+    char *const argv[] = {"cc", "-c", file, 0};
 
     expected_out("cc", file);
     create_source(file);
@@ -148,22 +124,11 @@ void call_execv()
 #endif
 
 #ifdef HAVE_EXECVE
-void call_execve()
-{
-    char * const file = "execve.c";
-    char * const compiler = "/usr/bin/cc";
-    char * const argv[] =
-    {
-        compiler,
-        "-c",
-        file,
-        0
-    };
-    char * const envp[] =
-    {
-        "THIS=THAT",
-        0
-    };
+void call_execve() {
+    char *const file = "execve.c";
+    char *const compiler = "/usr/bin/cc";
+    char *const argv[] = {compiler, "-c", file, 0};
+    char *const envp[] = {"THIS=THAT", 0};
 
     expected_out("/usr/bin/cc", file);
     create_source(file);
@@ -173,17 +138,10 @@ void call_execve()
 #endif
 
 #ifdef HAVE_EXECVP
-void call_execvp()
-{
-    char * const file = "execvp.c";
-    char * const compiler = "cc";
-    char * const argv[] =
-    {
-        compiler,
-        "-c",
-        file,
-        0
-    };
+void call_execvp() {
+    char *const file = "execvp.c";
+    char *const compiler = "cc";
+    char *const argv[] = {compiler, "-c", file, 0};
 
     expected_out(compiler, file);
     create_source(file);
@@ -193,17 +151,10 @@ void call_execvp()
 #endif
 
 #ifdef HAVE_EXECVP2
-void call_execvP()
-{
-    char * const file = "execv_p.c";
-    char * const compiler = "cc";
-    char * const argv[] =
-    {
-        compiler,
-        "-c",
-        file,
-        0
-    };
+void call_execvP() {
+    char *const file = "execv_p.c";
+    char *const compiler = "cc";
+    char *const argv[] = {compiler, "-c", file, 0};
 
     expected_out(compiler, file);
     create_source(file);
@@ -213,22 +164,11 @@ void call_execvP()
 #endif
 
 #ifdef HAVE_EXECVPE
-void call_execvpe()
-{
-    char * const file = "execvpe.c";
-    char * const compiler = "cc";
-    char * const argv[] =
-    {
-        "/usr/bin/cc",
-        "-c",
-        file,
-        0
-    };
-    char * const envp[] =
-    {
-        "THIS=THAT",
-        0
-    };
+void call_execvpe() {
+    char *const file = "execvpe.c";
+    char *const compiler = "cc";
+    char *const argv[] = {"/usr/bin/cc", "-c", file, 0};
+    char *const envp[] = {"THIS=THAT", 0};
 
     expected_out("/usr/bin/cc", file);
     create_source(file);
@@ -238,10 +178,9 @@ void call_execvpe()
 #endif
 
 #ifdef HAVE_EXECL
-void call_execl()
-{
-    char * const file = "execl.c";
-    char * const compiler = "/usr/bin/cc";
+void call_execl() {
+    char *const file = "execl.c";
+    char *const compiler = "/usr/bin/cc";
 
     expected_out("cc", file);
     create_source(file);
@@ -251,10 +190,9 @@ void call_execl()
 #endif
 
 #ifdef HAVE_EXECLP
-void call_execlp()
-{
-    char * const file = "execlp.c";
-    char * const compiler = "cc";
+void call_execlp() {
+    char *const file = "execlp.c";
+    char *const compiler = "cc";
 
     expected_out(compiler, file);
     create_source(file);
@@ -264,15 +202,10 @@ void call_execlp()
 #endif
 
 #ifdef HAVE_EXECLE
-void call_execle()
-{
-    char * const file = "execle.c";
-    char * const compiler = "/usr/bin/cc";
-    char * const envp[] =
-    {
-        "THIS=THAT",
-        0
-    };
+void call_execle() {
+    char *const file = "execle.c";
+    char *const compiler = "/usr/bin/cc";
+    char *const envp[] = {"THIS=THAT", 0};
 
     expected_out(compiler, file);
     create_source(file);
@@ -282,24 +215,16 @@ void call_execle()
 #endif
 
 #ifdef HAVE_POSIX_SPAWN
-void call_posix_spawn()
-{
-    char * const file = "posix_spawn.c";
-    char * const compiler = "cc";
-    char * const argv[] =
-    {
-        compiler,
-        "-c",
-        file,
-        0
-    };
+void call_posix_spawn() {
+    char *const file = "posix_spawn.c";
+    char *const compiler = "cc";
+    char *const argv[] = {compiler, "-c", file, 0};
 
     expected_out(compiler, file);
     create_source(file);
 
     pid_t child;
-    if (0 != posix_spawn(&child, "/usr/bin/cc", 0, 0, argv, getenviron()))
-    {
+    if (0 != posix_spawn(&child, "/usr/bin/cc", 0, 0, argv, getenviron())) {
         perror("posix_spawn");
         exit(EXIT_FAILURE);
     }
@@ -308,24 +233,16 @@ void call_posix_spawn()
 #endif
 
 #ifdef HAVE_POSIX_SPAWNP
-void call_posix_spawnp()
-{
-    char * const file = "posix_spawnp.c";
-    char * const compiler = "cc";
-    char * const argv[] =
-    {
-        compiler,
-        "-c",
-        file,
-        0
-    };
+void call_posix_spawnp() {
+    char *const file = "posix_spawnp.c";
+    char *const compiler = "cc";
+    char *const argv[] = {compiler, "-c", file, 0};
 
     expected_out(compiler, file);
     create_source(file);
 
     pid_t child;
-    if (0 != posix_spawnp(&child, "cc", 0, 0, argv, getenviron()))
-    {
+    if (0 != posix_spawnp(&child, "cc", 0, 0, argv, getenviron())) {
         perror("posix_spawnp");
         exit(EXIT_FAILURE);
     }
@@ -333,8 +250,7 @@ void call_posix_spawnp()
 }
 #endif
 
-int main(int argc, char * const argv[])
-{
+int main(int argc, char *const argv[]) {
     if (argc != 2)
         exit(EXIT_FAILURE);
 
