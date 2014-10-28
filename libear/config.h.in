@@ -21,6 +21,8 @@
 #cmakedefine HAVE_REALPATH
 #cmakedefine HAVE_NSGETENVIRON
 
+#cmakedefine APPLE
+
 #ifdef APPLE
 # define ENV_PRELOAD "DYLD_INSERT_LIBRARIES"
 # define ENV_FLAT    "DYLD_FORCE_FLAT_NAMESPACE"
