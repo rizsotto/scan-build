@@ -5,11 +5,11 @@ from setuptools import setup
 from subprocess import check_call
 from distutils import log
 from distutils.dir_util import mkpath
-from distutils.file_util import copy_file
 from distutils.command.build import build
+from distutils.command.install import install
 
 
-class Build(build):
+class BuildEAR(build):
 
     def run(self):
         import os
@@ -26,7 +26,20 @@ class Build(build):
         cmd = ['make', 'install']
         check_call(cmd, cwd=self.build_temp)
 
+
+class Build(build):
+
+    def run(self):
+        self.run_command('buildear')
         build.run(self)
+
+
+class Install(install):
+
+    def run(self):
+        self.run_command('build')
+        self.run_command('install_scripts')
+        install.run(self)
 
 
 setup(
@@ -49,7 +62,7 @@ setup(
             'bear = analyzer.bear:bear'
         ]
     },
-    cmdclass={'build': Build},
+    cmdclass={'buildear': BuildEAR, 'install': Install, 'build': Build},
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",

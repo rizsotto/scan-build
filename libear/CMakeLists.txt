@@ -36,7 +36,7 @@ target_link_libraries(ear ${CMAKE_DL_LIBS})
 set_target_properties(ear PROPERTIES
     COMPILE_FLAGS "-std=c99")
 
-install(TARGETS ear LIBRARY DESTINATION .)
+install(TARGETS ear LIBRARY DESTINATION analyzer)
 
 add_executable(exec_anatomy exec_anatomy.c)
 set_target_properties(exec_anatomy PROPERTIES

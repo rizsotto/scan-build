@@ -122,9 +122,8 @@ def run_build(command, destination):
     The exec calls will be logged by the 'libear' preloaded library. """
 
     def get_ear_so_file():
-        path = pkg_resources.get_distribution('beye').location
-        candidates = glob.glob(os.path.join(path, 'libear.*'))
-        return candidates[0] if len(candidates) else None
+        lib_name = 'libear.dylib' if 'darwin' == sys.platform else 'libear.so'
+        return pkg_resources.resource_filename('analyzer', lib_name)
 
     environment = dict(os.environ)
     for alias, key in ENVIRONMENTS:
