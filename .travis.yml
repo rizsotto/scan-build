@@ -14,11 +14,10 @@ before_install:
 
 install:
   - sudo apt-get install --allow-unauthenticated -qq clang-3.5
-  - pip install .
   - pip install pep8
 
 script:
   - pep8 analyzer tests
-  - python setup.py test
   - python setup.py check
   - python setup.py install
+  - python setup.py test
