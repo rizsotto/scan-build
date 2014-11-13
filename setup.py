@@ -3,7 +3,6 @@
 
 from setuptools import setup
 from subprocess import check_call
-from distutils import log
 from distutils.dir_util import mkpath
 from distutils.command.build import build
 from distutils.command.install import install
@@ -68,10 +67,15 @@ setup(
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
         "Environment :: Console",
         "Operating System :: POSIX",
+        "Operating System :: MacOS :: MacOS X",
         "Intended Audience :: Developers",
         "Programming Language :: C",
-        "Programming Language :: C++",
-        "Programming Language :: Objective C",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Quality Assurance"
     ],
