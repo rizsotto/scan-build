@@ -134,9 +134,7 @@ def run_build(command, destination):
             value = destination
         environment.update({key: value})
 
-    child = subprocess.Popen(command, env=environment)
-    child.wait()
-    return child.returncode
+    return subprocess.call(command, env=environment)
 
 
 @trace
