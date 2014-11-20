@@ -18,14 +18,14 @@
 #endif
 
 // ..:: environment access fixer - begin ::..
-#ifdef NEED_NSGETENVIRON
+#ifdef HAVE_NSGETENVIRON
 #include <crt_externs.h>
 #else
 extern char **environ;
 #endif
 
-char **getenviron() {
-#ifdef NEED_NSGETENVIRON
+char **get_environ() {
+#ifdef HAVE_NSGETENVIRON
     return *_NSGetEnviron();
 #else
     return environ;
@@ -224,7 +224,7 @@ void call_posix_spawn() {
     create_source(file);
 
     pid_t child;
-    if (0 != posix_spawn(&child, "/usr/bin/cc", 0, 0, argv, getenviron())) {
+    if (0 != posix_spawn(&child, "/usr/bin/cc", 0, 0, argv, get_environ())) {
         perror("posix_spawn");
         exit(EXIT_FAILURE);
     }
@@ -242,7 +242,7 @@ void call_posix_spawnp() {
     create_source(file);
 
     pid_t child;
-    if (0 != posix_spawnp(&child, "cc", 0, 0, argv, getenviron())) {
+    if (0 != posix_spawnp(&child, "cc", 0, 0, argv, get_environ())) {
         perror("posix_spawnp");
         exit(EXIT_FAILURE);
     }
