@@ -274,20 +274,15 @@ def parse(opts, continuation=filter_action):
             if task(iterator):
                 return
 
-    def extend(values, key, value):
-        if key in values:
-            values.get(key).extend(value)
-        else:
-            values[key] = copy.copy(value)
-
     def take_n(count=1, *keys):
         def take(values, iterator, _match):
-            current = []
-            current.append(iterator.current)
+            updates = []
+            updates.append(iterator.current)
             for _ in range(count - 1):
-                current.append(iterator.next())
+                updates.append(iterator.next())
             for key in keys:
-                extend(values, key, current)
+                current = values.get(key, [])
+                values.update({key: current + updates})
         return take
 
     def take_one(*keys):
@@ -301,12 +296,13 @@ def parse(opts, continuation=filter_action):
 
     def take_joined(*keys):
         def take(values, iterator, match):
-            current = []
-            current.append(iterator.current)
+            updates = []
+            updates.append(iterator.current)
             if not match.group(1):
-                current.append(iterator.next())
+                updates.append(iterator.next())
             for key in keys:
-                extend(values, key, current)
+                current = values.get(key, [])
+                values.update({key: current + updates})
         return take
 
     def take_from_file(*keys):
@@ -319,9 +315,10 @@ def parse(opts, continuation=filter_action):
 
     def take_as(value, *keys):
         def take(values, _iterator, _match):
-            current = [value]
+            updates = [value]
             for key in keys:
-                extend(values, key, current)
+                current = values.get(key, [])
+                values.update({key: current + updates})
         return take
 
     def take_second(*keys):
