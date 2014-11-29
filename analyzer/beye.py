@@ -50,10 +50,7 @@ def beye():
 
     It takes a compilation database as input and run analyzer against each
     files. The logic to run analyzer against a single file is implemented in
-    several modules. One generates the command from a single compiler call.
-    This is in the 'analyzer.command' module. The 'analyzer.runner' executes
-    the command. Report generation logic is in a separate module called
-    'analyzer.report'. """
+    several modules. """
 
     parser = initialize_command_line(create_parser())
     return main(parser, lambda x: 0)
@@ -62,7 +59,10 @@ def beye():
 def main(parser, build_ear):
     """ The reusable entry point of 'beye'.
 
-    The 'scan-build' and 'beye' are the two entry points of this code. """
+    The 'scan-build' and 'beye' are the two entry points of this code.
+
+    parser      -- the command line parser from 'argparse' module.
+    build_ear   -- the compilation database builder function. """
 
     def needs_report_file(output_format):
         """ Cover report can be generated only from html files. """
