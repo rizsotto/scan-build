@@ -31,7 +31,7 @@ else:
 
 @trace
 @require(['sequential', 'out_dir', 'clang', 'prefix'])
-def generate_report(opts):
+def generate_cover(opts):
     """ Report is generated from .html files, and it's a .html file itself.
 
     Two major parts: bug reports (coming from 'report-*.html' files) and
@@ -45,7 +45,6 @@ def generate_report(opts):
     """
     out_dir = opts['out_dir']
 
-    result = 0
     pool = multiprocessing.Pool(1 if opts['sequential'] else None)
 
     bug_generator = pool.imap_unordered(
@@ -58,13 +57,10 @@ def generate_report(opts):
     fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
     with fragment(bug_fragment, bug_generator) as bugs:
         with fragment(crash_fragment, crash_generator) as crashes:
-            result = bugs.count + crashes.count
-            if result > 0:
-                assembly_report(opts, bugs, crashes)
-                copy_resource_files(out_dir)
+            assembly_report(opts, bugs, crashes)
+            copy_resource_files(out_dir)
     pool.close()
     pool.join()
-    return result
 
 
 @trace
@@ -435,22 +431,26 @@ def metaline(name, opts=dict()):
 
 @trace
 def count_bugs(out_dir):
-    """ Count the number of bugs from .plist files. """
-    result = sum(glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
+    """ Count the number of bugs from the report directory. """
+    def count_files(path):
+        return sum(1 for _ in glob.iglob(os.path.join(out_dir, path)))
 
-    pool = multiprocessing.Pool()
-    result += sum(
-        pool.imap_unordered(
-            scan_plist,
-            glob.iglob(os.path.join(out_dir, '*.plist'))))
-    pool.close()
-    pool.join()
+    bugs = count_files('*.html')
+    if not bugs and count_files('*.plist'):
+        # Count the number of bugs from .plist files.
+        pool = multiprocessing.Pool()
+        bugs = sum(
+            pool.imap_unordered(
+                scan_plist,
+                glob.iglob(os.path.join(out_dir, '*.plist'))))
+        pool.close()
+        pool.join()
 
-    return result
+    return bugs + count_files(os.path.join('failures', '*.info.txt'))
 
 
 @trace
 def scan_plist(filename):
     """ Returns the number of bugs from a single .plist file. """
     content = plistlib.readPlist(filename)
-    return len(content['diagnostics']) if 'diagnostics' in content else 0
+    return len(content.get('diagnostics', []))

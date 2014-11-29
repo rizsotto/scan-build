@@ -27,7 +27,7 @@ from analyzer import create_parser
 from analyzer.decorators import to_logging_level, trace, require, entry
 from analyzer.command import create
 from analyzer.runner import run
-from analyzer.report import generate_report, count_bugs
+from analyzer.report import generate_cover, count_bugs
 from analyzer.clang import get_checkers
 
 
@@ -64,7 +64,7 @@ def main(parser, build_ear):
     parser      -- the command line parser from 'argparse' module.
     build_ear   -- the compilation database builder function. """
 
-    def needs_report_file(output_format):
+    def cover_file_asked(output_format):
         """ Cover report can be generated only from html files. """
         return 'html' == output_format or 'plist-html' == output_format
 
@@ -83,14 +83,14 @@ def main(parser, build_ear):
     with ReportDirectory(args.output, args.keep_empty) as target_dir:
         target_dir.copy_to(args.cdb)
         run_analyzer(args, target_dir.name)
-        number_of_bugs = generate_report(
-            {'sequential': args.sequential,
-             'out_dir': target_dir.name,
-             'prefix': get_prefix_from(args.cdb),
-             'clang': args.clang,
-             'html_title': args.html_title}) \
-            if needs_report_file(args.output_format) else \
-            count_bugs(target_dir.name)
+        number_of_bugs = count_bugs(target_dir.name)
+        if cover_file_asked(args.output_format) and number_of_bugs > 0:
+            generate_cover(
+                {'sequential': args.sequential,
+                 'out_dir': target_dir.name,
+                 'prefix': get_prefix_from(args.cdb),
+                 'clang': args.clang,
+                 'html_title': args.html_title})
 
         return number_of_bugs if args.status_bugs else exit_code
 
