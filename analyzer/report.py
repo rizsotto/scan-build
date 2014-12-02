@@ -20,6 +20,7 @@ import shutil
 import glob
 import pkg_resources
 import plistlib
+import itertools
 from analyzer.decorators import trace, require
 from analyzer.clang import get_version
 
@@ -27,6 +28,8 @@ if 3 == sys.version_info[0]:
     from html import escape
 else:
     from cgi import escape
+    filter = itertools.ifilter
+    map = itertools.imap
 
 
 @trace
@@ -61,6 +64,95 @@ def generate_cover(opts):
             copy_resource_files(out_dir)
     pool.close()
     pool.join()
+
+
+@trace
+def read_bugs_from(out_dir, html):
+    """ Generate a unique sequence of bugs from given output directory.
+
+    Duplicates can be in a project if the same module was compiled multiple
+    times with different compiler options. These would be better to show in
+    the final report (cover) only once. """
+
+    def duplicate(bug, state):
+        """ Predicate to detect duplicated bugs.
+
+        Bugs are represented as dictionary, which has no default hash method.
+        This method implement one and store it in the given state if that was
+        not already stored. """
+
+        bug_hash = '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug)
+        if bug_hash not in state:
+            state.add(bug_hash)
+            return False
+        else:
+            return True
+
+    parser = parse_html_bug if html else parse_plist_bug
+    pattern = '*.html' if html else '*.plist'
+
+    # state set up for duplicate detection
+    state = set()
+
+    return filter(
+        lambda x: not duplicate(x, state),
+        # from a stream of bug generators creates stream of bugs
+        itertools.chain.from_iterable(
+            # from stream of filenames creates a stream of bug generators
+            map(parser, glob.iglob(os.path.join(out_dir, pattern)))))
+
+
+@trace
+def parse_plist_bug(filename):
+    """ Returns the generator of bugs from a single .plist file. """
+    content = plistlib.readPlist(filename)
+    files = content.get('files')
+    for bug in content.get('diagnostics', []):
+        if len(files) <= int(bug['location']['file']):
+            logging.warning('Parsing bug from "{0}" failed'.format(filename))
+            continue
+
+        yield {'result': filename,
+               'bug_type': bug['type'],
+               'bug_category': bug['category'],
+               'bug_line': bug['location']['line'],
+               'bug_bug_path_length': bug['location']['col'],
+               'bug_file': files[int(bug['location']['file'])]}
+
+
+@trace
+def parse_html_bug(filename):
+    """ Parse out the bug information from HTML output. """
+    patterns = [
+        re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
+        re.compile(r'<!-- BUGFILE (?P<bug_file>.*) -->$'),
+        re.compile(r'<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
+        re.compile(r'<!-- BUGLINE (?P<bug_line>.*) -->$'),
+        re.compile(r'<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
+        re.compile(r'<!-- BUGDESC (?P<bug_description>.*) -->$'),
+        re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
+    endsign = re.compile(r'<!-- BUGMETAEND -->')
+
+    bug_info = {'bug_function': 'n/a'}  # compatibility with < clang-3.5
+    with open(filename) as handler:
+        for line in handler.readlines():
+            # do not read the file further
+            if endsign.match(line):
+                break
+            # search for the right lines
+            for regex in patterns:
+                match = regex.match(line.strip())
+                if match:
+                    bug_info.update(match.groupdict())
+                    break
+
+    # fix some default values
+    bug_info['report_file'] = filename
+    bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
+    bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
+    bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
+
+    yield bug_info
 
 
 @trace
@@ -432,25 +524,14 @@ def metaline(name, opts=dict()):
 @trace
 def count_bugs(out_dir):
     """ Count the number of bugs from the report directory. """
-    def count_files(path):
-        return sum(1 for _ in glob.iglob(os.path.join(out_dir, path)))
+    def count(iterator):
+        return sum(1 for _ in iterator)
 
-    bugs = count_files('*.html')
-    if not bugs and count_files('*.plist'):
-        # Count the number of bugs from .plist files.
-        pool = multiprocessing.Pool()
-        bugs = sum(
-            pool.imap_unordered(
-                scan_plist,
-                glob.iglob(os.path.join(out_dir, '*.plist'))))
-        pool.close()
-        pool.join()
+    def count_files(path):
+        return count(glob.iglob(os.path.join(out_dir, path)))
+
+    bugs = count(read_bugs_from(out_dir, True))
+    if not bugs:
+        bugs = count(read_bugs_from(out_dir, False))
 
     return bugs + count_files(os.path.join('failures', '*.info.txt'))
-
-
-@trace
-def scan_plist(filename):
-    """ Returns the number of bugs from a single .plist file. """
-    content = plistlib.readPlist(filename)
-    return len(content.get('diagnostics', []))
