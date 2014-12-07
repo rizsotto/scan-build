@@ -49,8 +49,6 @@ class ScanFileTest(unittest.TestCase):
         self.assertEqual(result['bug_description'], 'Division by zero')
         self.assertEqual(result['bug_type'], 'Division by zero')
         self.assertEqual(result['bug_file'], 'xx')
-        self.assertEqual(result['bug_type_class'],
-                         'bt_logic_error_division_by_zero')
 
     def test_scan_bug_empty(self):
         content = []
@@ -58,7 +56,6 @@ class ScanFileTest(unittest.TestCase):
         self.assertEqual(result['bug_category'], 'Other')
         self.assertEqual(result['bug_path_length'], 1)
         self.assertEqual(result['bug_line'], 0)
-        self.assertEqual(result['bug_type_class'], 'bt_other_')
 
     def test_scan_crash(self):
         content = [

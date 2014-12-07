@@ -158,11 +158,6 @@ def parse_html_bug(filename):
 @trace
 def scan_bug(result):
     """ Parse out the bug information from HTML output. """
-    def classname(bug):
-        def smash(key):
-            return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
-        return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
-
     patterns = [
         re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
         re.compile(r'<!-- BUGFILE (?P<bug_file>.*) -->$'),
@@ -191,7 +186,6 @@ def scan_bug(result):
     bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
     bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
     bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
-    bug_info['bug_type_class'] = classname(bug_info)
 
     return bug_info
 
@@ -299,10 +293,10 @@ def bug_fragment(iterator, out_dir, prefix):
             str(bug['bug_path_length']) + ':' +\
             chop(prefix, bug['bug_file'])[::-1]
 
-    def update_counters(counters, bug):
+    def update_counters(bug, state):
         """ For bug summary fragment it maintain the bug statistic. """
         bug_category = bug['bug_category']
-        current_category = counters.get(bug_category, dict())
+        current_category = state.get(bug_category, dict())
         bug_type = bug['bug_type']
         current_type = current_category.get(bug_type, {
             'bug_type': bug_type,
@@ -310,17 +304,24 @@ def bug_fragment(iterator, out_dir, prefix):
             'bug_count': 0})
         current_type.update({'bug_count': current_type['bug_count'] + 1})
         current_category.update({bug_type: current_type})
-        counters.update({bug_category: current_category})
+        state.update({bug_category: current_category})
 
-    def pretty(opts):
+    def classname(bug):
+        """ Create a new bug attribute from bug by category and type. """
+        def smash(key):
+            return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
+        return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
+
+    def pretty(bug):
         """ Make safe this values to embed into HTML. """
-        encode_value(opts, 'bug_file', lambda x: chop(prefix, x))
-        encode_value(opts, 'bug_file', escape)
-        encode_value(opts, 'bug_category', escape)
-        encode_value(opts, 'bug_type', escape)
-        encode_value(opts, 'bug_type_class', lambda x: escape(x, True))
-        encode_value(opts, 'report_file', lambda x: chop(out_dir, x))
-        return opts
+        encode_value(bug, 'bug_file', lambda x: chop(prefix, x))
+        encode_value(bug, 'bug_file', escape)
+        encode_value(bug, 'bug_category', escape)
+        encode_value(bug, 'bug_type', escape)
+        encode_value(bug, 'report_file', lambda x: chop(out_dir, x))
+        bug['bug_type_class'] = escape(classname(bug), True)
+
+        return bug
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
     uniques = set()
@@ -351,7 +352,7 @@ def bug_fragment(iterator, out_dir, prefix):
             if bug_hash not in uniques:
                 uniques.add(bug_hash)
                 current = pretty(current)
-                update_counters(counters, current)
+                update_counters(current, counters)
                 handle.write(reindent("""
         |    <tr class="{bug_type_class}">
         |      <td class="DESC">{bug_category}</td>
