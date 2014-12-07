@@ -242,18 +242,19 @@ class ReportFragment(object):
 @trace
 def crash_fragment(iterator, out_dir, prefix):
     """ Creates a fragment from the compiler crashes. """
-    def pretty(opts):
+
+    def pretty(crash):
         """ Make safe this values to embed into HTML. """
-        encode_value(opts, 'source', lambda x: chop(prefix, x))
-        encode_value(opts, 'source', escape)
-        encode_value(opts, 'problem', escape)
-        encode_value(opts, 'file', lambda x: chop(out_dir, x))
-        encode_value(opts, 'file', lambda x: escape(x, True))
-        encode_value(opts, 'info', lambda x: chop(out_dir, x))
-        encode_value(opts, 'info', lambda x: escape(x, True))
-        encode_value(opts, 'stderr', lambda x: chop(out_dir, x))
-        encode_value(opts, 'stderr', lambda x: escape(x, True))
-        return opts
+        encode_value(crash, 'source', lambda x: chop(prefix, x))
+        encode_value(crash, 'source', escape)
+        encode_value(crash, 'problem', escape)
+        encode_value(crash, 'file', lambda x: chop(out_dir, x))
+        encode_value(crash, 'file', lambda x: escape(x, True))
+        encode_value(crash, 'info', lambda x: chop(out_dir, x))
+        encode_value(crash, 'info', lambda x: escape(x, True))
+        encode_value(crash, 'stderr', lambda x: chop(out_dir, x))
+        encode_value(crash, 'stderr', lambda x: escape(x, True))
+        return crash
 
     name = os.path.join(out_dir, 'crashes.html.fragment')
     count = 0
@@ -272,8 +273,7 @@ def crash_fragment(iterator, out_dir, prefix):
         |    </tr>
         |  </thead>
         |  <tbody>""", indent))
-        for current in iterator:
-            current = pretty(current)
+        for current in map(pretty, iterator):
             count += 1
             handle.write(reindent("""
         |    <tr>
