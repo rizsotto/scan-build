@@ -333,6 +333,11 @@ def summary_fragment(counters, out_dir, tail_fragment):
     counters -- dictionary of bug categories, which contains a dictionary of
                 bug types, count.
     """
+    def sum_of_bugs():
+        return count(map(lambda x: count(map(lambda y: y['bug_count'],
+                                             x.values())),
+                         counters.values()))
+
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
@@ -357,7 +362,7 @@ def summary_fragment(counters, out_dir, tail_fragment):
         |                 onClick="CopyCheckedStateToCheckButtons(this);"/>
         |        </center>
         |      </td>
-        |    </tr>""", indent).format(tail_fragment.count))
+        |    </tr>""", indent).format(sum_of_bugs()))
         for category, types in counters.items():
             handle.write(reindent("""
         |    <tr>
