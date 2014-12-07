@@ -11,25 +11,26 @@ import os
 import os.path
 
 
-def run_bug_scan(content):
+def run_bug_parse(content):
     with fixtures.TempDir() as tmpdir:
         file_name = os.path.join(tmpdir, 'test.html')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
-        return sut.scan_bug(file_name)
+        for bug in sut.parse_html_bug(file_name):
+            return bug
 
 
-def run_crash_scan(content, preproc):
+def run_crash_parse(content, preproc):
     with fixtures.TempDir() as tmpdir:
         file_name = os.path.join(tmpdir, preproc + '.info.txt')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
-        return sut.scan_crash(file_name)
+        return sut.parse_crash(file_name)
 
 
-class ScanFileTest(unittest.TestCase):
+class ParseFileTest(unittest.TestCase):
 
-    def test_scan_bug(self):
+    def test_parse_bug(self):
         content = [
             "some header\n",
             "<!-- BUGDESC Division by zero -->\n",
@@ -42,7 +43,7 @@ class ScanFileTest(unittest.TestCase):
             "<!-- BUGMETAEND -->\n",
             "<!-- REPORTHEADER -->\n",
             "some tails\n"]
-        result = run_bug_scan(content)
+        result = run_bug_parse(content)
         self.assertEqual(result['bug_category'], 'Logic error')
         self.assertEqual(result['bug_path_length'], 4)
         self.assertEqual(result['bug_line'], 5)
@@ -50,20 +51,20 @@ class ScanFileTest(unittest.TestCase):
         self.assertEqual(result['bug_type'], 'Division by zero')
         self.assertEqual(result['bug_file'], 'xx')
 
-    def test_scan_bug_empty(self):
+    def test_parse_bug_empty(self):
         content = []
-        result = run_bug_scan(content)
+        result = run_bug_parse(content)
         self.assertEqual(result['bug_category'], 'Other')
         self.assertEqual(result['bug_path_length'], 1)
         self.assertEqual(result['bug_line'], 0)
 
-    def test_scan_crash(self):
+    def test_parse_crash(self):
         content = [
             "/some/path/file.c\n",
             "Some very serious Error\n",
             "bla\n",
             "bla-bla\n"]
-        result = run_crash_scan(content, 'file.i')
+        result = run_crash_parse(content, 'file.i')
         self.assertEqual(result['source'], content[0].rstrip())
         self.assertEqual(result['problem'], content[1].rstrip())
         self.assertEqual(os.path.basename(result['file']),
@@ -73,7 +74,7 @@ class ScanFileTest(unittest.TestCase):
         self.assertEqual(os.path.basename(result['stderr']),
                          'file.i.stderr.txt')
 
-    def test_scan_real_crash(self):
+    def test_parse_real_crash(self):
         import analyzer.runner as sut2
         import re
         with fixtures.TempDir() as tmpdir:
@@ -99,7 +100,7 @@ class ScanFileTest(unittest.TestCase):
                         pp_file = key
             self.assertIsNot(pp_file, None)
             # read the failure report back
-            result = sut.scan_crash(pp_file + '.info.txt')
+            result = sut.parse_crash(pp_file + '.info.txt')
             self.assertEqual(result['source'], filename)
             self.assertEqual(result['problem'], 'Other Error')
             self.assertEqual(result['file'], pp_file)

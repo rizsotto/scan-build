@@ -50,15 +50,12 @@ def generate_cover(opts):
 
     pool = multiprocessing.Pool(1 if opts['sequential'] else None)
 
-    bug_generator = pool.imap_unordered(
-        scan_bug,
-        glob.iglob(os.path.join(out_dir, '*.html')))
     crash_generator = pool.imap_unordered(
-        scan_crash,
+        parse_crash,
         glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
 
     fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
-    with fragment(bug_fragment, bug_generator) as bugs:
+    with fragment(bug_fragment, read_bugs_from(out_dir, True)) as bugs:
         with fragment(crash_fragment, crash_generator) as crashes:
             assembly_report(opts, bugs, crashes)
             copy_resource_files(out_dir)
@@ -156,42 +153,7 @@ def parse_html_bug(filename):
 
 
 @trace
-def scan_bug(result):
-    """ Parse out the bug information from HTML output. """
-    patterns = [
-        re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
-        re.compile(r'<!-- BUGFILE (?P<bug_file>.*) -->$'),
-        re.compile(r'<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
-        re.compile(r'<!-- BUGLINE (?P<bug_line>.*) -->$'),
-        re.compile(r'<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
-        re.compile(r'<!-- BUGDESC (?P<bug_description>.*) -->$'),
-        re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
-    endsign = re.compile(r'<!-- BUGMETAEND -->')
-
-    bug_info = {'bug_function': 'n/a'}  # compatibility with < clang-3.5
-    with open(result) as handler:
-        for line in handler.readlines():
-            # do not read the file further
-            if endsign.match(line):
-                break
-            # search for the right lines
-            for regex in patterns:
-                match = regex.match(line.strip())
-                if match:
-                    bug_info.update(match.groupdict())
-                    break
-
-    # fix some default values
-    bug_info['report_file'] = result
-    bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
-    bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
-    bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
-
-    return bug_info
-
-
-@trace
-def scan_crash(filename):
+def parse_crash(filename):
     """ Parse out the crash information from the report file. """
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
@@ -287,17 +249,12 @@ def crash_fragment(iterator, out_dir, prefix):
 @trace
 def bug_fragment(iterator, out_dir, prefix):
     """ Creates a fragment from the analyzer reports. """
-    def hash_bug(bug):
-        """ Make a unique hash for bugs to detect duplicates. """
-        return str(bug['bug_line']) + ':' +\
-            str(bug['bug_path_length']) + ':' +\
-            chop(prefix, bug['bug_file'])[::-1]
 
     def update_counters(bug, state):
         """ For bug summary fragment it maintain the bug statistic. """
         bug_category = bug['bug_category']
-        current_category = state.get(bug_category, dict())
         bug_type = bug['bug_type']
+        current_category = state.get(bug_category, dict())
         current_type = current_category.get(bug_type, {
             'bug_type': bug_type,
             'bug_type_class': bug['bug_type_class'],
@@ -324,7 +281,6 @@ def bug_fragment(iterator, out_dir, prefix):
         return bug
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
-    uniques = set()
     counters = dict()
     with open(name, 'w') as handle:
         indent = 4
@@ -347,13 +303,9 @@ def bug_fragment(iterator, out_dir, prefix):
         |  </thead>
         |  <tbody>""", indent))
         handle.write(metaline('REPORTBUGCOL'))
-        for current in iterator:
-            bug_hash = hash_bug(current)
-            if bug_hash not in uniques:
-                uniques.add(bug_hash)
-                current = pretty(current)
-                update_counters(current, counters)
-                handle.write(reindent("""
+        for current in map(pretty, iterator):
+            update_counters(current, counters)
+            handle.write(reindent("""
         |    <tr class="{bug_type_class}">
         |      <td class="DESC">{bug_category}</td>
         |      <td class="DESC">{bug_type}</td>
@@ -363,13 +315,13 @@ def bug_fragment(iterator, out_dir, prefix):
         |      <td class="Q">{bug_path_length}</td>
         |      <td><a href="{report_file}#EndPath">View Report</a></td>
         |    </tr>""", indent).format(**current))
-                handle.write(metaline('REPORTBUG',
-                                      {'id': current['report_file']}))
+            handle.write(metaline('REPORTBUG',
+                                  {'id': current['report_file']}))
         handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
         handle.write(metaline('REPORTBUGEND'))
-    with ReportFragment(name, len(uniques)) as bugs:
+    with ReportFragment(name, 0) as bugs:
         return summary_fragment(counters, out_dir, bugs)\
             if bugs.count else bugs
 
