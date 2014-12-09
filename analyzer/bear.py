@@ -32,11 +32,15 @@ import re
 import glob
 import shlex
 import pkg_resources
+from itertools import chain
 from analyzer import create_parser
 from analyzer.decorators import to_logging_level, trace, entry
 from analyzer.command import parse as cmdparse
 from analyzer.command import Action
 
+if 3 != sys.version_info[0]:
+    from itertools import ifilter
+    filter = ifilter
 
 if 'darwin' == sys.platform:
     ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
@@ -88,19 +92,19 @@ def main(args):
         if os.path.exists(filename):
             with open(filename) as handle:
                 return json.load(handle)
-        else:
-            return []
+        return []
 
-    exit_code = 0
+    filtering = 'filtering' in args and args.filtering
+    append = 'append' in args and args.append
+
     with TemporaryDirectory(prefix='bear-') as tmpdir:
         exit_code = run_build(args.build, tmpdir)
-        append = 'append' in args and args.append
-        currents = load_current_cdb(args.cdb) if append else []
-        filtering = 'filtering' in args and args.filtering
-        commands = merge(currents, collect(not filtering, tmpdir))
+        commands = filter(not_duplicate(),
+                          chain(collect(not filtering, tmpdir),
+                                load_current_cdb(args.cdb) if append else []))
         with open(args.cdb, 'w+') as handle:
-            json.dump(commands, handle, sort_keys=True, indent=4)
-    return exit_code
+            json.dump(list(commands), handle, sort_keys=True, indent=4)
+        return exit_code
 
 
 @trace
@@ -209,32 +213,32 @@ def collect(filtering, destination):
     return list(chain(generator)) if filtering else generator
 
 
-@trace
-def merge(old, new):
-    """ Merge two list of commands into one. """
-    def duplicate(state, entry):
-        """ Find out repetition amongst the merged items. """
-        def hash_cdb(entry):
-            """ Make a unique hash for cdb entries to detect duplicates. """
-            # On OS X the 'cc' and 'c++' compilers are wrappers for 'clang'
-            # therefore both call would be logged. To avoid this the hash does
-            # not contain the first word of the command.
+def not_duplicate():
+    """ Predicate to detect duplicated entries.
+
+    Entries are represented as dictionary, which has no default hash
+    method. This method implement one and store it in the given state
+    if that was not already stored. """
+    def predicate(entry):
+        if os.path.exists(entry['file']):
+            # On OS X the 'cc' and 'c++' compilers are wrappers for
+            # 'clang' therefore both call would be logged. To avoid
+            # this the hash does not contain the first word of the
+            # command.
             command = ' '.join(shlex.split(entry['command'])[1:])
             # For faster lookup in set filename is reverted
             filename = entry['file'][::-1]
             # For faster lookup in set directory is reverted
             directory = entry['directory'][::-1]
-            return '<>'.join([filename, directory, command])
 
-        if os.path.exists(entry['file']):
-            entry_hash = hash_cdb(entry)
-            if entry_hash not in state:
-                state.add(entry_hash)
-                return False
-        return True
+            entry_hash = '<>'.join([filename, directory, command])
+            if entry_hash not in predicate.state:
+                predicate.state.add(entry_hash)
+                return True
+        return False
 
-    state = set()
-    return [entry for entry in old + new if not duplicate(state, entry)]
+    predicate.state = set()
+    return predicate
 
 
 if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
