@@ -71,28 +71,27 @@ def read_bugs_from(out_dir, html):
     times with different compiler options. These would be better to show in
     the final report (cover) only once. """
 
-    def duplicate(bug, state):
+    def not_duplicate():
         """ Predicate to detect duplicated bugs.
 
         Bugs are represented as dictionary, which has no default hash method.
         This method implement one and store it in the given state if that was
         not already stored. """
-
-        bug_hash = '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug)
-        if bug_hash not in state:
-            state.add(bug_hash)
+        def predicate(bug):
+            bug_hash = '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug)
+            if bug_hash not in predicate.state:
+                predicate.state.add(bug_hash)
+                return True
             return False
-        else:
-            return True
+
+        predicate.state = set()
+        return predicate
 
     parser = parse_html_bug if html else parse_plist_bug
     pattern = '*.html' if html else '*.plist'
 
-    # state set up for duplicate detection
-    state = set()
-
     return filter(
-        lambda x: not duplicate(x, state),
+        not_duplicate(),
         # from a stream of bug generators creates stream of bugs
         itertools.chain.from_iterable(
             # from stream of filenames creates a stream of bug generators
