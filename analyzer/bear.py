@@ -38,10 +38,6 @@ from analyzer.decorators import to_logging_level, trace, entry
 from analyzer.command import parse
 from analyzer.command import Action
 
-if 3 != sys.version_info[0]:
-    filter = itertools.ifilter
-    map = itertools.imap
-
 if 'darwin' == sys.platform:
     ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
                     ("ENV_PRELOAD", "DYLD_INSERT_LIBRARIES"),
@@ -87,13 +83,14 @@ def main(args):
         The 'scan-build' and 'bear' are the two entry points of this code.
         Both provide the parsed argument object as input for this job. """
 
-    def post_processing(entries):
+    def post_processing(commands):
+        # run post processing only if that was requested
         if 'raw_entries' not in args or not args.raw_entries:
             # create entries from the current run
             current = itertools.chain.from_iterable(
-                map(format_entry,
-                    # filter out non compiler calls from intercepted execs
-                    filter(compiler_call, entries)))
+                # creates a sequence of entry generators from an exec,
+                # but filter out non compiler calls before.
+                (format_entry(x) for x in commands if compiler_call(x)))
             # read entries from previous run
             if 'append' in args and args.append and os.path.exists(args.cdb):
                 with open(args.cdb) as handle:
@@ -102,7 +99,7 @@ def main(args):
                 previous = iter([])
             # filter out duplicate entries from both
             return filter(not_duplicate(), itertools.chain(current, previous))
-        return entries
+        return commands
 
     with TemporaryDirectory(prefix='bear-') as tmpdir:
         # run the build command
@@ -110,7 +107,7 @@ def main(args):
         # read the intercepted exec calls
         commands = map(parse_exec_trace,
                        glob.iglob(os.path.join(tmpdir, 'cmd.*')))
-        # do post processing when it required
+        # do post processing
         entries = post_processing(commands)
         # dump the compilation database
         with open(args.cdb, 'w+') as handle:
@@ -193,7 +190,7 @@ def compiler_call(entry):
         re.compile(r'^([^/]*/)*llvm-g(cc|\+\+)$'),
     ]
     executable = entry['command'][0]
-    return any(map(lambda pattern: pattern.match(executable), patterns))
+    return any((pattern.match(executable) for pattern in patterns))
 
 
 def not_duplicate():

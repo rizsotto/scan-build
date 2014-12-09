@@ -113,7 +113,7 @@ def set_language(opts, continuation=create_commands):
         (_, extension) = os.path.splitext(os.path.basename(name))
         return mapping.get(extension)
 
-    accepteds = [
+    accepteds = {
         'c',
         'c++',
         'objective-c',
@@ -121,7 +121,7 @@ def set_language(opts, continuation=create_commands):
         'c-cpp-output',
         'c++-cpp-output',
         'objective-c-cpp-output'
-    ]
+    }
 
     key = 'language'
     language = opts[key] if key in opts else \
@@ -141,7 +141,7 @@ def set_language(opts, continuation=create_commands):
 @require([])
 def arch_loop(opts, continuation=set_language):
     """ Do run analyzer through one of the given architectures. """
-    disableds = ['ppc', 'ppc64']
+    disableds = {'ppc', 'ppc64'}
 
     key = 'archs_seen'
     if key in opts:

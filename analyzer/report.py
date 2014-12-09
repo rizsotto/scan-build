@@ -11,6 +11,7 @@ could be found. It parses those reports and generates a final HTML "cover"
 report. """
 
 
+import logging
 import multiprocessing
 import re
 import os
@@ -28,8 +29,6 @@ if 3 == sys.version_info[0]:
     from html import escape
 else:
     from cgi import escape
-    filter = itertools.ifilter
-    map = itertools.imap
 
 
 @trace
@@ -333,9 +332,9 @@ def summary_fragment(counters, out_dir, tail_fragment):
                 bug types, count.
     """
     def sum_of_bugs():
-        return count(map(lambda x: count(map(lambda y: y['bug_count'],
-                                             x.values())),
-                         counters.values()))
+        return sum(map(lambda x: sum(map(lambda y: y['bug_count'],
+                                         x.values())),
+                       counters.values()))
 
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
@@ -472,8 +471,8 @@ def reindent(text, indent):
 def metaline(name, opts=dict()):
     """ Utility function to format meta information as comment. """
     attributes = ''
-    for k, v in opts.items():
-        attributes += ' {0}="{1}"'.format(k, v)
+    for key, value in opts.items():
+        attributes += ' {0}="{1}"'.format(key, value)
 
     return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)
 

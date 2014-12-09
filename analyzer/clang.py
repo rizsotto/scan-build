@@ -77,8 +77,8 @@ def _get_active_checkers(clang, plugins):
         """ Returns a list of active checkers for the given language. """
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
-        return [pattern.match(arg).group(1)
-                for arg in get_arguments('.', cmd) if pattern.match(arg)]
+        return (pattern.match(arg).group(1)
+                for arg in get_arguments('.', cmd) if pattern.match(arg))
 
     load = functools.reduce(
         lambda acc, x: acc + ['-Xclang', '-load', '-Xclang', x],
@@ -87,9 +87,9 @@ def _get_active_checkers(clang, plugins):
 
     return set(
         itertools.chain.from_iterable(
-            [checkers(language, load)
+            (checkers(language, load)
              for language
-             in ['c', 'c++', 'objective-c', 'objective-c++']]))
+             in ['c', 'c++', 'objective-c', 'objective-c++'])))
 
 
 @trace
