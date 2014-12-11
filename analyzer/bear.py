@@ -33,7 +33,7 @@ import glob
 import shlex
 import pkg_resources
 import itertools
-from analyzer import create_parser
+from analyzer import create_parser, duplicate_check
 from analyzer.decorators import to_logging_level, trace, entry
 from analyzer.command import parse
 from analyzer.command import Action
@@ -98,7 +98,10 @@ def main(args):
             else:
                 previous = iter([])
             # filter out duplicate entries from both
-            return filter(not_duplicate(), itertools.chain(current, previous))
+            duplicate = duplicate_check(entry_hash)
+            return (entry
+                    for entry in itertools.chain(current, previous)
+                    if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
     with TemporaryDirectory(prefix='bear-') as tmpdir:
@@ -193,32 +196,20 @@ def compiler_call(entry):
     return any((pattern.match(executable) for pattern in patterns))
 
 
-def not_duplicate():
-    """ Predicate to detect duplicated entries.
+def entry_hash(entry):
+    """ Implement unique hash method for compilation database entries. """
 
-    Entries are represented as dictionary, which has no default hash
-    method. This method implement one and store it in the given state
-    if that was not already stored. """
-    def predicate(entry):
-        if os.path.exists(entry['file']):
-            # On OS X the 'cc' and 'c++' compilers are wrappers for
-            # 'clang' therefore both call would be logged. To avoid
-            # this the hash does not contain the first word of the
-            # command.
-            command = ' '.join(shlex.split(entry['command'])[1:])
-            # For faster lookup in set filename is reverted
-            filename = entry['file'][::-1]
-            # For faster lookup in set directory is reverted
-            directory = entry['directory'][::-1]
+    # For faster lookup in set filename is reverted
+    filename = entry['file'][::-1]
+    # For faster lookup in set directory is reverted
+    directory = entry['directory'][::-1]
+    # On OS X the 'cc' and 'c++' compilers are wrappers for
+    # 'clang' therefore both call would be logged. To avoid
+    # this the hash does not contain the first word of the
+    # command.
+    command = ' '.join(shlex.split(entry['command'])[1:])
 
-            entry_hash = '<>'.join([filename, directory, command])
-            if entry_hash not in predicate.state:
-                predicate.state.add(entry_hash)
-                return True
-        return False
-
-    predicate.state = set()
-    return predicate
+    return '<>'.join([filename, directory, command])
 
 
 if sys.version_info.major >= 3 and sys.version_info.minor >= 2:

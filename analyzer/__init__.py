@@ -131,3 +131,24 @@ def create_parser():
         default="compile_commands.json",
         help="""The JSON compilation database.""")
     return parser
+
+
+def duplicate_check(method):
+    """ Predicate to detect duplicated entries.
+
+    Unique hash method can be use to detect duplicates. Entries are
+    represented as dictionaries, which has no default hash method.
+    This implementation uses a set datatype to store the unique hash values.
+
+    This method returns a method which can detect the duplicate values.
+    """
+    def predicate(entry):
+        entry_hash = predicate.unique(entry)
+        if entry_hash not in predicate.state:
+            predicate.state.add(entry_hash)
+            return False
+        return True
+
+    predicate.unique = method
+    predicate.state = set()
+    return predicate

@@ -22,6 +22,7 @@ import glob
 import pkg_resources
 import plistlib
 import itertools
+from analyzer import duplicate_check
 from analyzer.decorators import trace, require
 from analyzer.clang import get_version
 
@@ -70,31 +71,18 @@ def read_bugs_from(out_dir, html):
     times with different compiler options. These would be better to show in
     the final report (cover) only once. """
 
-    def not_duplicate():
-        """ Predicate to detect duplicated bugs.
-
-        Bugs are represented as dictionary, which has no default hash method.
-        This method implement one and store it in the given state if that was
-        not already stored. """
-        def predicate(bug):
-            bug_hash = '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug)
-            if bug_hash not in predicate.state:
-                predicate.state.add(bug_hash)
-                return True
-            return False
-
-        predicate.state = set()
-        return predicate
-
     parser = parse_html_bug if html else parse_plist_bug
     pattern = '*.html' if html else '*.plist'
 
-    return filter(
-        not_duplicate(),
-        # from a stream of bug generators creates stream of bugs
-        itertools.chain.from_iterable(
-            # from stream of filenames creates a stream of bug generators
-            map(parser, glob.iglob(os.path.join(out_dir, pattern)))))
+    duplicate = duplicate_check(
+        lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
+
+    return (bug
+            for bug
+            in itertools.chain.from_iterable(
+                # parser creates a bug generator not the bug itself
+                map(parser, glob.iglob(os.path.join(out_dir, pattern))))
+            if not duplicate(bug))
 
 
 @trace
