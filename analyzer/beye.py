@@ -173,28 +173,30 @@ def run_analyzer(args, out_dir):
 
 
 @trace
+def _commonprefix(files):
+    """ Fixed version of os.path.commonprefix. Return the longest path prefix
+    that is a prefix of all paths in filenames. """
+    result = None
+    for current in files:
+        if result is not None:
+            result = os.path.commonprefix([result, current])
+        else:
+            result = current
+
+    if result is None:
+        return ''
+    elif not os.path.isdir(result):
+        return os.path.dirname(result)
+    else:
+        return os.path.abspath(result)
+
+
+@trace
 def get_prefix_from(compilation_database):
     """ Get common path prefix for compilation database entries.
     This will be used to taylor the file names in the final report. """
-    def common(files):
-        result = None
-        for current in files:
-            result = current if result is None else\
-                os.path.commonprefix([result, current])
-
-        if result is None:
-            return ''
-        elif not os.path.isdir(result):
-            return os.path.dirname(result)
-        else:
-            return result
-
-    def filenames():
-        with open(compilation_database, 'r') as handle:
-            for element in json.load(handle):
-                yield os.path.dirname(element['file'])
-
-    return common(filenames())
+    with open(compilation_database, 'r') as handle:
+        return _commonprefix(element['file'] for element in json.load(handle))
 
 
 @trace
