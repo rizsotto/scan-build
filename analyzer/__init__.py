@@ -96,41 +96,10 @@ analyzer/command.py
 
 analyzer/runner.py
    run an analyzer execution.
+
+analyzer/options.py
+   command line options
 """
-
-import argparse
-
-
-def create_parser():
-    """ Create parser for all entry points.
-
-    The help message is generated from this parse method.
-    Default values are printed.
-    """
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        add_help=False)
-    parser.add_argument(
-        '--help', '-h',
-        action='store_true',
-        dest='help',
-        help="""show this help message and exit""")
-    parser.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from '%(prog)s'. A second and third
-                '-v' increases verbosity.""")
-    parser.add_argument(
-        '--sequential',
-        action='store_true',
-        help="""Execute analyzer sequentialy.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
-    return parser
 
 
 def duplicate_check(method):
@@ -152,3 +121,9 @@ def duplicate_check(method):
     predicate.unique = method
     predicate.state = set()
     return predicate
+
+
+def tempdir():
+    """ Return the defatul temorary directory. """
+    from os import getenv
+    return getenv('TMPDIR', getenv('TEMP', getenv('TMP', '/tmp')))

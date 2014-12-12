@@ -23,7 +23,8 @@ import functools
 import tempfile
 import shutil
 import multiprocessing
-from analyzer import create_parser
+from analyzer import tempdir
+from analyzer.options import create_parser
 from analyzer.decorators import to_logging_level, trace, require, entry
 from analyzer.command import create
 from analyzer.runner import run
@@ -39,8 +40,7 @@ def scanbuild():
     original Perl implementation of 'scan-build' command. """
 
     from analyzer.bear import main as run_bear
-    from analyzer.bear import initialize_command_line as bear_command_init
-    parser = bear_command_init(initialize_command_line(create_parser()))
+    parser = create_parser('scan-build')
     return main(parser, run_bear)
 
 
@@ -52,7 +52,7 @@ def beye():
     files. The logic to run analyzer against a single file is implemented in
     several modules. """
 
-    parser = initialize_command_line(create_parser())
+    parser = create_parser('beye')
     return main(parser, lambda x: 0)
 
 
@@ -61,7 +61,7 @@ def main(parser, build_ear):
 
     The 'scan-build' and 'beye' are the two entry points of this code.
 
-    parser      -- the command line parser from 'argparse' module.
+    parser      -- the command line parser.
     build_ear   -- the compilation database builder function. """
 
     def cover_file_asked(output_format):
@@ -93,163 +93,6 @@ def main(parser, build_ear):
                  'html_title': args.html_title})
 
         return number_of_bugs if args.status_bugs else exit_code
-
-
-@trace
-def initialize_command_line(parser):
-    """ Add task related argument to the command line parser.
-
-    Command line parameters are defined by previous implementation, and
-    influence either the analyzer behaviour or the report generation.
-    The paramters are grouped together according their functionality. """
-    parser.add_argument(
-        '--output', '-o',
-        metavar='<path>',
-        default=tempdir(),
-        help="""Specifies the output directory for analyzer reports.
-                Subdirectory will be created if default directory is targeted.
-                """)
-    parser.add_argument(
-        '--status-bugs',
-        action='store_true',
-        help="""By default, the exit status of '%(prog)s' is the same as the
-                executed build command. Specifying this option causes the exit
-                status of '%(prog)s' to be non zero if it found potential bugs
-                and zero otherwise.""")
-    parser.add_argument(
-        '--html-title',
-        metavar='<title>',
-        help="""Specify the title used on generated HTML pages.
-                If not specified, a default title will be used.""")
-    parser.add_argument(
-        '--analyze-headers',
-        action='store_true',
-        help="""Also analyze functions in #included files. By default, such
-                functions are skipped unless they are called by functions
-                within the main source file.""")
-    format_group = parser.add_mutually_exclusive_group()
-    format_group.add_argument(
-        '--plist',
-        dest='output_format',
-        const='plist',
-        default='html',
-        action='store_const',
-        help="""This option outputs the results as a set of .plist files.""")
-    format_group.add_argument(
-        '--plist-html',
-        dest='output_format',
-        const='plist-html',
-        default='html',
-        action='store_const',
-        help="""This option outputs the results as a set of .html and .plist
-                files.""")
-    # TODO: implement '-view '
-
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
-        '--keep-empty',
-        action='store_true',
-        help="""Don't remove the build results directory even if no issues
-                were reported.""")
-    advanced.add_argument(
-        '--no-failure-reports',
-        dest='report_failures',
-        action='store_false',
-        help="""Do not create a 'failures' subdirectory that includes analyzer
-                crash reports and preprocessed source files.""")
-    advanced.add_argument(
-        '--stats',
-        action='store_true',
-        help="""Generates visitation statistics for the project being analyzed.
-                """)
-    advanced.add_argument(
-        '--internal-stats',
-        action='store_true',
-        help="""Generate internal analyzer statistics.""")
-    advanced.add_argument(
-        '--maxloop',
-        metavar='<loop count>',
-        type=int,
-        default=4,
-        help="""Specifiy the number of times a block can be visited before
-                giving up. Increase for more comprehensive coverage at a cost
-                of speed.""")
-    advanced.add_argument(
-        '--store',
-        metavar='<model>',
-        dest='store_model',
-        default='region',
-        choices=['region', 'basic'],
-        help="""Specify the store model used by the analyzer.
-                'region' specifies a field- sensitive store model.
-                'basic' which is far less precise but can more quickly
-                analyze code. 'basic' was the default store model for
-                checker-0.221 and earlier.""")
-    advanced.add_argument(
-        '--constraints',
-        metavar='<model>',
-        dest='constraints_model',
-        default='range',
-        choices=['range', 'basic'],
-        help="""Specify the contraint engine used by the analyzer. Specifying
-                'basic' uses a simpler, less powerful constraint model used by
-                checker-0.160 and earlier.""")
-    advanced.add_argument(
-        '--use-analyzer',
-        metavar='<path>',
-        dest='clang',
-        default='clang',
-        help="""'%(prog)s' uses the 'clang' executable relative to itself for
-                static analysis. One can override this behavior with this
-                option by using the 'clang' packaged with Xcode (on OS X) or
-                from the PATH.""")
-    advanced.add_argument(
-        '--analyzer-config',
-        metavar='<options>',
-        help="""Provide options to pass through to the analyzer's
-                -analyzer-config flag. Several options are separated with
-                comma: 'key1=val1,key2=val2'
-
-                Available options:
-                    stable-report-filename=true or false (default)
-
-                Switch the page naming to:
-                report-<filename>-<function/method name>-<id>.html
-                instead of report-XXXXXX.html""")
-    advanced.add_argument(
-        '--ubiviz',
-        action='store_true',
-        help="""Meant to display the analysis path graph (aka 'exploded graph')
-                as it gets explored by the analyzer. The ubigraph support is
-                not enabled in a release build of clang. And you also need the
-                'ubiviz' script in your path.""")
-
-    plugins = parser.add_argument_group('checker options')
-    plugins.add_argument(
-        '--load-plugin',
-        metavar='<plugin library>',
-        dest='plugins',
-        action='append',
-        help="""Loading external checkers using the clang plugin interface.""")
-    plugins.add_argument(
-        '--enable-checker',
-        metavar='<checker name>',
-        action='append',
-        help="""Enable specific checker.""")
-    plugins.add_argument(
-        '--disable-checker',
-        metavar='<checker name>',
-        action='append',
-        help="""Disable specific checker.""")
-    plugins.add_argument(
-        '--help-checkers',
-        action='store_true',
-        help="""A default group of checkers is run unless explicitly disabled.
-                Exactly which checkers constitute the default group is a
-                function of the operating system in use. These can be printed
-                with this flag.""")
-
-    return parser
 
 
 @trace
@@ -426,8 +269,3 @@ class ReportDirectory(object):
         else:
             stamp = time.strftime('%Y-%m-%d-%H%M%S', time.localtime())
             return tempfile.mkdtemp(prefix='scan-build-{0}-'.format(stamp))
-
-
-def tempdir():
-    """ Return the defatul temorary directory. """
-    return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))

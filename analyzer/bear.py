@@ -23,7 +23,6 @@ and the post-processing of the output files, which will condensates into a
 
 import logging
 import subprocess
-import argparse
 import json
 import sys
 import os
@@ -33,8 +32,9 @@ import glob
 import shlex
 import pkg_resources
 import itertools
-from analyzer import create_parser, duplicate_check
+from analyzer import duplicate_check, tempdir
 from analyzer.decorators import to_logging_level, trace, entry
+from analyzer.options import create_parser
 from analyzer.command import parse
 from analyzer.command import Action
 
@@ -53,18 +53,7 @@ def bear():
 
         This part initializes some parts and forwards to the main method. """
 
-    parser = initialize_command_line(create_parser())
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
-        '--append',
-        action='store_true',
-        help="""Append new entries to existing compilation database.""")
-    advanced.add_argument(
-        '--disable-filter', '-n',
-        dest='raw_entries',
-        action='store_true',
-        help="""Disable filter, unformated output.""")
-
+    parser = create_parser('bear')
     args = parser.parse_args()
 
     logging.getLogger().setLevel(to_logging_level(args.verbose))
@@ -104,7 +93,7 @@ def main(args):
                     if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
-    with TemporaryDirectory(prefix='bear-') as tmpdir:
+    with TemporaryDirectory(prefix='bear-', dir=tempdir()) as tmpdir:
         # run the build command
         exit_code = run_build(args.build, tmpdir)
         # read the intercepted exec calls
@@ -116,17 +105,6 @@ def main(args):
         with open(args.cdb, 'w+') as handle:
             json.dump(list(entries), handle, sort_keys=True, indent=4)
         return exit_code
-
-
-@trace
-def initialize_command_line(parser):
-    """ Add task related argument to the command line parser. """
-    parser.add_argument(
-        dest='build',
-        nargs=argparse.REMAINDER,
-        help="""Command to run.""")
-
-    return parser
 
 
 @trace
