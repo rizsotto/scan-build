@@ -198,7 +198,7 @@ def parse(opts, continuation=filter_action):
 
         def anyof(opts, action):
             def evaluate(iterator):
-                if iterator.current in frozenset(opts):
+                if iterator.current in opts:
                     action(state, iterator, None)
                     return True
             return evaluate
@@ -206,23 +206,23 @@ def parse(opts, continuation=filter_action):
         tasks = [
             #
             regex(r'^-(E|MM?)$', take_action(Action.Preprocess)),
-            anyof(['-c'], take_action(Action.Compile)),
-            anyof(['-print-prog-name'], take_action(Action.Info)),
+            anyof({'-c'}, take_action(Action.Compile)),
+            anyof({'-print-prog-name'}, take_action(Action.Info)),
             #
-            anyof(['-arch'], take_two('archs_seen')),
+            anyof({'-arch'}, take_two('archs_seen')),
             #
-            anyof(['-filelist'], take_from_file('files')),
+            anyof({'-filelist'}, take_from_file('files')),
             regex(r'^[^-].+', take_one('files')),
             #
-            anyof(['-x'], take_second('language')),
+            anyof({'-x'}, take_second('language')),
             #
-            anyof(['-o'], take_second('output')),
+            anyof({'-o'}, take_second('output')),
             #
-            anyof(['-write-strings',
-                   '-v'], take_one('compile_options')),
-            anyof(['-ftrapv-handler',
+            anyof({'-write-strings',
+                   '-v'}, take_one('compile_options')),
+            anyof({'-ftrapv-handler',
                    '--sysroot',
-                   '-target'], take_two('compile_options')),
+                   '-target'}, take_two('compile_options')),
             regex(r'^-isysroot', take_two('compile_options')),
             regex(r'^-m(32|64)$', take_one('compile_options')),
             regex(r'^-mios-simulator-version-min(.*)',
@@ -233,18 +233,18 @@ def parse(opts, continuation=filter_action):
             regex(r'^-miphoneos-version-min(.*)',
                   take_joined('compile_options')),
             regex(r'^-O[1-3]$', take_one('compile_options')),
-            anyof(['-O'], take_as('-O1', 'compile_options')),
-            anyof(['-Os'], take_as('-O2', 'compile_options')),
+            anyof({'-O'}, take_as('-O1', 'compile_options')),
+            anyof({'-Os'}, take_as('-O2', 'compile_options')),
             regex(r'^-[DIU](.*)$', take_joined('compile_options')),
-            anyof(['-nostdinc'], take_one('compile_options')),
+            anyof({'-nostdinc'}, take_one('compile_options')),
             regex(r'^-std=', take_one('compile_options')),
             regex(r'^-include', take_two('compile_options')),
-            anyof(['-idirafter',
+            anyof({'-idirafter',
                    '-imacros',
                    '-iprefix',
                    '-isystem',
                    '-iwithprefix',
-                   '-iwithprefixbefore'], take_two('compile_options')),
+                   '-iwithprefixbefore'}, take_two('compile_options')),
             regex(r'^-m.*', take_one('compile_options')),
             regex(r'^-iquote(.*)', take_joined('compile_options')),
             regex(r'^-Wno-', take_one('compile_options')),
@@ -254,9 +254,9 @@ def parse(opts, continuation=filter_action):
             regex(r'^-[lL]', take_one()),
             regex(r'^-M[TF]$', take_two()),
             regex(r'^-[eu]$', take_two()),
-            anyof(['-fsyntax-only',
-                   '-save-temps'], take_one()),
-            anyof(['-install_name',
+            anyof({'-fsyntax-only',
+                   '-save-temps'}, take_one()),
+            anyof({'-install_name',
                    '-exported_symbols_list',
                    '-current_version',
                    '-compatibility_version',
@@ -265,8 +265,8 @@ def parse(opts, continuation=filter_action):
                    '-bundle_loader',
                    '-multiply_defined',
                    '--param',
-                   '--serialize-diagnostics'], take_two()),
-            anyof(['-sectorder'], take_four()),
+                   '--serialize-diagnostics'}, take_two()),
+            anyof({'-sectorder'}, take_four()),
             #
             regex(r'^-[fF](.+)$', take_one('compile_options'))
         ]
