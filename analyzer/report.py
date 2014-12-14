@@ -12,7 +12,6 @@ report. """
 
 
 import logging
-import multiprocessing
 import re
 import os
 import os.path
@@ -48,19 +47,19 @@ def generate_cover(opts):
     """
     out_dir = opts['out_dir']
 
-    pool = multiprocessing.Pool(1 if opts['sequential'] else None)
-
-    crash_generator = pool.imap_unordered(
-        parse_crash,
-        glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
-
     fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
     with fragment(bug_fragment, read_bugs_from(out_dir, True)) as bugs:
-        with fragment(crash_fragment, crash_generator) as crashes:
+        with fragment(crash_fragment, read_crashes_from(out_dir)) as crashes:
             assembly_report(opts, bugs, crashes)
             copy_resource_files(out_dir)
-    pool.close()
-    pool.join()
+
+
+@trace
+def read_crashes_from(out_dir):
+    """ Generate a unique sequence of crashes from given output directory. """
+    return (parse_crash(filename)
+            for filename
+            in glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
 
 
 @trace
