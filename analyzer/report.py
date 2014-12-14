@@ -32,7 +32,7 @@ else:
 
 
 @trace
-@require(['sequential', 'out_dir', 'clang', 'prefix'])
+@require(['out_dir', 'prefix'])
 def generate_cover(opts):
     """ Report is generated from .html files, and it's a .html file itself.
 
@@ -46,13 +46,16 @@ def generate_cover(opts):
     Copy stylesheet(s) and javascript file(s) are also part of this method.
     """
     out_dir = opts['out_dir']
+    prefix = opts['prefix']
 
-    pretty = pretty_bug(opts['prefix'], out_dir)
-    bug_source = (pretty(bug) for bug in read_bugs_from(out_dir, True))
+    prettyb = pretty_bug(prefix, out_dir)
+    bug_source = (prettyb(bug) for bug in read_bugs_from(out_dir, True))
 
-    fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
-    with fragment(bug_fragment, bug_source) as bugs:
-        with fragment(crash_fragment, read_crashes_from(out_dir)) as crashes:
+    prettyc = pretty_crash(prefix, out_dir)
+    crash_source = (prettyc(crash) for crash in read_crashes_from(out_dir))
+
+    with bug_fragment(bug_source, out_dir) as bugs:
+        with crash_fragment(crash_source, out_dir) as crashes:
             assembly_report(opts, bugs, crashes)
             copy_resource_files(out_dir)
 
@@ -184,21 +187,8 @@ class ReportFragment(object):
 
 
 @trace
-def crash_fragment(iterator, out_dir, prefix):
+def crash_fragment(iterator, out_dir):
     """ Creates a fragment from the compiler crashes. """
-
-    def pretty(crash):
-        """ Make safe this values to embed into HTML. """
-        encode_value(crash, 'source', lambda x: chop(prefix, x))
-        encode_value(crash, 'source', escape)
-        encode_value(crash, 'problem', escape)
-        encode_value(crash, 'file', lambda x: chop(out_dir, x))
-        encode_value(crash, 'file', lambda x: escape(x, True))
-        encode_value(crash, 'info', lambda x: chop(out_dir, x))
-        encode_value(crash, 'info', lambda x: escape(x, True))
-        encode_value(crash, 'stderr', lambda x: chop(out_dir, x))
-        encode_value(crash, 'stderr', lambda x: escape(x, True))
-        return crash
 
     name = os.path.join(out_dir, 'crashes.html.fragment')
     count = 0
@@ -217,7 +207,7 @@ def crash_fragment(iterator, out_dir, prefix):
         |    </tr>
         |  </thead>
         |  <tbody>""", indent))
-        for current in map(pretty, iterator):
+        for current in iterator:
             count += 1
             handle.write(reindent("""
         |    <tr>
@@ -280,8 +270,25 @@ def pretty_bug(prefix, out_dir):
     return predicate
 
 
+def pretty_crash(prefix, out_dir):
+    def predicate(crash):
+        """ Make safe this values to embed into HTML. """
+        encode_value(crash, 'source', lambda x: chop(prefix, x))
+        encode_value(crash, 'source', escape)
+        encode_value(crash, 'problem', escape)
+        encode_value(crash, 'file', lambda x: chop(out_dir, x))
+        encode_value(crash, 'file', lambda x: escape(x, True))
+        encode_value(crash, 'info', lambda x: chop(out_dir, x))
+        encode_value(crash, 'info', lambda x: escape(x, True))
+        encode_value(crash, 'stderr', lambda x: chop(out_dir, x))
+        encode_value(crash, 'stderr', lambda x: escape(x, True))
+        return crash
+
+    return predicate
+
+
 @trace
-def bug_fragment(iterator, out_dir, prefix):
+def bug_fragment(iterator, out_dir):
     """ Creates a fragment from the analyzer reports. """
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
