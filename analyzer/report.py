@@ -47,8 +47,11 @@ def generate_cover(opts):
     """
     out_dir = opts['out_dir']
 
+    pretty = pretty_bug(opts['prefix'], out_dir)
+    bug_source = (pretty(bug) for bug in read_bugs_from(out_dir, True))
+
     fragment = lambda fun, x: fun(x, out_dir, opts['prefix'])
-    with fragment(bug_fragment, read_bugs_from(out_dir, True)) as bugs:
+    with fragment(bug_fragment, bug_source) as bugs:
         with fragment(crash_fragment, read_crashes_from(out_dir)) as crashes:
             assembly_report(opts, bugs, crashes)
             copy_resource_files(out_dir)
@@ -257,17 +260,14 @@ def create_counters():
     return predicate
 
 
-@trace
-def bug_fragment(iterator, out_dir, prefix):
-    """ Creates a fragment from the analyzer reports. """
-
+def pretty_bug(prefix, out_dir):
     def classname(bug):
         """ Create a new bug attribute from bug by category and type. """
         def smash(key):
             return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
         return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
 
-    def pretty(bug):
+    def predicate(bug):
         """ Make safe this values to embed into HTML. """
         encode_value(bug, 'bug_file', lambda x: chop(prefix, x))
         encode_value(bug, 'bug_file', escape)
@@ -275,8 +275,14 @@ def bug_fragment(iterator, out_dir, prefix):
         encode_value(bug, 'bug_type', escape)
         encode_value(bug, 'report_file', lambda x: chop(out_dir, x))
         bug['bug_type_class'] = escape(classname(bug), True)
-
         return bug
+
+    return predicate
+
+
+@trace
+def bug_fragment(iterator, out_dir, prefix):
+    """ Creates a fragment from the analyzer reports. """
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
     counters = create_counters()
@@ -301,7 +307,7 @@ def bug_fragment(iterator, out_dir, prefix):
         |  </thead>
         |  <tbody>""", indent))
         handle.write(metaline('REPORTBUGCOL'))
-        for current in map(pretty, iterator):
+        for current in iterator:
             counters(current)
             handle.write(reindent("""
         |    <tr class="{bug_type_class}">
@@ -319,9 +325,9 @@ def bug_fragment(iterator, out_dir, prefix):
         |  </tbody>
         |</table>""", indent))
         handle.write(metaline('REPORTBUGEND'))
-    with ReportFragment(name, 0) as bugs:
+    with ReportFragment(name, counters.total) as bugs:
         return summary_fragment(counters, out_dir, bugs)\
-            if bugs.count else bugs
+            if counters.total else bugs
 
 
 @trace
