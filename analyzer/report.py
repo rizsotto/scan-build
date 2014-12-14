@@ -231,22 +231,35 @@ def crash_fragment(iterator, out_dir, prefix):
     return ReportFragment(name, count)
 
 
-@trace
-def bug_fragment(iterator, out_dir, prefix):
-    """ Creates a fragment from the analyzer reports. """
+def create_counters():
+    """ Create counters for bug statistics.
 
-    def update_counters(bug, state):
-        """ For bug summary fragment it maintain the bug statistic. """
+    Two entries are maintained: 'total' is an integer, represents the
+    number of bugs. The 'categories' is a two level categorisation of bug
+    counters. The first level is 'bug category' the second is 'bug type'.
+    Each entry in this classification is a dictionary of 'count', 'type'
+    and 'label'. """
+    def predicate(bug):
         bug_category = bug['bug_category']
         bug_type = bug['bug_type']
-        current_category = state.get(bug_category, dict())
+        current_category = predicate.categories.get(bug_category, dict())
         current_type = current_category.get(bug_type, {
             'bug_type': bug_type,
             'bug_type_class': bug['bug_type_class'],
             'bug_count': 0})
         current_type.update({'bug_count': current_type['bug_count'] + 1})
         current_category.update({bug_type: current_type})
-        state.update({bug_category: current_category})
+        predicate.categories.update({bug_category: current_category})
+        predicate.total += 1
+
+    predicate.total = 0
+    predicate.categories = dict()
+    return predicate
+
+
+@trace
+def bug_fragment(iterator, out_dir, prefix):
+    """ Creates a fragment from the analyzer reports. """
 
     def classname(bug):
         """ Create a new bug attribute from bug by category and type. """
@@ -266,7 +279,7 @@ def bug_fragment(iterator, out_dir, prefix):
         return bug
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
-    counters = dict()
+    counters = create_counters()
     with open(name, 'w') as handle:
         indent = 4
         handle.write(reindent("""
@@ -289,7 +302,7 @@ def bug_fragment(iterator, out_dir, prefix):
         |  <tbody>""", indent))
         handle.write(metaline('REPORTBUGCOL'))
         for current in map(pretty, iterator):
-            update_counters(current, counters)
+            counters(current)
             handle.write(reindent("""
         |    <tr class="{bug_type_class}">
         |      <td class="DESC">{bug_category}</td>
@@ -318,11 +331,6 @@ def summary_fragment(counters, out_dir, tail_fragment):
     counters -- dictionary of bug categories, which contains a dictionary of
                 bug types, count.
     """
-    def sum_of_bugs():
-        return sum(map(lambda x: sum(map(lambda y: y['bug_count'],
-                                         x.values())),
-                       counters.values()))
-
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
@@ -347,8 +355,8 @@ def summary_fragment(counters, out_dir, tail_fragment):
         |                 onClick="CopyCheckedStateToCheckButtons(this);"/>
         |        </center>
         |      </td>
-        |    </tr>""", indent).format(sum_of_bugs()))
-        for category, types in counters.items():
+        |    </tr>""", indent).format(counters.total))
+        for category, types in counters.categories.items():
             handle.write(reindent("""
         |    <tr>
         |      <th>{0}</th><th colspan=2></th>
