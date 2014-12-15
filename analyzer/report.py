@@ -16,6 +16,7 @@ import re
 import os
 import os.path
 import sys
+import json
 import shutil
 import glob
 import pkg_resources
@@ -32,7 +33,7 @@ else:
 
 
 @trace
-@require(['out_dir', 'prefix'])
+@require(['out_dir', 'in_cdb'])
 def generate_cover(opts):
     """ Report is generated from .html files, and it's a .html file itself.
 
@@ -46,7 +47,8 @@ def generate_cover(opts):
     Copy stylesheet(s) and javascript file(s) are also part of this method.
     """
     out_dir = opts['out_dir']
-    prefix = opts['prefix']
+    with open(opts['in_cdb'], 'r') as handle:
+        prefix = _commonprefix(item['file'] for item in json.load(handle))
 
     prettyb = pretty_bug(prefix, out_dir)
     bug_source = (prettyb(bug) for bug in read_bugs_from(out_dir, True))
@@ -56,6 +58,7 @@ def generate_cover(opts):
 
     with bug_fragment(bug_source, out_dir) as bugs:
         with crash_fragment(crash_source, out_dir) as crashes:
+            opts.update({'prefix': prefix})
             assembly_report(opts, bugs, crashes)
             copy_resource_files(out_dir)
 
@@ -483,6 +486,25 @@ def metaline(name, opts=dict()):
         attributes += ' {0}="{1}"'.format(key, value)
 
     return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)
+
+
+@trace
+def _commonprefix(files):
+    """ Fixed version of os.path.commonprefix. Return the longest path prefix
+    that is a prefix of all paths in filenames. """
+    result = None
+    for current in files:
+        if result is not None:
+            result = os.path.commonprefix([result, current])
+        else:
+            result = current
+
+    if result is None:
+        return ''
+    elif not os.path.isdir(result):
+        return os.path.dirname(result)
+    else:
+        return os.path.abspath(result)
 
 
 @trace

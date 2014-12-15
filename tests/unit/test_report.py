@@ -116,3 +116,26 @@ class ReportMethodTest(unittest.TestCase):
         self.assertEqual('lib/file', sut.chop('/prefix/', '/prefix/lib/file'))
         self.assertEqual('/prefix/file', sut.chop('', '/prefix/file'))
         self.assertEqual('/prefix/file', sut.chop('apple', '/prefix/file'))
+
+
+class GetPrefixFromCompilationDatabaseTest(fixtures.TestCase):
+
+    def test_with_different_filenames(self):
+        self.assertEqual(
+            sut._commonprefix(['/tmp/a.c', '/tmp/b.c']), '/tmp')
+
+    def test_with_different_dirnames(self):
+        self.assertEqual(
+            sut._commonprefix(['/tmp/abs/a.c', '/tmp/ack/b.c']), '/tmp')
+
+    def test_no_common_prefix(self):
+        self.assertEqual(
+            sut._commonprefix(['/tmp/abs/a.c', '/usr/ack/b.c']), '/')
+
+    def test_with_single_file(self):
+        self.assertEqual(
+            sut._commonprefix(['/tmp/a.c']), '/tmp')
+
+    def test_empty(self):
+        self.assertEqual(
+            sut._commonprefix([]), '')

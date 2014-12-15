@@ -86,9 +86,8 @@ def main(parser, build_ear):
         number_of_bugs = count_bugs(target_dir.name)
         if cover_file_asked(args.output_format) and number_of_bugs > 0:
             generate_cover(
-                {'sequential': args.sequential,
-                 'out_dir': target_dir.name,
-                 'prefix': get_prefix_from(args.cdb),
+                {'out_dir': target_dir.name,
+                 'in_cdb': args.cdb,
                  'clang': args.clang,
                  'html_title': args.html_title})
 
@@ -170,33 +169,6 @@ def run_analyzer(args, out_dir):
                     logging.info(line.rstrip())
         pool.close()
         pool.join()
-
-
-@trace
-def _commonprefix(files):
-    """ Fixed version of os.path.commonprefix. Return the longest path prefix
-    that is a prefix of all paths in filenames. """
-    result = None
-    for current in files:
-        if result is not None:
-            result = os.path.commonprefix([result, current])
-        else:
-            result = current
-
-    if result is None:
-        return ''
-    elif not os.path.isdir(result):
-        return os.path.dirname(result)
-    else:
-        return os.path.abspath(result)
-
-
-@trace
-def get_prefix_from(compilation_database):
-    """ Get common path prefix for compilation database entries.
-    This will be used to taylor the file names in the final report. """
-    with open(compilation_database, 'r') as handle:
-        return _commonprefix(element['file'] for element in json.load(handle))
 
 
 @trace
