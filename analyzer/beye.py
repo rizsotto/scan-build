@@ -21,14 +21,13 @@ import os
 import time
 import functools
 import tempfile
-import shutil
 import multiprocessing
 from analyzer import tempdir
 from analyzer.options import create_parser
 from analyzer.decorators import to_logging_level, trace, require, entry
 from analyzer.command import create
 from analyzer.runner import run
-from analyzer.report import generate_cover, count_bugs
+from analyzer.report import document
 from analyzer.clang import get_checkers
 
 
@@ -56,13 +55,13 @@ def beye():
     return main(parser, lambda x: 0)
 
 
-def main(parser, build_ear):
+def main(parser, intercept):
     """ The reusable entry point of 'beye'.
 
     The 'scan-build' and 'beye' are the two entry points of this code.
 
     parser      -- the command line parser.
-    build_ear   -- the compilation database builder function. """
+    intercept   -- the compilation database builder function. """
 
     args = parser.parse_args()
 
@@ -77,19 +76,10 @@ def main(parser, build_ear):
         print_active_checkers(get_checkers(args.clang, args.plugins))
         return 0
 
-    html = 'html' == args.output_format or 'plist-html' == args.output_format
-
-    exit_code = build_ear(args)
+    exit_code = intercept(args)
     with ReportDirectory(args.output, args.keep_empty) as target_dir:
         run_analyzer(args, target_dir.name)
-        number_of_bugs = count_bugs(target_dir.name, html)
-        if html and number_of_bugs > 0:
-            generate_cover(
-                {'out_dir': target_dir.name,
-                 'in_cdb': args.cdb,
-                 'clang': args.clang,
-                 'html_title': args.html_title})
-            shutil.copy(args.cdb, target_dir.name)
+        number_of_bugs = document(args, target_dir.name)
 
         return number_of_bugs if args.status_bugs else exit_code
 

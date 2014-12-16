@@ -33,6 +33,21 @@ else:
 
 
 @trace
+def document(args, out_dir):
+    html = 'html' == args.output_format or 'plist-html' == args.output_format
+
+    number_of_bugs = count_bugs(out_dir, html)
+    if html and number_of_bugs > 0:
+        generate_cover(
+            {'out_dir': out_dir,
+             'in_cdb': args.cdb,
+             'clang': args.clang,
+             'html_title': args.html_title})
+        shutil.copy(args.cdb, out_dir)
+    return number_of_bugs
+
+
+@trace
 def count_bugs(out_dir, html):
     """ Count the number of bugs from the report directory. """
     def count(iterator):
