@@ -81,7 +81,6 @@ def main(parser, build_ear):
 
     exit_code = build_ear(args)
     with ReportDirectory(args.output, args.keep_empty) as target_dir:
-        target_dir.copy_to(args.cdb)
         run_analyzer(args, target_dir.name)
         number_of_bugs = count_bugs(target_dir.name)
         if cover_file_asked(args.output_format) and number_of_bugs > 0:
@@ -90,6 +89,7 @@ def main(parser, build_ear):
                  'in_cdb': args.cdb,
                  'clang': args.clang,
                  'html_title': args.html_title})
+            shutil.copy(args.cdb, target_dir.name)
 
         return number_of_bugs if args.status_bugs else exit_code
 
@@ -205,7 +205,6 @@ class ReportDirectory(object):
     def __init__(self, hint, keep):
         self.name = ReportDirectory._create(hint)
         self.keep = keep
-        self.additions = []
 
     def __enter__(self):
         return self
@@ -222,15 +221,8 @@ class ReportDirectory(object):
                 msg = "Removing directory '{0}' because it contains no report."
         logging.warning(msg.format(self.name))
 
-        if self.keep:
-            for addition in self.additions:
-                shutil.copy(addition, self.name)
-        else:
+        if not self.keep:
             os.rmdir(self.name)
-
-    @trace
-    def copy_to(self, item):
-        self.additions.append(item)
 
     @staticmethod
     def _create(hint):
