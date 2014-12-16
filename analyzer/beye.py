@@ -71,9 +71,11 @@ def main(parser, build_ear):
 
     if args.help:
         parser.print_help()
-        return print_checkers(get_checkers(args.clang, args.plugins))
+        print_checkers(get_checkers(args.clang, args.plugins))
+        return 0
     elif args.help_checkers:
-        return print_checkers(get_checkers(args.clang, args.plugins), True)
+        print_active_checkers(get_checkers(args.clang, args.plugins))
+        return 0
 
     html = 'html' == args.output_format or 'plist-html' == args.output_format
 
@@ -170,28 +172,32 @@ def run_analyzer(args, out_dir):
 
 
 @trace
-def print_checkers(checkers, only_actives=False):
-    """ Print checker help to stdout. """
-    def dump(message):
-        if not only_actives:
-            print(os.linesep + message + os.linesep)
+def print_active_checkers(checkers):
+    """ Print active checkers to stdout. """
+    for name in sorted(name
+                       for name, (_, active)
+                       in checkers.items()
+                       if active):
+        print(name)
 
-    dump('available checkers:')
+
+@trace
+def print_checkers(checkers):
+    """ Print checker help to stdout. """
+    print()
+    print('available checkers:')
+    print()
     for name in sorted(checkers.keys()):
         description, active = checkers[name]
-        if only_actives:
-            if active:
-                print(name)
+        prefix = '+' if active else ' '
+        if len(name) > 30:
+            print(' {0} {1}'.format(prefix, name))
+            print(' ' * 35 + description)
         else:
-            prefix = '+' if active else ' '
-            if len(name) > 30:
-                print(' {0} {1}'.format(prefix, name))
-                print(' ' * 35 + description)
-            else:
-                print(' {0} {1: <30}  {2}'.format(prefix, name, description))
-    dump('NOTE: "+" indicates that an analysis is enabled by default.')
-
-    return 0
+            print(' {0} {1: <30}  {2}'.format(prefix, name, description))
+    print()
+    print('NOTE: "+" indicates that an analysis is enabled by default.')
+    print()
 
 
 class ReportDirectory(object):
