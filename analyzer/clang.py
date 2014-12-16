@@ -75,21 +75,21 @@ def _get_active_checkers(clang, plugins):
 
     def checkers(language, load):
         """ Returns a list of active checkers for the given language. """
-        pattern = re.compile(r'^-analyzer-checker=(.*)$')
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
+        pattern = re.compile(r'^-analyzer-checker=(.*)$')
         return (pattern.match(arg).group(1)
                 for arg in get_arguments('.', cmd) if pattern.match(arg))
 
     load = functools.reduce(
         lambda acc, x: acc + ['-Xclang', '-load', '-Xclang', x],
-        plugins if plugins else [],
+        plugins,
         [])
 
     return set(
         itertools.chain.from_iterable(
-            (checkers(language, load)
-             for language
-             in ['c', 'c++', 'objective-c', 'objective-c++'])))
+            checkers(language, load)
+            for language
+            in ['c', 'c++', 'objective-c', 'objective-c++']))
 
 
 @trace
@@ -102,6 +102,8 @@ def get_checkers(clang, plugins):
     This method returns a dictionary of all available checkers and status.
 
     {<plugin name>: (<plugin description>, <is active by default>)} """
+
+    plugins = plugins if plugins else []
 
     def parse_checkers(stream):
         """ Parse clang -analyzer-checker-help output.
@@ -120,11 +122,10 @@ def get_checkers(clang, plugins):
             if re.match(r'^CHECKERS:', line):
                 break
         # find entries
-        result = {}
         state = None
         for line in stream:
             if state and not re.match(r'^\s\s\S', line):
-                result.update({state: line.strip()})
+                yield (state, line.strip())
                 state = None
             elif re.match(r'^\s\s\S+$', line.rstrip()):
                 state = line.strip()
@@ -133,8 +134,7 @@ def get_checkers(clang, plugins):
                 match = pattern.match(line.rstrip())
                 if match:
                     current = match.groupdict()
-                    result.update({current['key']: current['value']})
-        return result
+                    yield (current['key'], current['value'])
 
     def is_active(actives, entry):
         """ Returns true if plugin name is matching the active plugin names.
@@ -145,27 +145,24 @@ def get_checkers(clang, plugins):
         The active plugin names are specific plugin names or prefix of some
         names. One example for prefix, when it say 'unix' and it shall match
         on 'unix.API', 'unix.Malloc' and 'unix.MallocSizeof'. """
-        for active in actives:
-            if re.match(r'^' + active + r'(\.|$)', entry):
-                return True
-        return False
+        return any(re.match(r'^' + a + r'(\.|$)', entry) for a in actives)
 
-    load = functools.reduce(
-        lambda acc, x: acc + ['-load', x],
-        plugins if plugins else [],
-        [])
+    actives = _get_active_checkers(clang, plugins)
 
+    load = functools.reduce(lambda acc, x: acc + ['-load', x], plugins, [])
     cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']
+
     logging.debug('exec command: {0}'.format(' '.join(cmd)))
     child = subprocess.Popen(cmd,
                              universal_newlines=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
-    checkers = parse_checkers(child.stdout)
+    checkers = {k: (v, is_active(actives, k))
+                for k, v
+                in parse_checkers(child.stdout)}
     child.stdout.close()
     child.wait()
     if 0 == child.returncode and len(checkers):
-        actives = _get_active_checkers(clang, plugins)
-        return {k: (v, is_active(actives, k)) for k, v in checkers.items()}
+        return checkers
     else:
         raise Exception('Could not query Clang for available checkers.')
