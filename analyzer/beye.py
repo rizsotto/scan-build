@@ -64,10 +64,6 @@ def main(parser, build_ear):
     parser      -- the command line parser.
     build_ear   -- the compilation database builder function. """
 
-    def cover_file_asked(output_format):
-        """ Cover report can be generated only from html files. """
-        return 'html' == output_format or 'plist-html' == output_format
-
     args = parser.parse_args()
 
     logging.getLogger().setLevel(to_logging_level(args.verbose))
@@ -79,11 +75,13 @@ def main(parser, build_ear):
     elif args.help_checkers:
         return print_checkers(get_checkers(args.clang, args.plugins), True)
 
+    html = 'html' == args.output_format or 'plist-html' == args.output_format
+
     exit_code = build_ear(args)
     with ReportDirectory(args.output, args.keep_empty) as target_dir:
         run_analyzer(args, target_dir.name)
-        number_of_bugs = count_bugs(target_dir.name)
-        if cover_file_asked(args.output_format) and number_of_bugs > 0:
+        number_of_bugs = count_bugs(target_dir.name, html)
+        if html and number_of_bugs > 0:
             generate_cover(
                 {'out_dir': target_dir.name,
                  'in_cdb': args.cdb,

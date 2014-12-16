@@ -33,6 +33,16 @@ else:
 
 
 @trace
+def count_bugs(out_dir, html):
+    """ Count the number of bugs from the report directory. """
+    def count(iterator):
+        return sum(1 for _ in iterator)
+
+    return count(read_bugs_from(out_dir, html)) + \
+        count(read_crashes_from(out_dir))
+
+
+@trace
 @require(['out_dir', 'in_cdb'])
 def generate_cover(opts):
     """ Report is generated from .html files, and it's a .html file itself.
@@ -505,19 +515,3 @@ def _commonprefix(files):
         return os.path.dirname(result)
     else:
         return os.path.abspath(result)
-
-
-@trace
-def count_bugs(out_dir):
-    """ Count the number of bugs from the report directory. """
-    def count(iterator):
-        return sum(1 for _ in iterator)
-
-    def count_files(path):
-        return count(glob.iglob(os.path.join(out_dir, path)))
-
-    bugs = count(read_bugs_from(out_dir, True))
-    if not bugs:
-        bugs = count(read_bugs_from(out_dir, False))
-
-    return bugs + count_files(os.path.join('failures', '*.info.txt'))
