@@ -26,11 +26,6 @@ from analyzer import duplicate_check
 from analyzer.decorators import trace
 from analyzer.clang import get_version
 
-if 3 == sys.version_info[0]:
-    from html import escape
-else:
-    from cgi import escape
-
 
 @trace
 def document(args, out_dir):
@@ -360,7 +355,7 @@ def _category_type_name(bug):
     The result will be used as CSS class selector in the final report. """
     def smash(key):
         return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
-    return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
+    return _escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
 
 
 def _create_counters():
@@ -395,9 +390,9 @@ def _prettify_bug(prefix, out_dir):
         bug['bug_type_class'] = _category_type_name(bug)
 
         _encode_value(bug, 'bug_file', lambda x: _chop(prefix, x))
-        _encode_value(bug, 'bug_file', escape)
-        _encode_value(bug, 'bug_category', escape)
-        _encode_value(bug, 'bug_type', escape)
+        _encode_value(bug, 'bug_file', _escape)
+        _encode_value(bug, 'bug_category', _escape)
+        _encode_value(bug, 'bug_type', _escape)
         _encode_value(bug, 'report_file', lambda x: _chop(out_dir, x))
         return bug
 
@@ -408,14 +403,14 @@ def _prettify_crash(prefix, out_dir):
     def predicate(crash):
         """ Make safe this values to embed into HTML. """
         _encode_value(crash, 'source', lambda x: _chop(prefix, x))
-        _encode_value(crash, 'source', escape)
-        _encode_value(crash, 'problem', escape)
+        _encode_value(crash, 'source', _escape)
+        _encode_value(crash, 'problem', _escape)
         _encode_value(crash, 'file', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'file', lambda x: escape(x, True))
+        _encode_value(crash, 'file', lambda x: _escape(x))
         _encode_value(crash, 'info', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'info', lambda x: escape(x, True))
+        _encode_value(crash, 'info', lambda x: _escape(x))
         _encode_value(crash, 'stderr', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'stderr', lambda x: escape(x, True))
+        _encode_value(crash, 'stderr', lambda x: _escape(x))
         return crash
 
     return predicate
@@ -444,6 +439,16 @@ def _chop(prefix, filename):
         prefix += os.path.sep
     split = filename.split(prefix, 1)
     return split[1] if len(split) == 2 else split[0]
+
+
+def _escape(text):
+    """ Paranoid HTML escape method. (Python version independent) """
+    escape_table = {'&': '&amp;',
+                    '"': '&quot;',
+                    "'": '&apos;',
+                    '>': '&gt;',
+                    '<': '&lt;'}
+    return ''.join(escape_table.get(c, c) for c in text)
 
 
 def _reindent(text, indent):
