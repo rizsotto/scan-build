@@ -298,8 +298,8 @@ def _parse_bug_plist(filename):
         yield {'result': filename,
                'bug_type': bug['type'],
                'bug_category': bug['category'],
-               'bug_line': bug['location']['line'],
-               'bug_bug_path_length': bug['location']['col'],
+               'bug_line': int(bug['location']['line']),
+               'bug_bug_path_length': int(bug['location']['col']),
                'bug_file': files[int(bug['location']['file'])]}
 
 
@@ -316,7 +316,12 @@ def _parse_bug_html(filename):
         re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
     endsign = re.compile(r'<!-- BUGMETAEND -->')
 
-    bug_info = {'bug_function': 'n/a'}  # compatibility with < clang-3.5
+    bug = {'report_file': filename,
+           'bug_function': 'n/a',  # compatibility with < clang-3.5
+           'bug_category': 'Other',
+           'bug_line': 0,
+           'bug_path_length': 1}
+
     with open(filename) as handler:
         for line in handler.readlines():
             # do not read the file further
@@ -326,16 +331,13 @@ def _parse_bug_html(filename):
             for regex in patterns:
                 match = regex.match(line.strip())
                 if match:
-                    bug_info.update(match.groupdict())
+                    bug.update(match.groupdict())
                     break
 
-    # fix some default values
-    bug_info['report_file'] = filename
-    bug_info['bug_category'] = bug_info.get('bug_category', 'Other')
-    bug_info['bug_path_length'] = int(bug_info.get('bug_path_length', 1))
-    bug_info['bug_line'] = int(bug_info.get('bug_line', 0))
+    _encode_value(bug, 'bug_line', lambda x: int(x))
+    _encode_value(bug, 'bug_path_length', lambda x: int(x))
 
-    yield bug_info
+    yield bug
 
 
 @trace
