@@ -252,6 +252,15 @@ def crash_fragment(iterator, out_dir):
     return ReportFragment(name, count)
 
 
+def _category_type_name(bug):
+    """ Create a new bug attribute from bug by category and type.
+
+    The result will be used as CSS class selector in the final report. """
+    def smash(key):
+        return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
+    return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
+
+
 def create_counters():
     """ Create counters for bug statistics.
 
@@ -266,7 +275,7 @@ def create_counters():
         current_category = predicate.categories.get(bug_category, dict())
         current_type = current_category.get(bug_type, {
             'bug_type': bug_type,
-            'bug_type_class': bug['bug_type_class'],
+            'bug_type_class': _category_type_name(bug),
             'bug_count': 0})
         current_type.update({'bug_count': current_type['bug_count'] + 1})
         current_category.update({bug_type: current_type})
@@ -279,20 +288,15 @@ def create_counters():
 
 
 def pretty_bug(prefix, out_dir):
-    def classname(bug):
-        """ Create a new bug attribute from bug by category and type. """
-        def smash(key):
-            return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
-        return 'bt_' + smash('bug_category') + '_' + smash('bug_type')
-
     def predicate(bug):
         """ Make safe this values to embed into HTML. """
+        bug['bug_type_class'] = _category_type_name(bug)
+
         encode_value(bug, 'bug_file', lambda x: chop(prefix, x))
         encode_value(bug, 'bug_file', escape)
         encode_value(bug, 'bug_category', escape)
         encode_value(bug, 'bug_type', escape)
         encode_value(bug, 'report_file', lambda x: chop(out_dir, x))
-        bug['bug_type_class'] = escape(classname(bug), True)
         return bug
 
     return predicate
