@@ -36,25 +36,28 @@ else:
 def document(args, out_dir):
     html = 'html' == args.output_format or 'plist-html' == args.output_format
 
-    number_of_bugs = count_bugs(out_dir, html)
-    if html and number_of_bugs > 0:
+    crash_count, bug_count, bug_categories = _stat_reports(out_dir, html)
+    if html and crash_count + bug_count > 0:
         generate_cover(
             {'out_dir': out_dir,
              'in_cdb': args.cdb,
              'clang': args.clang,
              'html_title': args.html_title})
         shutil.copy(args.cdb, out_dir)
-    return number_of_bugs
+    return crash_count + bug_count
 
 
 @trace
-def count_bugs(out_dir, html):
-    """ Count the number of bugs from the report directory. """
-    def count(iterator):
-        return sum(1 for _ in iterator)
+def _stat_reports(out_dir, html):
+    """ Create statistic from the report directory. """
 
-    return count(read_bugs_from(out_dir, html)) + \
-        count(read_crashes_from(out_dir))
+    bug_counter = create_counters()
+    for bug in read_bugs_from(out_dir, html):
+        bug_counter(bug)
+
+    crash_count = sum(1 for _ in read_crashes_from(out_dir))
+
+    return crash_count, bug_counter.total, bug_counter.categories
 
 
 @trace
