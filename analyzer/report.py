@@ -23,7 +23,7 @@ import pkg_resources
 import plistlib
 import itertools
 from analyzer import duplicate_check
-from analyzer.decorators import trace, require
+from analyzer.decorators import trace
 from analyzer.clang import get_version
 
 if 3 == sys.version_info[0]:
@@ -34,61 +34,225 @@ else:
 
 @trace
 def document(args, out_dir):
+    """ Generates cover report and returns the number of bugs/crashes. """
+
     html = 'html' == args.output_format or 'plist-html' == args.output_format
 
-    crash_count, bug_count, bug_categories = _stat_reports(out_dir, html)
-    if html and crash_count + bug_count > 0:
-        generate_cover(
-            {'out_dir': out_dir,
-             'in_cdb': args.cdb,
-             'clang': args.clang,
-             'html_title': args.html_title})
-        shutil.copy(args.cdb, out_dir)
-    return crash_count + bug_count
-
-
-@trace
-def _stat_reports(out_dir, html):
-    """ Create statistic from the report directory. """
-
-    bug_counter = create_counters()
-    for bug in read_bugs_from(out_dir, html):
-        bug_counter(bug)
-
     crash_count = sum(1 for _ in read_crashes_from(out_dir))
+    bug_count = create_counters()
+    for bug in read_bugs_from(out_dir, html):
+        bug_count(bug)
 
-    return crash_count, bug_counter.total, bug_counter.categories
+    result = crash_count + bug_count.total
+    if html and result:
+        with open(args.cdb, 'r') as handle:
+            prefix = _commonprefix(item['file'] for item in json.load(handle))
+
+        try:
+            fragments = []
+            if bug_count.total:
+                fragments.append(_bug_summary(out_dir, bug_count))
+                fragments.append(_bug_report(out_dir, prefix))
+            if crash_count:
+                fragments.append(_crash_report(out_dir, prefix))
+
+            _assemble_cover(out_dir, prefix, args, fragments)
+        finally:
+            for fragment in fragments:
+                os.remove(fragment)
+
+        _copy_resource_files(out_dir)
+        shutil.copy(args.cdb, out_dir)
+
+    return result
 
 
 @trace
-@require(['out_dir', 'in_cdb'])
-def generate_cover(opts):
-    """ Report is generated from .html files, and it's a .html file itself.
+def _assemble_cover(out_dir, prefix, args, fragments):
+    """ Put together the fragments into a final report. """
+    import getpass
+    import socket
+    import datetime
 
-    Two major parts: bug reports (coming from 'report-*.html' files) and
-    crash reports (coming from 'failures' directory content). Each parts
-    are tables (or multiple tables) with rows. To reduce the memory footprint
-    of the report generation, these tables are generated before the final
-    report. Those called fragments (because they are fragments). The
-    'assembly_report' write the final report.
+    if args.html_title is None:
+        args.html_title = os.path.basename(prefix) + ' - analyzer results'
 
-    Copy stylesheet(s) and javascript file(s) are also part of this method.
-    """
-    out_dir = opts['out_dir']
-    with open(opts['in_cdb'], 'r') as handle:
-        prefix = _commonprefix(item['file'] for item in json.load(handle))
+    with open(os.path.join(out_dir, 'index.html'), 'w') as handle:
+        handle.write(reindent("""
+        |<!DOCTYPE html>
+        |<html>
+        |  <head>
+        |    <title>{html_title}</title>
+        |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
+        |    <script type='text/javascript' src="sorttable.js"></script>
+        |    <script type='text/javascript' src='selectable.js'></script>
+        |  </head>""", 0).format(html_title=args.html_title))
+        handle.write(metaline('SUMMARYENDHEAD'))
+        handle.write(reindent("""
+        |  <body>
+        |    <h1>{html_title}</h1>
+        |    <table>
+        |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
+        |      <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
+        |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
+        |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
+        |      <tr><th>Date:</th><td>{date}</td></tr>
+        |    </table>""", 0).format(
+            html_title=args.html_title,
+            user_name=getpass.getuser(),
+            host_name=socket.gethostname(),
+            current_dir=prefix,
+            cmd_args=' '.join(sys.argv),
+            clang_version=get_version(args.clang),
+            date=datetime.datetime.today().strftime('%c')))
+        for fragment in fragments:
+            # copy the content of fragments
+            with open(fragment, 'r') as input_handle:
+                for line in input_handle:
+                    handle.write(line)
+        handle.write(reindent("""
+        |  </body>
+        |</html>""", 0))
 
-    prettyb = pretty_bug(prefix, out_dir)
-    bug_source = (prettyb(bug) for bug in read_bugs_from(out_dir, True))
 
-    prettyc = pretty_crash(prefix, out_dir)
-    crash_source = (prettyc(crash) for crash in read_crashes_from(out_dir))
+@trace
+def _bug_summary(out_dir, bug_counter):
+    """ Bug summary is a HTML table to give a better overview of the bugs. """
+    name = os.path.join(out_dir, 'summary.html.fragment')
+    with open(name, 'w') as handle:
+        indent = 4
+        handle.write(reindent("""
+        |<h2>Bug Summary</h2>
+        |<table>
+        |  <thead>
+        |    <tr>
+        |      <td>Bug Type</td>
+        |      <td>Quantity</td>
+        |      <td class="sorttable_nosort">Display?</td>
+        |    </tr>
+        |  </thead>
+        |  <tbody>""", indent))
+        handle.write(reindent("""
+        |    <tr style="font-weight:bold">
+        |      <td class="SUMM_DESC">All Bugs</td>
+        |      <td class="Q">{0}</td>
+        |      <td>
+        |        <center>
+        |          <input checked type="checkbox" id="AllBugsCheck"
+        |                 onClick="CopyCheckedStateToCheckButtons(this);"/>
+        |        </center>
+        |      </td>
+        |    </tr>""", indent).format(bug_counter.total))
+        for category, types in bug_counter.categories.items():
+            handle.write(reindent("""
+        |    <tr>
+        |      <th>{0}</th><th colspan=2></th>
+        |    </tr>""", indent).format(category))
+            for bug_type in types.values():
+                handle.write(reindent("""
+        |    <tr>
+        |      <td class="SUMM_DESC">{bug_type}</td>
+        |      <td class="Q">{bug_count}</td>
+        |      <td>
+        |        <center>
+        |          <input checked type="checkbox"
+        |                 onClick="ToggleDisplay(this,'{bug_type_class}');"/>
+        |        </center>
+        |      </td>
+        |    </tr>""", indent).format(**bug_type))
+        handle.write(reindent("""
+        |  </tbody>
+        |</table>""", indent))
+        handle.write(metaline('SUMMARYBUGEND'))
+    return name
 
-    with bug_fragment(bug_source, out_dir) as bugs:
-        with crash_fragment(crash_source, out_dir) as crashes:
-            opts.update({'prefix': prefix})
-            assembly_report(opts, bugs, crashes)
-            copy_resource_files(out_dir)
+
+@trace
+def _bug_report(out_dir, prefix):
+    """ Creates a fragment from the analyzer reports. """
+
+    pretty = pretty_bug(prefix, out_dir)
+    bugs = (pretty(bug) for bug in read_bugs_from(out_dir, True))
+
+    name = os.path.join(out_dir, 'bugs.html.fragment')
+    with open(name, 'w') as handle:
+        indent = 4
+        handle.write(reindent("""
+        |<h2>Reports</h2>
+        |<table class="sortable" style="table-layout:automatic">
+        |  <thead>
+        |    <tr>
+        |      <td>Bug Group</td>
+        |      <td class="sorttable_sorted">
+        |        Bug Type
+        |        <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
+        |      </td>
+        |      <td>File</td>
+        |      <td>Function/Method</td>
+        |      <td class="Q">Line</td>
+        |      <td class="Q">Path Length</td>
+        |      <td class="sorttable_nosort"></td>
+        |    </tr>
+        |  </thead>
+        |  <tbody>""", indent))
+        handle.write(metaline('REPORTBUGCOL'))
+        for current in bugs:
+            handle.write(reindent("""
+        |    <tr class="{bug_type_class}">
+        |      <td class="DESC">{bug_category}</td>
+        |      <td class="DESC">{bug_type}</td>
+        |      <td>{bug_file}</td>
+        |      <td class="DESC">{bug_function}</td>
+        |      <td class="Q">{bug_line}</td>
+        |      <td class="Q">{bug_path_length}</td>
+        |      <td><a href="{report_file}#EndPath">View Report</a></td>
+        |    </tr>""", indent).format(**current))
+            handle.write(metaline('REPORTBUG',
+                                  {'id': current['report_file']}))
+        handle.write(reindent("""
+        |  </tbody>
+        |</table>""", indent))
+        handle.write(metaline('REPORTBUGEND'))
+    return name
+
+
+@trace
+def _crash_report(out_dir, prefix):
+    """ Creates a fragment from the compiler crashes. """
+
+    pretty = pretty_crash(prefix, out_dir)
+    crashes = (pretty(crash) for crash in read_crashes_from(out_dir))
+
+    name = os.path.join(out_dir, 'crashes.html.fragment')
+    with open(name, 'w') as handle:
+        indent = 4
+        handle.write(reindent("""
+        |<h2>Analyzer Failures</h2>
+        |<p>The analyzer had problems processing the following files:</p>
+        |<table>
+        |  <thead>
+        |    <tr>
+        |      <td>Problem</td>
+        |      <td>Source File</td>
+        |      <td>Preprocessed File</td>
+        |      <td>STDERR Output</td>
+        |    </tr>
+        |  </thead>
+        |  <tbody>""", indent))
+        for current in crashes:
+            handle.write(reindent("""
+        |    <tr>
+        |      <td>{problem}</td>
+        |      <td>{source}</td>
+        |      <td><a href="{file}">preprocessor output</a></td>
+        |      <td><a href="{stderr}">analyzer std err</a></td>
+        |    </tr>""", indent).format(**current))
+            handle.write(metaline('REPORTPROBLEM', current))
+        handle.write(reindent("""
+        |  </tbody>
+        |</table>""", indent))
+        handle.write(metaline('REPORTCRASHES'))
+    return name
 
 
 @trace
@@ -188,73 +352,6 @@ def parse_crash(filename):
                 'stderr': name + '.stderr.txt'}
 
 
-class ReportFragment(object):
-    """ Represents a report fragment on the disk. The only usage at report
-    generation, when multiple fragments are combined together.
-
-    The object shall be used within a 'with' to guard the resource. To delete
-    the file in this case. Carry the bug count also important to decide about
-    to include the fragment or not. """
-
-    def __init__(self, filename, count):
-        self.filename = filename
-        self.count = count
-
-    def __enter__(self):
-        return self
-
-    @trace
-    def __exit__(self, _type, _value, _traceback):
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
-
-    @trace
-    def write(self, output_handle):
-        """ Append the fragment content to given file. """
-        if self.count:
-            with open(self.filename, 'r') as input_handle:
-                for line in input_handle:
-                    output_handle.write(line)
-
-
-@trace
-def crash_fragment(iterator, out_dir):
-    """ Creates a fragment from the compiler crashes. """
-
-    name = os.path.join(out_dir, 'crashes.html.fragment')
-    count = 0
-    with open(name, 'w') as handle:
-        indent = 4
-        handle.write(reindent("""
-        |<h2>Analyzer Failures</h2>
-        |<p>The analyzer had problems processing the following files:</p>
-        |<table>
-        |  <thead>
-        |    <tr>
-        |      <td>Problem</td>
-        |      <td>Source File</td>
-        |      <td>Preprocessed File</td>
-        |      <td>STDERR Output</td>
-        |    </tr>
-        |  </thead>
-        |  <tbody>""", indent))
-        for current in iterator:
-            count += 1
-            handle.write(reindent("""
-        |    <tr>
-        |      <td>{problem}</td>
-        |      <td>{source}</td>
-        |      <td><a href="{file}">preprocessor output</a></td>
-        |      <td><a href="{stderr}">analyzer std err</a></td>
-        |    </tr>""", indent).format(**current))
-            handle.write(metaline('REPORTPROBLEM', current))
-        handle.write(reindent("""
-        |  </tbody>
-        |</table>""", indent))
-        handle.write(metaline('REPORTCRASHES'))
-    return ReportFragment(name, count)
-
-
 def _category_type_name(bug):
     """ Create a new bug attribute from bug by category and type.
 
@@ -323,162 +420,7 @@ def pretty_crash(prefix, out_dir):
 
 
 @trace
-def bug_fragment(iterator, out_dir):
-    """ Creates a fragment from the analyzer reports. """
-
-    name = os.path.join(out_dir, 'bugs.html.fragment')
-    counters = create_counters()
-    with open(name, 'w') as handle:
-        indent = 4
-        handle.write(reindent("""
-        |<h2>Reports</h2>
-        |<table class="sortable" style="table-layout:automatic">
-        |  <thead>
-        |    <tr>
-        |      <td>Bug Group</td>
-        |      <td class="sorttable_sorted">
-        |        Bug Type
-        |        <span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span>
-        |      </td>
-        |      <td>File</td>
-        |      <td>Function/Method</td>
-        |      <td class="Q">Line</td>
-        |      <td class="Q">Path Length</td>
-        |      <td class="sorttable_nosort"></td>
-        |    </tr>
-        |  </thead>
-        |  <tbody>""", indent))
-        handle.write(metaline('REPORTBUGCOL'))
-        for current in iterator:
-            counters(current)
-            handle.write(reindent("""
-        |    <tr class="{bug_type_class}">
-        |      <td class="DESC">{bug_category}</td>
-        |      <td class="DESC">{bug_type}</td>
-        |      <td>{bug_file}</td>
-        |      <td class="DESC">{bug_function}</td>
-        |      <td class="Q">{bug_line}</td>
-        |      <td class="Q">{bug_path_length}</td>
-        |      <td><a href="{report_file}#EndPath">View Report</a></td>
-        |    </tr>""", indent).format(**current))
-            handle.write(metaline('REPORTBUG',
-                                  {'id': current['report_file']}))
-        handle.write(reindent("""
-        |  </tbody>
-        |</table>""", indent))
-        handle.write(metaline('REPORTBUGEND'))
-    with ReportFragment(name, counters.total) as bugs:
-        return summary_fragment(counters, out_dir, bugs)\
-            if counters.total else bugs
-
-
-@trace
-def summary_fragment(counters, out_dir, tail_fragment):
-    """ Bug summary is a HTML table to give a better overview of the bugs.
-
-    counters -- dictionary of bug categories, which contains a dictionary of
-                bug types, count.
-    """
-    name = os.path.join(out_dir, 'summary.html.fragment')
-    with open(name, 'w') as handle:
-        indent = 4
-        handle.write(reindent("""
-        |<h2>Bug Summary</h2>
-        |<table>
-        |  <thead>
-        |    <tr>
-        |      <td>Bug Type</td>
-        |      <td>Quantity</td>
-        |      <td class="sorttable_nosort">Display?</td>
-        |    </tr>
-        |  </thead>
-        |  <tbody>""", indent))
-        handle.write(reindent("""
-        |    <tr style="font-weight:bold">
-        |      <td class="SUMM_DESC">All Bugs</td>
-        |      <td class="Q">{0}</td>
-        |      <td>
-        |        <center>
-        |          <input checked type="checkbox" id="AllBugsCheck"
-        |                 onClick="CopyCheckedStateToCheckButtons(this);"/>
-        |        </center>
-        |      </td>
-        |    </tr>""", indent).format(counters.total))
-        for category, types in counters.categories.items():
-            handle.write(reindent("""
-        |    <tr>
-        |      <th>{0}</th><th colspan=2></th>
-        |    </tr>""", indent).format(category))
-            for bug_type in types.values():
-                handle.write(reindent("""
-        |    <tr>
-        |      <td class="SUMM_DESC">{bug_type}</td>
-        |      <td class="Q">{bug_count}</td>
-        |      <td>
-        |        <center>
-        |          <input checked type="checkbox"
-        |                 onClick="ToggleDisplay(this,'{bug_type_class}');"/>
-        |        </center>
-        |      </td>
-        |    </tr>""", indent).format(**bug_type))
-        handle.write(reindent("""
-        |  </tbody>
-        |</table>""", indent))
-        handle.write(metaline('SUMMARYBUGEND'))
-        tail_fragment.write(handle)
-    return ReportFragment(name, tail_fragment.count)
-
-
-@trace
-@require(['out_dir', 'prefix', 'clang'])
-def assembly_report(opts, *fragments):
-    """ Put together the fragments into a final report. """
-    import getpass
-    import socket
-    import datetime
-
-    if 'html_title' not in opts or opts['html_title'] is None:
-        opts['html_title'] = os.path.basename(opts['prefix']) +\
-            ' - analyzer results'
-
-    output = os.path.join(opts['out_dir'], 'index.html')
-    with open(output, 'w') as handle:
-        handle.write(reindent("""
-        |<!DOCTYPE html>
-        |<html>
-        |  <head>
-        |    <title>{html_title}</title>
-        |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
-        |    <script type='text/javascript' src="sorttable.js"></script>
-        |    <script type='text/javascript' src='selectable.js'></script>
-        |  </head>""", 0).format(html_title=opts['html_title']))
-        handle.write(metaline('SUMMARYENDHEAD'))
-        handle.write(reindent("""
-        |  <body>
-        |    <h1>{html_title}</h1>
-        |    <table>
-        |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
-        |      <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
-        |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
-        |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
-        |      <tr><th>Date:</th><td>{date}</td></tr>
-        |    </table>""", 0).format(
-            html_title=opts['html_title'],
-            user_name=getpass.getuser(),
-            host_name=socket.gethostname(),
-            current_dir=opts['prefix'],
-            cmd_args=' '.join(sys.argv),
-            clang_version=get_version(opts['clang']),
-            date=datetime.datetime.today().strftime('%c')))
-        for fragment in fragments:
-            fragment.write(handle)
-        handle.write(reindent("""
-        |  </body>
-        |</html>""", 0))
-
-
-@trace
-def copy_resource_files(out_dir):
+def _copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
     resources_dir = pkg_resources.resource_filename('analyzer', 'resources')
     for resource in pkg_resources.resource_listdir('analyzer', 'resources'):
