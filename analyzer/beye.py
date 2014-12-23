@@ -16,16 +16,14 @@ confusion the 'scan-build' generated report I call "cover".) """
 
 
 import logging
-import json
 import os
 import time
-import functools
 import tempfile
 import multiprocessing
 from analyzer import tempdir
 from analyzer.options import create_parser
-from analyzer.decorators import to_logging_level, trace, require, entry
-from analyzer.command import create
+from analyzer.decorators import to_logging_level, trace, entry
+from analyzer.command import generate_commands
 from analyzer.runner import run
 from analyzer.report import document
 from analyzer.clang import get_checkers
@@ -85,80 +83,30 @@ def main(parser, intercept):
 
 
 @trace
-@require(['cdb', 'sequential'])
 def run_analyzer(args, out_dir):
     """ Runs the analyzer.
 
-    First it generates the command which will be executed. But not all
-    compilation database entry makes an analyzer call. Result of that
-    step contains enough information to run the analyzer (and the crash
-    report generation if that was requested). """
-
-    def analyzer_params(args):
-        """ A group of command line arguments can mapped to command
-        line arguments of the analyzer. This method generates those. """
-        result = []
-
-        extend_result = lambda pieces, prefix: \
-            functools.reduce(lambda acc, x: acc + [prefix, x], pieces, result)
-
-        if args.store_model:
-            result.append('-analyzer-store={0}'.format(args.store_model))
-        if args.constraints_model:
-            result.append(
-                '-analyzer-constraints={0}'.format(args.constraints_model))
-        if args.internal_stats:
-            result.append('-analyzer-stats')
-        if args.analyze_headers:
-            result.append('-analyzer-opt-analyze-headers')
-        if args.stats:
-            result.append('-analyzer-checker=debug.Stats')
-        if args.maxloop:
-            result.extend(['-analyzer-max-loop', str(args.maxloop)])
-        if args.output_format:
-            result.append('-analyzer-output={0}'.format(args.output_format))
-        if args.analyzer_config:
-            result.append(args.analyzer_config)
-        if 2 <= args.verbose:
-            result.append('-analyzer-display-progress')
-        if args.plugins:
-            extend_result(args.plugins, '-load')
-        if args.enable_checker:
-            extend_result(args.enable_checker, '-analyzer-checker')
-        if args.disable_checker:
-            extend_result(args.disable_checker, '-analyzer-disable-checker')
-        if args.ubiviz:
-            result.append('-analyzer-viz-egraph-ubigraph')
-        return functools.reduce(
-            lambda acc, x: acc + ['-Xclang', x], result, [])
+    It generates commands (from compilation database entries) which contains
+    enough information to run the analyzer (and the crash report generation
+    if that was requested). """
 
     def wrap(iterable, const):
         for current in iterable:
             current.update(const)
             yield current
 
-    with open(args.cdb, 'r') as handle:
-        pool = multiprocessing.Pool(1 if args.sequential else None)
-        commands = [cmd
-                    for cmd
-                    in pool.imap_unordered(
-                        create,
-                        wrap(json.load(handle), {
-                            'clang': args.clang,
-                            'direct_args': analyzer_params(args)}))
-                    if cmd is not None]
-
-        for current in pool.imap_unordered(
-                run,
-                wrap(commands, {
-                    'out_dir': out_dir,
-                    'report_failures': args.report_failures,
-                    'output_format': args.output_format})):
-            if current is not None:
-                for line in current['error_output']:
-                    logging.info(line.rstrip())
-        pool.close()
-        pool.join()
+    pool = multiprocessing.Pool(1 if args.sequential else None)
+    for current in pool.imap_unordered(
+            run,
+            wrap(generate_commands(args), {
+                'out_dir': out_dir,
+                'report_failures': args.report_failures,
+                'output_format': args.output_format})):
+        if current is not None:
+            for line in current['error_output']:
+                logging.info(line.rstrip())
+    pool.close()
+    pool.join()
 
 
 @trace

@@ -16,6 +16,8 @@ import os.path
 import sys
 import copy
 import shlex
+import json
+import functools
 from analyzer.decorators import trace, require
 
 
@@ -26,7 +28,60 @@ else:
 
 
 @trace
-def create(opts):
+def generate_commands(args):
+    """ From compilation database it creates analyzer commands. """
+
+    extra_args = _analyzer_params(args)
+    with open(args.cdb, 'r') as handle:
+        return (cmd
+                for cmd
+                in (_create(cmd, args.clang, extra_args)
+                    for cmd
+                    in json.load(handle))
+                if cmd is not None)
+
+
+@trace
+def _analyzer_params(args):
+    """ A group of command line arguments can mapped to command
+    line arguments of the analyzer. This method generates those. """
+    result = []
+
+    extend_result = lambda pieces, prefix: \
+        functools.reduce(lambda acc, x: acc + [prefix, x], pieces, result)
+
+    if args.store_model:
+        result.append('-analyzer-store={0}'.format(args.store_model))
+    if args.constraints_model:
+        result.append(
+            '-analyzer-constraints={0}'.format(args.constraints_model))
+    if args.internal_stats:
+        result.append('-analyzer-stats')
+    if args.analyze_headers:
+        result.append('-analyzer-opt-analyze-headers')
+    if args.stats:
+        result.append('-analyzer-checker=debug.Stats')
+    if args.maxloop:
+        result.extend(['-analyzer-max-loop', str(args.maxloop)])
+    if args.output_format:
+        result.append('-analyzer-output={0}'.format(args.output_format))
+    if args.analyzer_config:
+        result.append(args.analyzer_config)
+    if 2 <= args.verbose:
+        result.append('-analyzer-display-progress')
+    if args.plugins:
+        extend_result(args.plugins, '-load')
+    if args.enable_checker:
+        extend_result(args.enable_checker, '-analyzer-checker')
+    if args.disable_checker:
+        extend_result(args.disable_checker, '-analyzer-disable-checker')
+    if args.ubiviz:
+        result.append('-analyzer-viz-egraph-ubigraph')
+    return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
+
+
+@trace
+def _create(opts, clang, direct_args):
     """ From a single compilation it creates a command to run the analyzer.
 
     opts -- This is an entry from the compilation database plus some extra
@@ -40,9 +95,9 @@ def create(opts):
 
         { 'directory': ...,
           'command': ...,
-          'file': ...,
-          'clang': ...,
-          'direct_args': ... }
+          'file': ... },
+        clang,
+        direct_args
 
     creates an output dictionary like this..
 
@@ -55,6 +110,7 @@ def create(opts):
 
     try:
         opts.update({'command': shlex.split(opts['command'])})
+        opts.update({'clang': clang, 'direct_args': direct_args})
         return parse(opts)
     except Exception as exception:
         logging.error(str(exception))
