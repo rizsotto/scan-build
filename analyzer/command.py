@@ -109,9 +109,11 @@ def _create(opts, clang, direct_args):
     """
 
     try:
-        opts.update({'command': shlex.split(opts['command'])})
+        details = parse(shlex.split(opts['command']))
         opts.update({'clang': clang, 'direct_args': direct_args})
-        return parse(opts)
+        opts.update(details)
+        del opts['command']
+        return filter_action(opts)
     except Exception as exception:
         logging.error(str(exception))
         return None
@@ -229,8 +231,7 @@ def filter_action(opts, continuation=arch_loop):
 
 
 @trace
-@require(['command'])
-def parse(opts, continuation=filter_action):
+def parse(command):
     """ Parses the command line arguments of the current invocation.
 
     To run analysis from a compilation command, first it disassembles the
@@ -407,7 +408,6 @@ def parse(opts, continuation=filter_action):
 
     state = {'action': Action.Link}
     try:
-        command = opts['command']
         # get the invocation intent
         state.update(is_cxx=is_cxx(command[0]))
         # iterate on arguments
@@ -416,6 +416,4 @@ def parse(opts, continuation=filter_action):
             iterator.next()
             match(state, iterator)
     except StopIteration:
-        del opts['command']
-        state.update(opts)
-        return continuation(state)
+        return state

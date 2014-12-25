@@ -154,7 +154,7 @@ def format_entry(entry):
         (Eg.: -D_KEY="Value with spaces") """
         return ' '.join(args)
 
-    atoms = parse({'command': entry['command']}, lambda x: x)
+    atoms = parse(entry['command'])
     if atoms['action'] == Action.Compile:
         for filename in atoms['files']:
             yield {'directory': entry['directory'],
