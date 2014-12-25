@@ -166,8 +166,8 @@ def compiler_call(entry):
     """ A predicate to decide the entry is a compiler call or not. """
     patterns = [
         re.compile(r'^([^/]*/)*c(c|\+\+)$'),
-        re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-[2345].[0-9])?$'),
-        re.compile(r'^([^/]*/)*([^-]*-)*clang(\+\+)?(-[23].[0-9])?$'),
+        re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-\d+(\.\d+){0,2})?$'),
+        re.compile(r'^([^/]*/)*([^-]*-)*clang(\+\+)?(-\d+(\.\d+){0,2})?$'),
         re.compile(r'^([^/]*/)*llvm-g(cc|\+\+)$'),
     ]
     executable = entry['command'][0]

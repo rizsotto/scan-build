@@ -393,7 +393,7 @@ def parse(command):
         return take
 
     def is_cxx(cmd):
-        m = re.match(r'([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
+        m = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
         return False if m is None else True
 
     class ArgumentIterator(object):
@@ -406,11 +406,9 @@ def parse(command):
             self.current = NEXT(self.__it)
             return self.current
 
-    state = {'action': Action.Link}
+    state = {'action': Action.Link,
+             'is_cxx': is_cxx(command[0])}
     try:
-        # get the invocation intent
-        state.update(is_cxx=is_cxx(command[0]))
-        # iterate on arguments
         iterator = ArgumentIterator(command[1:])
         while True:
             iterator.next()
