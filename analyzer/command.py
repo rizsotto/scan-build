@@ -13,18 +13,10 @@ import logging
 import re
 import os
 import os.path
-import sys
-import copy
 import shlex
 import json
 import functools
 from analyzer.decorators import trace, require
-
-
-if 3 == sys.version_info[0]:
-    NEXT = next
-else:
-    NEXT = lambda x: x.next()
 
 
 @trace
@@ -247,7 +239,7 @@ def parse(command):
             regexp = re.compile(pattern)
 
             def evaluate(iterator):
-                match = regexp.match(iterator.current)
+                match = regexp.match(iterator.current())
                 if match:
                     action(state, iterator, match)
                     return True
@@ -255,7 +247,7 @@ def parse(command):
 
         def anyof(opts, action):
             def evaluate(iterator):
-                if iterator.current in opts:
+                if iterator.current() in opts:
                     action(state, iterator, None)
                     return True
             return evaluate
@@ -334,7 +326,7 @@ def parse(command):
     def take_n(count=1, *keys):
         def take(values, iterator, _match):
             updates = []
-            updates.append(iterator.current)
+            updates.append(iterator.current())
             for _ in range(count - 1):
                 updates.append(iterator.next())
             for key in keys:
@@ -354,7 +346,7 @@ def parse(command):
     def take_joined(*keys):
         def take(values, iterator, match):
             updates = []
-            updates.append(iterator.current)
+            updates.append(iterator.current())
             if not match.group(1):
                 updates.append(iterator.next())
             for key in keys:
@@ -396,22 +388,48 @@ def parse(command):
         m = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
         return False if m is None else True
 
-    class ArgumentIterator(object):
-        """ Iterator from the current value can be queried. """
-        def __init__(self, args):
-            self.current = None
-            self.__it = iter(args)
-
-        def next(self):
-            self.current = NEXT(self.__it)
-            return self.current
-
     state = {'action': Action.Link,
              'is_cxx': is_cxx(command[0])}
-    try:
-        iterator = ArgumentIterator(command[1:])
-        while True:
-            iterator.next()
-            match(state, iterator)
-    except StopIteration:
-        return state
+
+    iterator = Arguments(command)
+    for _ in iterator:
+        match(state, iterator)
+    return state
+
+
+class Arguments(object):
+    """ An iterator wraper around compiler arguments.
+
+    Python iterators are only implement the 'next' method, but this one
+    implements the 'current' query method as well.
+    """
+    def __init__(self, args):
+        """ Takes the full command line, but iterates on the parameters only.
+        """
+        self.__sequence = args[1:]
+        self.__size = len(self.__sequence)
+        self.__current = -1
+
+    def __iter__(self):
+        """ Needed for python iterator.
+        """
+        return self
+
+    def __next__(self):
+        """ Needed for python iterator. (version 3.x)
+        """
+        return self.next()
+
+    def next(self):
+        """ Needed for python iterator. (version 2.x)
+        """
+        self.__current += 1
+        return self.current()
+
+    def current(self):
+        """ Extra method to query the current element.
+        """
+        if self.__current >= self.__size:
+            raise StopIteration
+        else:
+            return self.__sequence[self.__current]
