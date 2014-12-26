@@ -20,9 +20,10 @@ def run_analyzer(content, opts):
 
         opts.update({
             'directory': os.getcwd(),
+            'clang': 'clang',
             'file': filename,
             'language': 'c++',
-            'analyze': ['clang', '--analyze', '-x', 'c++', filename],
+            'analyze': ['--analyze', '-x', 'c++', filename],
             'output': ['-o', tmpdir]})
         spy = fixtures.Spy()
         result = sut.run_analyzer(opts, spy.call)
@@ -93,8 +94,9 @@ class ReportFailureTest(fixtures.TestCase):
             error_msg = 'this is my error output'
             # execute test
             opts = {'directory': os.getcwd(),
+                    'clang': 'clang',
                     'file': filename,
-                    'report': ['clang', '-fsyntax-only', '-E', filename],
+                    'report': ['-fsyntax-only', '-E', filename],
                     'language': 'c',
                     'out_dir': tmpdir,
                     'error_type': 'other_error',

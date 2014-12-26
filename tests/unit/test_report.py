@@ -83,8 +83,9 @@ class ParseFileTest(unittest.TestCase):
                 handle.write('int main() { return 0')
             # produce failure report
             opts = {'directory': os.getcwd(),
+                    'clang': 'clang',
                     'file': filename,
-                    'report': ['clang', '-fsyntax-only', '-E', filename],
+                    'report': ['-fsyntax-only', '-E', filename],
                     'language': 'c',
                     'out_dir': tmpdir,
                     'error_type': 'other_error',

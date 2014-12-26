@@ -27,7 +27,7 @@ def generate_commands(args):
     with open(args.cdb, 'r') as handle:
         return (cmd
                 for cmd
-                in (_create(cmd, args.clang, extra_args)
+                in (_create(cmd, extra_args)
                     for cmd
                     in json.load(handle))
                 if cmd is not None)
@@ -73,7 +73,7 @@ def _analyzer_params(args):
 
 
 @trace
-def _create(opts, clang, direct_args):
+def _create(opts, direct_args):
     """ From a single compilation it creates a command to run the analyzer.
 
     opts -- This is an entry from the compilation database plus some extra
@@ -88,7 +88,6 @@ def _create(opts, clang, direct_args):
         { 'directory': ...,
           'command': ...,
           'file': ... },
-        clang,
         direct_args
 
     creates an output dictionary like this..
@@ -102,7 +101,7 @@ def _create(opts, clang, direct_args):
 
     try:
         details = parse(shlex.split(opts['command']))
-        opts.update({'clang': clang, 'direct_args': direct_args})
+        opts.update({'direct_args': direct_args})
         opts.update(details)
         del opts['command']
         return filter_action(opts)
@@ -117,7 +116,7 @@ class Action(object):
 
 
 @trace
-@require(['clang', 'directory', 'file', 'language', 'direct_args'])
+@require(['directory', 'file', 'language', 'direct_args'])
 def create_commands(opts):
     """ Create command to run analyzer or failure report generation.
 
@@ -135,8 +134,8 @@ def create_commands(opts):
         'directory': opts['directory'],
         'file': opts['file'],
         'language': opts['language'],
-        'analyze': [opts['clang'], '--analyze'] + opts['direct_args'] + common,
-        'report': [opts['clang'], '-fsyntax-only', '-E'] + common}
+        'analyze': ['--analyze'] + opts['direct_args'] + common,
+        'report': ['-fsyntax-only', '-E'] + common}
 
 
 @trace

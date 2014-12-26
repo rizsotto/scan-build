@@ -17,9 +17,6 @@ from analyzer.clang import get_arguments, get_version
 
 
 @trace
-@require(['analyze', 'report', 'directory',
-          'out_dir', 'language',
-          'file'])
 def run(opts):
     """ Execute given analyzer command.
 
@@ -36,7 +33,7 @@ def run(opts):
 
 @trace
 @require(['report', 'directory',
-          'out_dir', 'language',
+          'clang', 'out_dir', 'language',
           'file', 'error_type', 'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
@@ -67,7 +64,7 @@ def report_failure(opts):
                                       dir=destination(opts))
     os.close(handle)
     cwd = opts['directory']
-    cmd = get_arguments(cwd, opts['report'] + ['-o', name])
+    cmd = get_arguments(cwd, [opts['clang']] + opts['report'] + ['-o', name])
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     subprocess.call(cmd, cwd=cwd)
 
@@ -88,14 +85,14 @@ def report_failure(opts):
 
 
 @trace
-@require(['analyze', 'directory', 'output'])
+@require(['clang', 'analyze', 'directory', 'output'])
 def run_analyzer(opts, continuation=report_failure):
     """ From the state parameter it assembles the analysis command line and
     executes it. Capture the output of the analysis and returns with it. If
     failure reports are requested, it calls the continuation to generate it.
     """
     cwd = opts['directory']
-    cmd = opts['analyze'] + opts['output']
+    cmd = [opts['clang']] + opts['analyze'] + opts['output']
     logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
     child = subprocess.Popen(cmd,
                              cwd=cwd,

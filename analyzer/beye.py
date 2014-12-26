@@ -100,6 +100,7 @@ def run_analyzer(args, out_dir):
             run,
             wrap(generate_commands(args), {
                 'out_dir': out_dir,
+                'clang': args.clang,
                 'report_failures': args.report_failures,
                 'output_format': args.output_format})):
         if current is not None:
