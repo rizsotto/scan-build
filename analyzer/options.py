@@ -44,10 +44,6 @@ def _common(parser):
         help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
     parser.add_argument(
-        '--sequential',
-        action='store_true',
-        help="""Execute analyzer sequentialy.""")
-    parser.add_argument(
         '--cdb',
         metavar='<file>',
         default="compile_commands.json",
@@ -100,6 +96,10 @@ def _beye(parser):
         help="""Also analyze functions in #included files. By default, such
                 functions are skipped unless they are called by functions
                 within the main source file.""")
+    parser.add_argument(
+        '--sequential',
+        action='store_true',
+        help="""Execute analyzer sequentialy.""")
     format_group = parser.add_mutually_exclusive_group()
     format_group.add_argument(
         '--plist',
