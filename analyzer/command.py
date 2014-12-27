@@ -200,16 +200,12 @@ def parse(command):
             values[key] = max(current, action)
         return take
 
-    def is_cxx(cmd):
-        m = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', cmd)
-        return False if m is None else True
-
     state = {'action': Action.Link,
-             'is_cxx': is_cxx(command[0])}
+             'cxx': _is_cplusplus_compiler(command[0])}
 
-    iterator = Arguments(command)
-    for _ in iterator:
-        match(state, iterator)
+    arguments = Arguments(command)
+    for _ in arguments:
+        match(state, arguments)
     return state
 
 
@@ -249,6 +245,13 @@ class Arguments(object):
             raise StopIteration
         else:
             return self.__sequence[self.__current]
+
+
+def _is_cplusplus_compiler(name):
+    """ Returns true when the compiler name refer to a C++ compiler.
+    """
+    match = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', name)
+    return False if match is None else True
 
 
 @trace
@@ -356,9 +359,9 @@ def _create_commands(opts):
 def _language_check(opts, continuation=_create_commands):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
-    def from_filename(name, is_cxx):
+    def from_filename(name, cplusplus_compiler):
         mapping = {
-            '.c': 'c++' if is_cxx else 'c',
+            '.c': 'c++' if cplusplus_compiler else 'c',
             '.cp': 'c++',
             '.cpp': 'c++',
             '.cxx': 'c++',
@@ -366,7 +369,7 @@ def _language_check(opts, continuation=_create_commands):
             '.cc': 'c++',
             '.C': 'c++',
             '.ii': 'c++-cpp-output',
-            '.i': 'c++-cpp-output' if is_cxx else 'c-cpp-output',
+            '.i': 'c++-cpp-output' if cplusplus_compiler else 'c-cpp-output',
             '.m': 'objective-c',
             '.mi': 'objective-c-cpp-output',
             '.mm': 'objective-c++',
@@ -387,7 +390,7 @@ def _language_check(opts, continuation=_create_commands):
 
     key = 'language'
     language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts.get('is_cxx'))
+        from_filename(opts['file'], opts.get('cxx', False))
     if language is None:
         logging.debug('skip analysis, language not known')
     elif language not in accepteds:

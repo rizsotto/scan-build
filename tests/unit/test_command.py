@@ -19,7 +19,7 @@ class AnalyzerTest(unittest.TestCase):
 
         l = 'language'
         f = 'file'
-        i = 'is_cxx'
+        i = 'cxx'
         test({f: 'file.c', l: 'c'}, {f: 'file.c', l: 'c'})
         test({f: 'file.c', l: 'c++'}, {f: 'file.c', l: 'c++'})
         test({f: 'file.c', l: 'c++', i: True}, {f: 'file.c', i: True})
@@ -241,7 +241,7 @@ class ParseTest(unittest.TestCase):
     def test_detect_cxx_from_compiler_name(self):
         def test(cmd):
             opts = sut.parse(cmd)
-            return opts.get('is_cxx')
+            return opts.get('cxx')
 
         eq = self.assertEqual
 
