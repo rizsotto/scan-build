@@ -329,8 +329,8 @@ def _parse_bug_html(filename):
                     bug.update(match.groupdict())
                     break
 
-    _encode_value(bug, 'bug_line', lambda x: int(x))
-    _encode_value(bug, 'bug_path_length', lambda x: int(x))
+    _encode_value(bug, 'bug_line', int)
+    _encode_value(bug, 'bug_path_length', int)
 
     yield bug
 
@@ -406,11 +406,11 @@ def _prettify_crash(prefix, out_dir):
         _encode_value(crash, 'source', _escape)
         _encode_value(crash, 'problem', _escape)
         _encode_value(crash, 'file', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'file', lambda x: _escape(x))
+        _encode_value(crash, 'file', _escape)
         _encode_value(crash, 'info', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'info', lambda x: _escape(x))
+        _encode_value(crash, 'info', _escape)
         _encode_value(crash, 'stderr', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'stderr', lambda x: _escape(x))
+        _encode_value(crash, 'stderr', _escape)
         return crash
 
     return predicate
