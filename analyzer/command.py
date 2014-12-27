@@ -23,14 +23,22 @@ from analyzer.decorators import trace, require
 def generate_commands(args):
     """ From compilation database it creates analyzer commands. """
 
-    extra_args = _analyzer_params(args)
+    def extend(opts, direct_args):
+        """ Take a compilation database entry and extend it with classified
+        compiler parameters and direct arguments from command line.
+        """
+        opts.update(classify_parameters(shlex.split(opts['command'])))
+        opts.update({'direct_args': direct_args})
+        return opts
+
+    direct_args = _analyzer_params(args)
     with open(args.cdb, 'r') as handle:
-        return (cmd
-                for cmd
-                in (_create(cmd, extra_args)
-                    for cmd
-                    in json.load(handle))
-                if cmd is not None)
+        generator = (extend(cmd, direct_args) for cmd in json.load(handle))
+
+    return (cmd
+            for cmd
+            in (_action_check(cmd) for cmd in generator)
+            if cmd is not None)
 
 
 class Action(object):
@@ -291,44 +299,6 @@ def _analyzer_params(args):
     if args.ubiviz:
         result.append('-analyzer-viz-egraph-ubigraph')
     return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
-
-
-@trace
-def _create(opts, direct_args):
-    """ From a single compilation it creates a command to run the analyzer.
-
-    opts -- This is an entry from the compilation database plus some extra
-            information, like: compiler, analyzer parameters, etc..
-
-    The analysis is written continuation-passing like style. Each step
-    takes two arguments: the current analysis state, and a method to call
-    as next thing to do. (The 'opts' argument is the initial state.)
-
-    From an input dictionary like this..
-
-        { 'directory': ...,
-          'command': ...,
-          'file': ... },
-        direct_args
-
-    creates an output dictionary like this..
-
-        { 'directory': ...,
-          'file': ...,
-          'language': ...,
-          'analyze': ...,
-          'report': ... }
-    """
-
-    try:
-        details = classify_parameters(shlex.split(opts['command']))
-        opts.update({'direct_args': direct_args})
-        opts.update(details)
-        del opts['command']
-        return _action_check(opts)
-    except Exception as exception:
-        logging.error(str(exception))
-        return None
 
 
 @trace
