@@ -33,192 +33,9 @@ def generate_commands(args):
                 if cmd is not None)
 
 
-@trace
-def _analyzer_params(args):
-    """ A group of command line arguments can mapped to command
-    line arguments of the analyzer. This method generates those. """
-    result = []
-
-    extend_result = lambda pieces, prefix: \
-        functools.reduce(lambda acc, x: acc + [prefix, x], pieces, result)
-
-    if args.store_model:
-        result.append('-analyzer-store={0}'.format(args.store_model))
-    if args.constraints_model:
-        result.append(
-            '-analyzer-constraints={0}'.format(args.constraints_model))
-    if args.internal_stats:
-        result.append('-analyzer-stats')
-    if args.analyze_headers:
-        result.append('-analyzer-opt-analyze-headers')
-    if args.stats:
-        result.append('-analyzer-checker=debug.Stats')
-    if args.maxloop:
-        result.extend(['-analyzer-max-loop', str(args.maxloop)])
-    if args.output_format:
-        result.append('-analyzer-output={0}'.format(args.output_format))
-    if args.analyzer_config:
-        result.append(args.analyzer_config)
-    if 2 <= args.verbose:
-        result.append('-analyzer-display-progress')
-    if args.plugins:
-        extend_result(args.plugins, '-load')
-    if args.enable_checker:
-        extend_result(args.enable_checker, '-analyzer-checker')
-    if args.disable_checker:
-        extend_result(args.disable_checker, '-analyzer-disable-checker')
-    if args.ubiviz:
-        result.append('-analyzer-viz-egraph-ubigraph')
-    return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
-
-
-@trace
-def _create(opts, direct_args):
-    """ From a single compilation it creates a command to run the analyzer.
-
-    opts -- This is an entry from the compilation database plus some extra
-            information, like: compiler, analyzer parameters, etc..
-
-    The analysis is written continuation-passing like style. Each step
-    takes two arguments: the current analysis state, and a method to call
-    as next thing to do. (The 'opts' argument is the initial state.)
-
-    From an input dictionary like this..
-
-        { 'directory': ...,
-          'command': ...,
-          'file': ... },
-        direct_args
-
-    creates an output dictionary like this..
-
-        { 'directory': ...,
-          'file': ...,
-          'language': ...,
-          'analyze': ...,
-          'report': ... }
-    """
-
-    try:
-        details = parse(shlex.split(opts['command']))
-        opts.update({'direct_args': direct_args})
-        opts.update(details)
-        del opts['command']
-        return filter_action(opts)
-    except Exception as exception:
-        logging.error(str(exception))
-        return None
-
-
 class Action(object):
     """ Enumeration class for compiler action. """
     Link, Compile, Preprocess, Info = range(4)
-
-
-@trace
-@require(['directory', 'file', 'language', 'direct_args'])
-def create_commands(opts):
-    """ Create command to run analyzer or failure report generation.
-
-    If output is passed it returns failure report command.
-    If it's not given it returns the analyzer command. """
-    common = []
-    if 'arch' in opts:
-        common.extend(['-arch', opts['arch']])
-    if 'compile_options' in opts:
-        common.extend(opts['compile_options'])
-    common.extend(['-x', opts['language']])
-    common.append(opts['file'])
-
-    return {
-        'directory': opts['directory'],
-        'file': opts['file'],
-        'language': opts['language'],
-        'analyze': ['--analyze'] + opts['direct_args'] + common,
-        'report': ['-fsyntax-only', '-E'] + common}
-
-
-@trace
-@require(['file'])
-def set_language(opts, continuation=create_commands):
-    """ Find out the language from command line parameters or file name
-    extension. The decision also influenced by the compiler invocation. """
-    def from_filename(name, is_cxx):
-        mapping = {
-            '.c': 'c++' if is_cxx else 'c',
-            '.cp': 'c++',
-            '.cpp': 'c++',
-            '.cxx': 'c++',
-            '.txx': 'c++',
-            '.cc': 'c++',
-            '.C': 'c++',
-            '.ii': 'c++-cpp-output',
-            '.i': 'c++-cpp-output' if is_cxx else 'c-cpp-output',
-            '.m': 'objective-c',
-            '.mi': 'objective-c-cpp-output',
-            '.mm': 'objective-c++',
-            '.mii': 'objective-c++-cpp-output'
-        }
-        (_, extension) = os.path.splitext(os.path.basename(name))
-        return mapping.get(extension)
-
-    accepteds = {
-        'c',
-        'c++',
-        'objective-c',
-        'objective-c++',
-        'c-cpp-output',
-        'c++-cpp-output',
-        'objective-c-cpp-output'
-    }
-
-    key = 'language'
-    language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts.get('is_cxx'))
-    if language is None:
-        logging.debug('skip analysis, language not known')
-    elif language not in accepteds:
-        logging.debug('skip analysis, language not supported')
-    else:
-        logging.debug('analysis, language: {0}'.format(language))
-        opts.update({key: language})
-        return continuation(opts)
-    return None
-
-
-@trace
-@require([])
-def arch_loop(opts, continuation=set_language):
-    """ Do run analyzer through one of the given architectures. """
-    disableds = {'ppc', 'ppc64'}
-
-    key = 'archs_seen'
-    if key in opts:
-        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
-        if not archs:
-            logging.debug('skip analysis, found not supported arch')
-            return None
-        else:
-            # There should be only one arch given (or the same multiple times)
-            # If there are multiple arch are given, and those are not the same
-            # those should not change the pre-processing step. (But that's the
-            # only pass we have before run the analyzer.)
-            arch = archs.pop()
-            logging.debug('analysis, on arch: {0}'.format(arch))
-
-            opts.update({'arch': arch})
-            del opts[key]
-            return continuation(opts)
-    else:
-        logging.debug('analysis, on default arch')
-        return continuation(opts)
-
-
-@trace
-@require(['action'])
-def filter_action(opts, continuation=arch_loop):
-    """ Continue analysis only if it compilation or link. """
-    return continuation(opts) if opts['action'] <= Action.Compile else None
 
 
 @trace
@@ -432,3 +249,186 @@ class Arguments(object):
             raise StopIteration
         else:
             return self.__sequence[self.__current]
+
+
+@trace
+def _analyzer_params(args):
+    """ A group of command line arguments can mapped to command
+    line arguments of the analyzer. This method generates those. """
+    result = []
+
+    extend_result = lambda pieces, prefix: \
+        functools.reduce(lambda acc, x: acc + [prefix, x], pieces, result)
+
+    if args.store_model:
+        result.append('-analyzer-store={0}'.format(args.store_model))
+    if args.constraints_model:
+        result.append(
+            '-analyzer-constraints={0}'.format(args.constraints_model))
+    if args.internal_stats:
+        result.append('-analyzer-stats')
+    if args.analyze_headers:
+        result.append('-analyzer-opt-analyze-headers')
+    if args.stats:
+        result.append('-analyzer-checker=debug.Stats')
+    if args.maxloop:
+        result.extend(['-analyzer-max-loop', str(args.maxloop)])
+    if args.output_format:
+        result.append('-analyzer-output={0}'.format(args.output_format))
+    if args.analyzer_config:
+        result.append(args.analyzer_config)
+    if 2 <= args.verbose:
+        result.append('-analyzer-display-progress')
+    if args.plugins:
+        extend_result(args.plugins, '-load')
+    if args.enable_checker:
+        extend_result(args.enable_checker, '-analyzer-checker')
+    if args.disable_checker:
+        extend_result(args.disable_checker, '-analyzer-disable-checker')
+    if args.ubiviz:
+        result.append('-analyzer-viz-egraph-ubigraph')
+    return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
+
+
+@trace
+def _create(opts, direct_args):
+    """ From a single compilation it creates a command to run the analyzer.
+
+    opts -- This is an entry from the compilation database plus some extra
+            information, like: compiler, analyzer parameters, etc..
+
+    The analysis is written continuation-passing like style. Each step
+    takes two arguments: the current analysis state, and a method to call
+    as next thing to do. (The 'opts' argument is the initial state.)
+
+    From an input dictionary like this..
+
+        { 'directory': ...,
+          'command': ...,
+          'file': ... },
+        direct_args
+
+    creates an output dictionary like this..
+
+        { 'directory': ...,
+          'file': ...,
+          'language': ...,
+          'analyze': ...,
+          'report': ... }
+    """
+
+    try:
+        details = parse(shlex.split(opts['command']))
+        opts.update({'direct_args': direct_args})
+        opts.update(details)
+        del opts['command']
+        return _action_check(opts)
+    except Exception as exception:
+        logging.error(str(exception))
+        return None
+
+
+@trace
+@require(['directory', 'file', 'language', 'direct_args'])
+def _create_commands(opts):
+    """ Create command to run analyzer or failure report generation.
+
+    If output is passed it returns failure report command.
+    If it's not given it returns the analyzer command. """
+    common = []
+    if 'arch' in opts:
+        common.extend(['-arch', opts['arch']])
+    if 'compile_options' in opts:
+        common.extend(opts['compile_options'])
+    common.extend(['-x', opts['language']])
+    common.append(opts['file'])
+
+    return {
+        'directory': opts['directory'],
+        'file': opts['file'],
+        'language': opts['language'],
+        'analyze': ['--analyze'] + opts['direct_args'] + common,
+        'report': ['-fsyntax-only', '-E'] + common}
+
+
+@trace
+@require(['file'])
+def _language_check(opts, continuation=_create_commands):
+    """ Find out the language from command line parameters or file name
+    extension. The decision also influenced by the compiler invocation. """
+    def from_filename(name, is_cxx):
+        mapping = {
+            '.c': 'c++' if is_cxx else 'c',
+            '.cp': 'c++',
+            '.cpp': 'c++',
+            '.cxx': 'c++',
+            '.txx': 'c++',
+            '.cc': 'c++',
+            '.C': 'c++',
+            '.ii': 'c++-cpp-output',
+            '.i': 'c++-cpp-output' if is_cxx else 'c-cpp-output',
+            '.m': 'objective-c',
+            '.mi': 'objective-c-cpp-output',
+            '.mm': 'objective-c++',
+            '.mii': 'objective-c++-cpp-output'
+        }
+        (_, extension) = os.path.splitext(os.path.basename(name))
+        return mapping.get(extension)
+
+    accepteds = {
+        'c',
+        'c++',
+        'objective-c',
+        'objective-c++',
+        'c-cpp-output',
+        'c++-cpp-output',
+        'objective-c-cpp-output'
+    }
+
+    key = 'language'
+    language = opts[key] if key in opts else \
+        from_filename(opts['file'], opts.get('is_cxx'))
+    if language is None:
+        logging.debug('skip analysis, language not known')
+    elif language not in accepteds:
+        logging.debug('skip analysis, language not supported')
+    else:
+        logging.debug('analysis, language: {0}'.format(language))
+        opts.update({key: language})
+        return continuation(opts)
+    return None
+
+
+@trace
+@require([])
+def _arch_check(opts, continuation=_language_check):
+    """ Do run analyzer through one of the given architectures. """
+    disableds = {'ppc', 'ppc64'}
+
+    key = 'archs_seen'
+    if key in opts:
+        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
+        if not archs:
+            logging.debug('skip analysis, found not supported arch')
+            return None
+        else:
+            # There should be only one arch given (or the same multiple times)
+            # If there are multiple arch are given, and those are not the same
+            # those should not change the pre-processing step. (But that's the
+            # only pass we have before run the analyzer.)
+            arch = archs.pop()
+            logging.debug('analysis, on arch: {0}'.format(arch))
+
+            opts.update({'arch': arch})
+            del opts[key]
+            return continuation(opts)
+    else:
+        logging.debug('analysis, on default arch')
+        return continuation(opts)
+
+
+@trace
+@require(['action'])
+def _action_check(opts, continuation=_arch_check):
+    """ Continue analysis only if it compilation or link. """
+    return continuation(opts) if opts['action'] <= Action.Compile else None

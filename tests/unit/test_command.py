@@ -14,7 +14,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language(self):
         def test(expected, input):
             spy = fixtures.Spy()
-            self.assertEqual(spy.success, sut.set_language(input, spy.call))
+            self.assertEqual(spy.success, sut._language_check(input, spy.call))
             self.assertEqual(expected, spy.arg)
 
         l = 'language'
@@ -31,7 +31,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language_fails(self):
         def test(expected, input):
             spy = fixtures.Spy()
-            self.assertEqual(None, sut.set_language(input, spy.call))
+            self.assertEqual(None, sut._language_check(input, spy.call))
             self.assertEqual(expected, spy.arg)
 
         test(None, {'file': 'file.java'})
@@ -39,19 +39,19 @@ class AnalyzerTest(unittest.TestCase):
     def test_arch_loop_default_forwards_call(self):
         spy = fixtures.Spy()
         input = {'key': 'value'}
-        self.assertEqual(spy.success, sut.arch_loop(input, spy.call))
+        self.assertEqual(spy.success, sut._arch_check(input, spy.call))
         self.assertEqual(input, spy.arg)
 
     def test_arch_loop_specified_forwards_call(self):
         spy = fixtures.Spy()
         input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
-        self.assertEqual(spy.success, sut.arch_loop(input, spy.call))
+        self.assertEqual(spy.success, sut._arch_check(input, spy.call))
         self.assertEqual({'arch': 'i386'}, spy.arg)
 
     def test_arch_loop_forwards_call(self):
         spy = fixtures.Spy()
         input = {'archs_seen': ['-arch', 'i386', '-arch', 'sparc']}
-        self.assertEqual(spy.success, sut.arch_loop(input, spy.call))
+        self.assertEqual(spy.success, sut._arch_check(input, spy.call))
         self.assertEqual({'arch': 'sparc'}, spy.arg)
 
 
