@@ -39,12 +39,12 @@ class Action(object):
 
 
 @trace
-def parse(command):
-    """ Parses the command line arguments of the current invocation.
+def classify_parameters(command):
+    """ Parses the command line arguments of the given invocation.
 
     To run analysis from a compilation command, first it disassembles the
     compilation command. Classifies the parameters into groups and throws
-    away those which are not relevant. This method is doing that task.
+    away those which are not relevant.
     """
     def match(state, iterator):
         """ This method contains a list of pattern and action tuples.
@@ -321,7 +321,7 @@ def _create(opts, direct_args):
     """
 
     try:
-        details = parse(shlex.split(opts['command']))
+        details = classify_parameters(shlex.split(opts['command']))
         opts.update({'direct_args': direct_args})
         opts.update(details)
         del opts['command']

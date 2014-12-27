@@ -35,7 +35,7 @@ import itertools
 from analyzer import duplicate_check, tempdir
 from analyzer.decorators import to_logging_level, trace, entry
 from analyzer.options import create_parser
-from analyzer.command import parse
+from analyzer.command import classify_parameters
 from analyzer.command import Action
 
 if 'darwin' == sys.platform:
@@ -154,7 +154,7 @@ def format_entry(entry):
         (Eg.: -D_KEY="Value with spaces") """
         return ' '.join(args)
 
-    atoms = parse(entry['command'])
+    atoms = classify_parameters(entry['command'])
     if atoms['action'] == Action.Compile:
         for filename in atoms['files']:
             yield {'directory': entry['directory'],
