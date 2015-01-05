@@ -5,7 +5,6 @@
 # License. See LICENSE.TXT for details.
 
 import analyzer.decorators as sut
-from . import fixtures
 import unittest
 
 

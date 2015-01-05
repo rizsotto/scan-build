@@ -13,6 +13,6 @@ import tests.functional.beye
 def suite():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTests(loader.loadTestsFromModule(unit))
-    suite.addTests(loader.loadTestsFromModule(functional.beye))
+    suite.addTests(loader.loadTestsFromModule(tests.unit))
+    suite.addTests(loader.loadTestsFromModule(tests.functional.beye))
     return suite
