@@ -55,12 +55,12 @@ typedef struct {
     char const **cmd;
 } bear_message_t;
 
+static char **bear_get_environ(void);
 static char const **bear_update_environment(char *const envp[]);
+static char const **bear_update_environ(char const **in, char const *key);
 static void bear_report_call(char const *fun, char const *const argv[]);
 static void bear_write_message(int fd, bear_message_t const *e);
 static void bear_send_message(char const *destination, bear_message_t const *e);
-static char const **bear_update_environ(char const **in, char const *key);
-static char **bear_get_environ(void);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
 static char const **bear_strings_append(char const **in, char const *e);
@@ -340,7 +340,11 @@ static int call_posix_spawn(pid_t *restrict pid, const char *restrict path,
 
     DLSYM(func, fp, "posix_spawn");
 
-    return (*fp)(pid, path, file_actions, attrp, argv, envp);
+    char const **const menvp = bear_update_environment(envp);
+    int const result =
+        (*fp)(pid, path, file_actions, attrp, argv, (char *const *restrict)menvp);
+    bear_strings_release(menvp);
+    return result;
 }
 #endif
 
@@ -357,7 +361,11 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 
     DLSYM(func, fp, "posix_spawnp");
 
-    return (*fp)(pid, file, file_actions, attrp, argv, envp);
+    char const **const menvp = bear_update_environment(envp);
+    int const result =
+        (*fp)(pid, file, file_actions, attrp, argv, (char *const *restrict)menvp);
+    bear_strings_release(menvp);
+    return result;
 }
 #endif
 
