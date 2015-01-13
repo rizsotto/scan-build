@@ -37,15 +37,18 @@
 #include <spawn.h>
 #endif
 
-#ifdef HAVE_NSGETENVIRON
+#if defined HAVE_NSGETENVIRON
 #include <crt_externs.h>
+static char **environ;
 #else
 extern char **environ;
 #endif
 
-#ifdef __APPLE__
-#define EXEC_LOOP_ON_EXECVE
-#endif
+
+typedef struct {
+    char const * output;
+    char const * preload;
+} bear_env_t;
 
 typedef struct {
     pid_t pid;
@@ -55,9 +58,10 @@ typedef struct {
     char const **cmd;
 } bear_message_t;
 
-static char **bear_get_environ(void);
+static void bear_release_env_t(bear_env_t * env);
+static int bear_capture_env_t(bear_env_t * env);
 static char const **bear_update_environment(char *const envp[]);
-static char const **bear_update_environ(char const **in, char const *key);
+static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *fun, char const *const argv[]);
 static void bear_write_message(int fd, bear_message_t const *e);
 static void bear_send_message(char const *destination, bear_message_t const *e);
@@ -66,6 +70,17 @@ static char const **bear_strings_copy(char const **const in);
 static char const **bear_strings_append(char const **in, char const *e);
 static size_t bear_strings_length(char const *const *in);
 static void bear_strings_release(char const **);
+
+
+static bear_env_t * state;
+
+static void on_load(void) __attribute__((constructor));
+static void on_unload(void) __attribute__((destructor));
+
+
+#ifdef __APPLE__
+#define EXEC_LOOP_ON_EXECVE
+#endif
 
 #ifdef EXEC_LOOP_ON_EXECVE
 static int already_reported = 0;
@@ -85,6 +100,7 @@ static int already_reported = 0;
 #define REPORT_FAILED_CALL(RESULT_)
 #endif
 
+
 #define DLSYM(TYPE_, VAR_, SYMBOL_)                                            \
     union {                                                                    \
         void *from;                                                            \
@@ -95,6 +111,7 @@ static int already_reported = 0;
         exit(EXIT_FAILURE);                                                    \
     }                                                                          \
     TYPE_ const VAR_ = cast.to;
+
 
 #ifdef HAVE_EXECVE
 static int call_execve(const char *path, char *const argv[],
@@ -126,6 +143,35 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
                              char *const envp[restrict]);
 #endif
 
+
+/* Initialization method to Captures the relevant environment variables.
+ */
+static void on_load(void) {
+#ifdef HAVE_NSGETENVIRON
+    environ = *_NSGetEnviron();
+#endif
+
+    state = malloc(sizeof(bear_env_t));
+    if (0 == state) {
+        perror("bear: malloc");
+        return;
+    }
+    if (0 != bear_capture_env_t(state)) {
+        bear_release_env_t(state);
+        free((void *)state);
+        state = 0;
+    }
+}
+
+static void on_unload(void) {
+    if (state) {
+        bear_release_env_t(state);
+        free((void *)state);
+        state = 0;
+    }
+}
+
+
 /* These are the methods we are try to hijack.
  */
 
@@ -149,7 +195,7 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
 #endif
 int execv(const char *path, char *const argv[]) {
     REPORT_CALL(argv);
-    int const result = call_execve(path, argv, bear_get_environ());
+    int const result = call_execve(path, argv, environ);
     REPORT_FAILED_CALL(result);
 
     return result;
@@ -198,7 +244,7 @@ int execl(const char *path, const char *arg, ...) {
 
     REPORT_CALL(argv);
     int const result =
-        call_execve(path, (char *const *)argv, bear_get_environ());
+        call_execve(path, (char *const *)argv, environ);
     REPORT_FAILED_CALL(result);
 
     bear_strings_release(argv);
@@ -372,11 +418,9 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 /* these methods are for to write log about the process creation. */
 
 static void bear_report_call(char const *fun, char const *const argv[]) {
-    char *const destination = getenv(ENV_OUTPUT);
-    if (0 == destination) {
-        perror("bear: getenv");
-        exit(EXIT_FAILURE);
-    }
+    if (0 == state)
+        return;
+
     const char *cwd = getcwd(NULL, 0);
     if (0 == cwd) {
         perror("bear: getcwd");
@@ -385,7 +429,7 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
 
     bear_message_t const msg = {getpid(), getppid(), fun, cwd,
                                 (char const **)argv};
-    bear_send_message(destination, &msg);
+    bear_send_message(state->output, &msg);
 
     free((void *)cwd);
 }
@@ -423,22 +467,43 @@ static void bear_send_message(char const *destination,
 /* update environment assure that chilren processes will copy the desired
  * behaviour */
 
+static void bear_release_env_t(bear_env_t * env) {
+    if (env->output)
+        free((void *)env->output);
+    if (env->preload)
+        free((void *)env->preload);
+}
+
+static int bear_capture_env_t(bear_env_t * env) {
+    char * const env_output = getenv(ENV_OUTPUT);
+    env->output = (env_output) ? strdup(env_output) : env_output;
+    if (0 == env->output) {
+        perror("bear: getenv(ENV_OUTPUT)");
+        return -1;
+    }
+    char * const env_preload = getenv(ENV_PRELOAD);
+    env->preload = (env_preload) ? strdup(env_preload) : env_preload;
+    if (0 == env->preload) {
+        perror("bear: getenv(ENV_PRELOAD)");
+        return -1;
+    }
+    return 0;
+}
+
 static char const **bear_update_environment(char *const envp[]) {
     char const **result = bear_strings_copy((char const **)envp);
-    result = bear_update_environ(result, ENV_PRELOAD);
-    result = bear_update_environ(result, ENV_OUTPUT);
+    if (0 == state)
+        return result;
+
+    result = bear_update_environ(result, ENV_PRELOAD, state->preload);
+    result = bear_update_environ(result, ENV_OUTPUT, state->output);
 #ifdef ENV_FLAT
-    result = bear_update_environ(result, ENV_FLAT);
+    result = bear_update_environ(result, ENV_FLAT, "1");
 #endif
     return result;
 }
 
-static char const **bear_update_environ(char const *envs[], char const *key) {
-    char const *const value = getenv(key);
-    if (0 == value) {
-        perror("bear: getenv");
-        exit(EXIT_FAILURE);
-    }
+static char const **bear_update_environ(char const *envs[], char const *key, char const * const value) {
     // find the key if it's there
     size_t const key_length = strlen(key);
     char const **it = envs;
@@ -462,15 +527,6 @@ static char const **bear_update_environ(char const *envs[], char const *key) {
             result = bear_strings_append(envs, env);
     }
     return result;
-}
-
-static char **bear_get_environ(void) {
-#ifdef HAVE_NSGETENVIRON
-    // environ is not available for shared libraries have to use _NSGetEnviron()
-    return *_NSGetEnviron();
-#else
-    return environ;
-#endif
 }
 
 /* util methods to deal with string arrays. environment and process arguments
@@ -526,9 +582,6 @@ static char const **bear_strings_copy(char const **const in) {
 
 static char const **bear_strings_append(char const **const in,
                                         char const *const e) {
-    if (0 == e)
-        return in;
-
     size_t size = bear_strings_length(in);
     char const **result = realloc(in, (size + 2) * sizeof(char const *));
     if (0 == result) {
