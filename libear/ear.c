@@ -45,13 +45,7 @@ extern char **environ;
 #endif
 
 
-typedef struct {
-    char const *output;
-    char const *preload;
-#ifdef ENV_FLAT
-    char const *flat;
-#endif
-} bear_env_t;
+typedef char const * bear_env_t[ENV_SIZE];
 
 typedef struct {
     pid_t pid;
@@ -61,11 +55,11 @@ typedef struct {
     char const **cmd;
 } bear_message_t;
 
-static void bear_capture_env_t(bear_env_t * env);
-static int bear_is_valid_env_t(bear_env_t * env);
-static void bear_restore_env_t(bear_env_t * env);
-static void bear_release_env_t(bear_env_t * env);
-static char const **bear_update_environment(char *const envp[], bear_env_t const * env);
+static void bear_capture_env_t(bear_env_t *env);
+static int bear_is_valid_env_t(bear_env_t *env);
+static void bear_restore_env_t(bear_env_t *env);
+static void bear_release_env_t(bear_env_t *env);
+static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *fun, char const *const argv[]);
 static void bear_write_message(int fd, bear_message_t const *e);
@@ -77,7 +71,21 @@ static size_t bear_strings_length(char const *const *in);
 static void bear_strings_release(char const **);
 
 
-static bear_env_t * state;
+static bear_env_t env_names =
+    { ENV_OUTPUT
+    , ENV_PRELOAD
+#ifdef ENV_FLAT
+    , ENV_FLAT
+#endif
+    };
+
+static bear_env_t initial_env =
+    { 0
+    , 0
+#ifdef ENV_FLAT
+    , 0
+#endif
+    };
 
 static void on_load(void) __attribute__((constructor));
 static void on_unload(void) __attribute__((destructor));
@@ -156,28 +164,11 @@ static void on_load(void) {
 #ifdef HAVE_NSGETENVIRON
     environ = *_NSGetEnviron();
 #endif
-    state = 0;
-    // Capture environment into a local variable.
-    bear_env_t current;
-    bear_capture_env_t(&current);
-    if (! bear_is_valid_env_t(&current)) {
-        bear_release_env_t(&current);
-        return;
-    }
-    // When everything okay copy the local variable into a bigger scope.
-    state = malloc(sizeof(bear_env_t));
-    if (state)
-        *state = current;
-    else
-        perror("bear: malloc(bear_env_t)");
+    bear_capture_env_t(&initial_env);
 }
 
 static void on_unload(void) {
-    if (state) {
-        bear_release_env_t(state);
-        free((void *)state);
-    }
-    state = 0;
+    bear_release_env_t(&initial_env);
 }
 
 
@@ -340,7 +331,7 @@ static int call_execve(const char *path, char *const argv[],
 
     DLSYM(func, fp, "execve");
 
-    char const **const menvp = bear_update_environment(envp, state);
+    char const **const menvp = bear_update_environment(envp, &initial_env);
     int const result = (*fp)(path, argv, (char *const *)menvp);
     bear_strings_release(menvp);
     return result;
@@ -354,7 +345,7 @@ static int call_execvpe(const char *file, char *const argv[],
 
     DLSYM(func, fp, "execvpe");
 
-    char const **const menvp = bear_update_environment(envp, state);
+    char const **const menvp = bear_update_environment(envp, &initial_env);
     int const result = (*fp)(file, argv, (char *const *)menvp);
     bear_strings_release(menvp);
     return result;
@@ -369,7 +360,7 @@ static int call_execvp(const char *file, char *const argv[]) {
 
     bear_env_t current;
     bear_capture_env_t(&current);
-    bear_restore_env_t(state);
+    bear_restore_env_t(&initial_env);
     int const result = (*fp)(file, argv);
     bear_restore_env_t(&current);
     bear_release_env_t(&current);
@@ -387,7 +378,7 @@ static int call_execvP(const char *file, const char *search_path,
 
     bear_env_t current;
     bear_capture_env_t(&current);
-    bear_restore_env_t(state);
+    bear_restore_env_t(&initial_env);
     int const result = (*fp)(file, search_path, argv);
     bear_restore_env_t(&current);
     bear_release_env_t(&current);
@@ -409,7 +400,7 @@ static int call_posix_spawn(pid_t *restrict pid, const char *restrict path,
 
     DLSYM(func, fp, "posix_spawn");
 
-    char const **const menvp = bear_update_environment(envp, state);
+    char const **const menvp = bear_update_environment(envp, &initial_env);
     int const result =
         (*fp)(pid, path, file_actions, attrp, argv, (char *const *restrict)menvp);
     bear_strings_release(menvp);
@@ -430,7 +421,7 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 
     DLSYM(func, fp, "posix_spawnp");
 
-    char const **const menvp = bear_update_environment(envp, state);
+    char const **const menvp = bear_update_environment(envp, &initial_env);
     int const result =
         (*fp)(pid, file, file_actions, attrp, argv, (char *const *restrict)menvp);
     bear_strings_release(menvp);
@@ -441,7 +432,7 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 /* these methods are for to write log about the process creation. */
 
 static void bear_report_call(char const *fun, char const *const argv[]) {
-    if (0 == state)
+    if (!bear_is_valid_env_t(&initial_env))
         return;
 
     const char *cwd = getcwd(NULL, 0);
@@ -452,7 +443,7 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
 
     bear_message_t const msg = {getpid(), getppid(), fun, cwd,
                                 (char const **)argv};
-    bear_send_message(state->output, &msg);
+    bear_send_message(initial_env[0], &msg);
 
     free((void *)cwd);
 }
@@ -490,71 +481,40 @@ static void bear_send_message(char const *destination,
 /* update environment assure that chilren processes will copy the desired
  * behaviour */
 
-static void bear_capture_env_t(bear_env_t * env) {
-    char const * const env_output = getenv(ENV_OUTPUT);
-    env->output = (env_output) ? strdup(env_output) : env_output;
-    char const * const env_preload = getenv(ENV_PRELOAD);
-    env->preload = (env_preload) ? strdup(env_preload) : env_preload;
-#ifdef ENV_FLAT
-    char const * const env_flat = getenv(ENV_FLAT);
-    env->flat = (env_flat) ? strdup(env_flat) : env_flat;
-#endif
-}
-
-static int bear_is_valid_env_t(bear_env_t * env) {
-    return (env)
-            && (env->preload)
-            && (env->output)
-#ifdef ENV_FLAT
-            && (env->flat)
-#endif
-        ? -1 : 0;
-}
-
-static void bear_restore_env_t(bear_env_t * env) {
-    if ((env->output)
-            ? setenv(ENV_OUTPUT, env->output, 1)
-            : unsetenv(ENV_OUTPUT)) {
-        perror("bear: setenv(ENV_OUTPUT)");
-        exit(EXIT_FAILURE);
+static void bear_capture_env_t(bear_env_t *env) {
+    for (size_t it = 0; it < ENV_SIZE; ++it) {
+        char const * const env_value = getenv(env_names[it]);
+        *env[it] = (env_value) ? strdup(env_value) : env_value;
     }
-    if ((env->preload)
-            ? setenv(ENV_PRELOAD, env->preload, 1)
-            : unsetenv(ENV_PRELOAD)) {
-        perror("bear: setenv(ENV_PRELOAD)");
-        exit(EXIT_FAILURE);
-    }
-#ifdef ENV_FLAT
-    if ((env->flat)
-            ? setenv(ENV_FLAT, env->flat, 1)
-            : unsetenv(ENV_FLAT)) {
-        perror("bear: setenv(ENV_FLAT)");
-        exit(EXIT_FAILURE);
-    }
-#endif
 }
 
-static void bear_release_env_t(bear_env_t * env) {
-    if (env->output)
-        free((void *)env->output);
-    if (env->preload)
-        free((void *)env->preload);
-#ifdef ENV_FLAT
-    if (env->flat)
-        free((void *)env->flat);
-#endif
+static int bear_is_valid_env_t(bear_env_t *env) {
+    for (size_t it = 0; it < ENV_SIZE; ++it)
+        if (*env[it])
+            return -1;
+    return 0;
 }
 
-static char const **bear_update_environment(char *const envp[], bear_env_t const * env) {
+static void bear_restore_env_t(bear_env_t *env) {
+    for (size_t it = 0; it < ENV_SIZE; ++it)
+        if ((*env[it])
+                ? setenv(env_names[it], *env[it], 1)
+                : unsetenv(env_names[it])) {
+            perror("bear: setenv");
+            exit(EXIT_FAILURE);
+        }
+}
+
+static void bear_release_env_t(bear_env_t *env) {
+    for (size_t it = 0; it < ENV_SIZE; ++it)
+        free((void *)*env[it]);
+}
+
+static char const **bear_update_environment(char *const envp[], bear_env_t *env) {
     char const **result = bear_strings_copy((char const **)envp);
-    if (0 == env)
-        return result;
-
-    result = bear_update_environ(result, ENV_PRELOAD, env->preload);
-    result = bear_update_environ(result, ENV_OUTPUT, env->output);
-#ifdef ENV_FLAT
-    result = bear_update_environ(result, ENV_FLAT, env->flat);
-#endif
+    if (bear_is_valid_env_t(env))
+        for (size_t it = 0; it < ENV_SIZE; ++it)
+            result = bear_update_environ(result, env_names[it], *env[it]);
     return result;
 }
 
