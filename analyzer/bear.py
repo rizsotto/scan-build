@@ -154,12 +154,16 @@ def _format_entry(entry):
         (Eg.: -D_KEY="Value with spaces") """
         return ' '.join(args)
 
+    def abspath(cwd, name):
+        fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
+        return os.path.normpath(fullname)
+
     atoms = classify_parameters(entry['command'])
     if atoms['action'] == Action.Compile:
         for filename in atoms['files']:
             yield {'directory': entry['directory'],
                    'command': join_command(entry['command']),
-                   'file': os.path.abspath(filename)}
+                   'file': abspath(entry['directory'], filename)}
 
 
 def _compiler_call(entry):
