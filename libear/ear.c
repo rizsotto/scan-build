@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <ctype.h>
 #include <stddef.h>
 #include <stdarg.h>
@@ -32,6 +33,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <time.h>
 
 #if defined HAVE_POSIX_SPAWN || defined HAVE_POSIX_SPAWNP
 #include <spawn.h>
@@ -47,14 +49,6 @@ extern char **environ;
 
 typedef char const * bear_env_t[ENV_SIZE];
 
-typedef struct {
-    pid_t pid;
-    pid_t ppid;
-    char const *fun;
-    char const *cwd;
-    char const **cmd;
-} bear_message_t;
-
 static void bear_capture_env_t(bear_env_t *env);
 static int bear_is_valid_env_t(bear_env_t *env);
 static void bear_restore_env_t(bear_env_t *env);
@@ -62,8 +56,6 @@ static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *fun, char const *const argv[]);
-static void bear_write_message(int fd, bear_message_t const *e);
-static void bear_send_message(char const *destination, bear_message_t const *e);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
 static char const **bear_strings_append(char const **in, char const *e);
@@ -89,29 +81,6 @@ static bear_env_t initial_env =
 
 static void on_load(void) __attribute__((constructor));
 static void on_unload(void) __attribute__((destructor));
-
-
-#ifdef __APPLE__
-#define EXEC_LOOP_ON_EXECVE
-#endif
-
-#ifdef EXEC_LOOP_ON_EXECVE
-static int already_reported = 0;
-#define REPORT_CALL(ARGV_)                                                     \
-    int const report_state = already_reported;                                 \
-    if (!already_reported) {                                                   \
-        bear_report_call(__func__, (char const *const *)ARGV_);                \
-        already_reported = 1;                                                  \
-    }
-#define REPORT_FAILED_CALL(RESULT_)                                            \
-    if (!report_state) {                                                       \
-        already_reported = 0;                                                  \
-    }
-#else
-#define REPORT_CALL(ARGV_)                                                     \
-    bear_report_call(__func__, (char const *const *)ARGV_);
-#define REPORT_FAILED_CALL(RESULT_)
-#endif
 
 
 #define DLSYM(TYPE_, VAR_, SYMBOL_)                                            \
@@ -175,17 +144,10 @@ static void on_unload(void) {
 /* These are the methods we are try to hijack.
  */
 
-#if defined HAVE_VFORK && defined EXEC_LOOP_ON_EXECVE
-pid_t vfork(void) { return fork(); }
-#endif
-
 #ifdef HAVE_EXECVE
 int execve(const char *path, char *const argv[], char *const envp[]) {
-    REPORT_CALL(argv);
-    int const result = call_execve(path, argv, envp);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_execve(path, argv, envp);
 }
 #endif
 
@@ -194,41 +156,29 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
 #error can not implement execv without execve
 #endif
 int execv(const char *path, char *const argv[]) {
-    REPORT_CALL(argv);
-    int const result = call_execve(path, argv, environ);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_execve(path, argv, environ);
 }
 #endif
 
 #ifdef HAVE_EXECVPE
 int execvpe(const char *file, char *const argv[], char *const envp[]) {
-    REPORT_CALL(argv);
-    int const result = call_execvpe(file, argv, envp);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_execvpe(file, argv, envp);
 }
 #endif
 
 #ifdef HAVE_EXECVP
 int execvp(const char *file, char *const argv[]) {
-    REPORT_CALL(argv);
-    int const result = call_execvp(file, argv);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_execvp(file, argv);
 }
 #endif
 
 #ifdef HAVE_EXECVP2
 int execvP(const char *file, const char *search_path, char *const argv[]) {
-    REPORT_CALL(argv);
-    int const result = call_execvP(file, search_path, argv);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_execvP(file, search_path, argv);
 }
 #endif
 
@@ -242,10 +192,8 @@ int execl(const char *path, const char *arg, ...) {
     char const **argv = bear_strings_build(arg, &args);
     va_end(args);
 
-    REPORT_CALL(argv);
-    int const result =
-        call_execve(path, (char *const *)argv, environ);
-    REPORT_FAILED_CALL(result);
+    bear_report_call(__func__, (char const *const *)argv);
+    int const result = call_execve(path, (char *const *)argv, environ);
 
     bear_strings_release(argv);
     return result;
@@ -262,9 +210,8 @@ int execlp(const char *file, const char *arg, ...) {
     char const **argv = bear_strings_build(arg, &args);
     va_end(args);
 
-    REPORT_CALL(argv);
+    bear_report_call(__func__, (char const *const *)argv);
     int const result = call_execvp(file, (char *const *)argv);
-    REPORT_FAILED_CALL(result);
 
     bear_strings_release(argv);
     return result;
@@ -283,10 +230,9 @@ int execle(const char *path, const char *arg, ...) {
     char const **envp = va_arg(args, char const **);
     va_end(args);
 
-    REPORT_CALL(argv);
+    bear_report_call(__func__, (char const *const *)argv);
     int const result =
         call_execve(path, (char *const *)argv, (char *const *)envp);
-    REPORT_FAILED_CALL(result);
 
     bear_strings_release(argv);
     return result;
@@ -298,12 +244,8 @@ int posix_spawn(pid_t *restrict pid, const char *restrict path,
                 const posix_spawn_file_actions_t *file_actions,
                 const posix_spawnattr_t *restrict attrp,
                 char *const argv[restrict], char *const envp[restrict]) {
-    REPORT_CALL(argv);
-    int const result =
-        call_posix_spawn(pid, path, file_actions, attrp, argv, envp);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_posix_spawn(pid, path, file_actions, attrp, argv, envp);
 }
 #endif
 
@@ -312,12 +254,8 @@ int posix_spawnp(pid_t *restrict pid, const char *restrict file,
                  const posix_spawn_file_actions_t *file_actions,
                  const posix_spawnattr_t *restrict attrp,
                  char *const argv[restrict], char *const envp[restrict]) {
-    REPORT_CALL(argv);
-    int const result =
-        call_posix_spawnp(pid, file, file_actions, attrp, argv, envp);
-    REPORT_FAILED_CALL(result);
-
-    return result;
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_posix_spawnp(pid, file, file_actions, attrp, argv, envp);
 }
 #endif
 
@@ -429,9 +367,12 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 }
 #endif
 
-/* these methods are for to write log about the process creation. */
+/* this method is to write log about the process creation. */
 
 static void bear_report_call(char const *fun, char const *const argv[]) {
+    static int const RS = 0x1e;
+    static int const US = 0x1f;
+
     if (!bear_is_valid_env_t(&initial_env))
         return;
 
@@ -440,42 +381,33 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
         perror("bear: getcwd");
         exit(EXIT_FAILURE);
     }
-
-    bear_message_t const msg = {getpid(), getppid(), fun, cwd,
-                                (char const **)argv};
-    bear_send_message(initial_env[0], &msg);
-
-    free((void *)cwd);
-}
-
-static void bear_write_message(int fd, bear_message_t const *e) {
-    static int const RS = 0x1e;
-    static int const US = 0x1f;
-    dprintf(fd, "%d%c", e->pid, RS);
-    dprintf(fd, "%d%c", e->ppid, RS);
-    dprintf(fd, "%s%c", e->fun, RS);
-    dprintf(fd, "%s%c", e->cwd, RS);
-    size_t const length = bear_strings_length(e->cmd);
-    for (size_t it = 0; it < length; ++it) {
-        dprintf(fd, "%s%c", e->cmd[it], US);
+    struct timeval now;
+    if (0 != gettimeofday(&now, 0)) {
+        perror("bear: clock_gettime");
+        exit(EXIT_FAILURE);
     }
-}
-
-static void bear_send_message(char const *destination,
-                              bear_message_t const *msg) {
     char *filename = 0;
-    if (-1 == asprintf(&filename, "%s/cmd.XXXXXX", destination)) {
+    if (-1 == asprintf(&filename, "%s/%ld.%ld.%d.cmd",
+                       initial_env[0], now.tv_sec, (long)now.tv_usec, getpid())) {
         perror("bear: asprintf");
         exit(EXIT_FAILURE);
     }
-    int fd = mkstemp(filename);
-    free((void *)filename);
+    int fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
     if (-1 == fd) {
         perror("bear: open");
         exit(EXIT_FAILURE);
     }
-    bear_write_message(fd, msg);
+    dprintf(fd, "%d%c", getpid(), RS);
+    dprintf(fd, "%d%c", getppid(), RS);
+    dprintf(fd, "%s%c", fun, RS);
+    dprintf(fd, "%s%c", cwd, RS);
+    size_t const argc = bear_strings_length(argv);
+    for (size_t it = 0; it < argc; ++it) {
+        dprintf(fd, "%s%c", argv[it], US);
+    }
     close(fd);
+    free((void *)filename);
+    free((void *)cwd);
 }
 
 /* update environment assure that chilren processes will copy the desired

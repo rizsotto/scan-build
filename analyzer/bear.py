@@ -28,7 +28,6 @@ import sys
 import os
 import os.path
 import re
-import glob
 import shlex
 import pkg_resources
 import itertools
@@ -89,16 +88,18 @@ def main(args):
             # filter out duplicate entries from both
             duplicate = duplicate_check(_entry_hash)
             return (entry
-                    for entry in itertools.chain(current, previous)
+                    for entry in itertools.chain(previous, current)
                     if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
     with TemporaryDirectory(prefix='bear-', dir=tempdir()) as tmpdir:
         # run the build command
         exit_code = _run_build(args.build, tmpdir)
+        logging.debug('build finished with exit code: {0}'.format(exit_code))
         # read the intercepted exec calls
-        commands = map(_parse_exec_trace,
-                       glob.iglob(os.path.join(tmpdir, 'cmd.*')))
+        commands = (_parse_exec_trace(os.path.join(tmpdir, filename))
+                    for filename
+                    in sorted(os.listdir(tmpdir)))
         # do post processing
         entries = post_processing(commands)
         # dump the compilation database
