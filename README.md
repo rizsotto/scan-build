@@ -60,13 +60,10 @@ Use `--help` to know more about the commands.
 Known problems
 --------------
 
-Compiler wrappers like ccache and distcc could cause duplicates or missing
-items in the compilation database. Make sure you have been disabled before
-you run `bear` or `scan-build`.
-
-In case of duplicate entries, you might consider to edit the
-`analyzer/bear.py` module to filter out wrapper calls (by path, or by file
-name) or filter out the compiler calls (and collect the wrapper calls only).
+Because it uses `LD_PRELOAD` or `DYLD_INSERT_LIBRARIES` environment variables,
+it does not append to it, but overrides it. So builds which are using these
+variables might not work. (I don't know any build tool which does that, but
+please let me know if you do.)
 
 Problem reports
 ---------------
