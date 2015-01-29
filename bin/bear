@@ -6,7 +6,25 @@
 # License. See LICENSE.TXT for details.
 
 import sys
-from analyzer.bear import bear
+import logging
+from analyzer.decorators import to_logging_level, entry
+from analyzer.options import create_parser
+from analyzer.bear import main as run_bear
+
+
+@entry
+def main():
+    parser = create_parser('bear')
+    args = parser.parse_args()
+
+    logging.getLogger().setLevel(to_logging_level(args.verbose))
+    logging.debug(args)
+
+    if args.help or 0 == len(args.build):
+        parser.print_help()
+        return 0
+    return run_bear(args)
+
 
 if __name__ == '__main__':
-    sys.exit(bear())
+    sys.exit(main())

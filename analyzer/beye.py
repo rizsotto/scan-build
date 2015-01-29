@@ -21,36 +21,11 @@ import time
 import tempfile
 import multiprocessing
 from analyzer import tempdir
-from analyzer.options import create_parser
-from analyzer.decorators import to_logging_level, trace, entry
+from analyzer.decorators import to_logging_level, trace
 from analyzer.command import generate_commands
 from analyzer.runner import run
 from analyzer.report import document
 from analyzer.clang import get_checkers
-
-
-@entry
-def scanbuild():
-    """ Entry point for 'scan-build' command.
-
-    This method combines the 'bear' and 'beye' commands to imitate the
-    original Perl implementation of 'scan-build' command. """
-
-    from analyzer.bear import main as run_bear
-    parser = create_parser('scan-build')
-    return main(parser, run_bear)
-
-
-@entry
-def beye():
-    """ Entry point for 'beye' command.
-
-    It takes a compilation database as input and run analyzer against each
-    files. The logic to run analyzer against a single file is implemented in
-    several modules. """
-
-    parser = create_parser('beye')
-    return main(parser, lambda x: 0)
 
 
 def main(parser, intercept):

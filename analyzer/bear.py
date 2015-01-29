@@ -32,10 +32,10 @@ import shlex
 import pkg_resources
 import itertools
 from analyzer import duplicate_check, tempdir
-from analyzer.decorators import to_logging_level, trace, entry
-from analyzer.options import create_parser
+from analyzer.decorators import trace
 from analyzer.command import classify_parameters
 from analyzer.command import Action
+
 
 if 'darwin' == sys.platform:
     ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
@@ -44,25 +44,6 @@ if 'darwin' == sys.platform:
 else:
     ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
                     ("ENV_PRELOAD", "LD_PRELOAD")]
-
-
-@entry
-def bear():
-    """ Entry point for 'bear'.
-
-        This part initializes some parts and forwards to the main method. """
-
-    parser = create_parser('bear')
-    args = parser.parse_args()
-
-    logging.getLogger().setLevel(to_logging_level(args.verbose))
-    logging.debug(args)
-
-    if args.help or 0 == len(args.build):
-        parser.print_help()
-        return 0
-
-    return main(args)
 
 
 def main(args):

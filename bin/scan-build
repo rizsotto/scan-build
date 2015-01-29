@@ -6,9 +6,19 @@
 # License. See LICENSE.TXT for details.
 
 import sys
-from multiprocessing import freeze_support
-from analyzer.beye import scanbuild
+import multiprocessing
+from analyzer.options import create_parser
+from analyzer.decorators import entry
+from analyzer.bear import main as run_bear
+from analyzer.beye import main as run_beye
+
+
+@entry
+def main():
+    parser = create_parser('scan-build')
+    return run_beye(parser, run_bear)
+
 
 if __name__ == '__main__':
-    freeze_support()
-    sys.exit(scanbuild())
+    multiprocessing.freeze_support()
+    sys.exit(main())
