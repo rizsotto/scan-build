@@ -9,6 +9,7 @@
 Since 'argparse' module is available only 2.7 and afterwards, this is
 the major force to be compatible with newer versions only. """
 
+
 import argparse
 from analyzer import tempdir
 

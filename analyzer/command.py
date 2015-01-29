@@ -5,8 +5,8 @@
 # License. See LICENSE.TXT for details.
 
 """ This module is responsible for to transform the arguments of a compilation
-into an analyzer invocation. To execute the analyzer is done in other module
-called 'analyzer.runner'. """
+into an analyzer invocation. To execute the analyzer is done in other module.
+"""
 
 
 import logging

@@ -75,30 +75,6 @@ command to analyzer, execute it can be done parallel. Then to collect the
 outputs and generate the "cover" also can be divided and make it parallel.
 
 For more please check the individual modules.
-
-analyzer/bear.py
-   to collect the compilations into a compilation database.
-
-analyzer/beye.py
-   run analyzer from a compilation database.
-
-analyzer/clang.py
-   Clang binary related functions.
-
-analyzer/decorators.py
-   utility function for easier debugging.
-
-analyzer/report.py
-   cover report generation methods.
-
-analyzer/command.py
-   transform a single compiler invocation into analyzer invocation.
-
-analyzer/runner.py
-   run an analyzer execution.
-
-analyzer/options.py
-   command line options
 """
 
 
