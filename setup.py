@@ -52,15 +52,9 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.md').read(),
     zip_safe=False,
+    scripts=['bin/bear', 'bin/beye', 'bin/scan-build'],
     packages=['analyzer'],
     package_data={'analyzer': ['resources/*']},
-    entry_points={
-        'console_scripts': [
-            'scan-build = analyzer.beye:scanbuild',
-            'beye = analyzer.beye:beye',
-            'bear = analyzer.bear:bear'
-        ]
-    },
     cmdclass={'buildear': BuildEAR, 'install': Install, 'build': Build},
     classifiers=[
         "Development Status :: 4 - Beta",

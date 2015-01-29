@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+
+import sys
+from multiprocessing import freeze_support
+from analyzer.beye import scanbuild
+
+if __name__ == '__main__':
+    freeze_support()
+    sys.exit(scanbuild())
