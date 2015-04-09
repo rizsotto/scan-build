@@ -15,7 +15,6 @@ import os
 import os.path
 import shlex
 import json
-import functools
 from analyzer.decorators import trace, require
 
 
@@ -267,10 +266,11 @@ def _is_cplusplus_compiler(name):
 def _analyzer_params(args):
     """ A group of command line arguments can mapped to command
     line arguments of the analyzer. This method generates those. """
-    result = []
 
-    extend_result = lambda pieces, prefix: \
-        functools.reduce(lambda acc, x: acc + [prefix, x], pieces, result)
+    def prefix_with(constant, pieces):
+        return [elem for piece in pieces for elem in [constant, piece]]
+
+    result = []
 
     if args.store_model:
         result.append('-analyzer-store={0}'.format(args.store_model))
@@ -292,14 +292,16 @@ def _analyzer_params(args):
     if 2 <= args.verbose:
         result.append('-analyzer-display-progress')
     if args.plugins:
-        extend_result(args.plugins, '-load')
+        result.extend(prefix_with('-load', args.plugins))
     if args.enable_checker:
-        extend_result(args.enable_checker, '-analyzer-checker')
+        result.extend(prefix_with('-analyzer-checker', args.enable_checker))
     if args.disable_checker:
-        extend_result(args.disable_checker, '-analyzer-disable-checker')
+        result.extend(
+            prefix_with('-analyzer-disable-checker', args.disable_checker))
     if args.ubiviz:
         result.append('-analyzer-viz-egraph-ubigraph')
-    return functools.reduce(lambda acc, x: acc + ['-Xclang', x], result, [])
+
+    return prefix_with('-Xclang', result)
 
 
 @trace
