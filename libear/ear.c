@@ -21,19 +21,13 @@
 
 #include "config.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <ctype.h>
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <dlfcn.h>
-#include <time.h>
 
 #if defined HAVE_POSIX_SPAWN || defined HAVE_POSIX_SPAWNP
 #include <spawn.h>
@@ -49,8 +43,7 @@ extern char **environ;
 
 typedef char const * bear_env_t[ENV_SIZE];
 
-static void bear_capture_env_t(bear_env_t *env);
-static int bear_is_valid_env_t(bear_env_t *env);
+static int bear_capture_env_t(bear_env_t *env);
 static void bear_restore_env_t(bear_env_t *env);
 static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
@@ -78,6 +71,8 @@ static bear_env_t initial_env =
     , 0
 #endif
     };
+
+static int initialized = 0;
 
 static void on_load(void) __attribute__((constructor));
 static void on_unload(void) __attribute__((destructor));
@@ -133,11 +128,13 @@ static void on_load(void) {
 #ifdef HAVE_NSGETENVIRON
     environ = *_NSGetEnviron();
 #endif
-    bear_capture_env_t(&initial_env);
+    if (!initialized)
+        initialized = bear_capture_env_t(&initial_env);
 }
 
 static void on_unload(void) {
     bear_release_env_t(&initial_env);
+    initialized = 0;
 }
 
 
@@ -370,10 +367,11 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 /* this method is to write log about the process creation. */
 
 static void bear_report_call(char const *fun, char const *const argv[]) {
+    static int const GS = 0x1d;
     static int const RS = 0x1e;
     static int const US = 0x1f;
 
-    if (!bear_is_valid_env_t(&initial_env))
+    if (!initialized)
         return;
 
     const char *cwd = getcwd(NULL, 0);
@@ -381,56 +379,52 @@ static void bear_report_call(char const *fun, char const *const argv[]) {
         perror("bear: getcwd");
         exit(EXIT_FAILURE);
     }
-    struct timeval now;
-    if (0 != gettimeofday(&now, 0)) {
-        perror("bear: clock_gettime");
+    char const * const out_dir = initial_env[0];
+    size_t const path_max_length = strlen(out_dir) + 32;
+    char filename[path_max_length];
+    if (-1 == snprintf(filename, path_max_length, "%s/%d.cmd", out_dir, getpid())) {
+        perror("bear: snprintf");
         exit(EXIT_FAILURE);
     }
-    char *filename = 0;
-    if (-1 == asprintf(&filename, "%s/%ld.%ld.%d.cmd",
-                       initial_env[0], now.tv_sec, (long)now.tv_usec, getpid())) {
-        perror("bear: asprintf");
+    FILE * fd = fopen(filename, "a+");
+    if (0 == fd) {
+        perror("bear: fopen");
         exit(EXIT_FAILURE);
     }
-    int fd = open(filename, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
-    if (-1 == fd) {
-        perror("bear: open");
-        exit(EXIT_FAILURE);
-    }
-    dprintf(fd, "%d%c", getpid(), RS);
-    dprintf(fd, "%d%c", getppid(), RS);
-    dprintf(fd, "%s%c", fun, RS);
-    dprintf(fd, "%s%c", cwd, RS);
+    fprintf(fd, "%d%c", getpid(), RS);
+    fprintf(fd, "%d%c", getppid(), RS);
+    fprintf(fd, "%s%c", fun, RS);
+    fprintf(fd, "%s%c", cwd, RS);
     size_t const argc = bear_strings_length(argv);
     for (size_t it = 0; it < argc; ++it) {
-        dprintf(fd, "%s%c", argv[it], US);
+        fprintf(fd, "%s%c", argv[it], US);
     }
-    close(fd);
-    free((void *)filename);
+    fprintf(fd, "%c", GS);
+    if (fclose(fd)) {
+        perror("bear: fclose");
+        exit(EXIT_FAILURE);
+    }
     free((void *)cwd);
 }
 
 /* update environment assure that chilren processes will copy the desired
  * behaviour */
 
-static void bear_capture_env_t(bear_env_t *env) {
+static int bear_capture_env_t(bear_env_t *env) {
+    int status = 1;
     for (size_t it = 0; it < ENV_SIZE; ++it) {
         char const * const env_value = getenv(env_names[it]);
-        *env[it] = (env_value) ? strdup(env_value) : env_value;
+        char const * const env_copy = (env_value) ? strdup(env_value) : env_value;
+        (*env)[it] = env_copy;
+        status &= (env_copy) ? 1 : 0;
     }
-}
-
-static int bear_is_valid_env_t(bear_env_t *env) {
-    for (size_t it = 0; it < ENV_SIZE; ++it)
-        if (*env[it])
-            return -1;
-    return 0;
+    return status;
 }
 
 static void bear_restore_env_t(bear_env_t *env) {
     for (size_t it = 0; it < ENV_SIZE; ++it)
-        if ((*env[it])
-                ? setenv(env_names[it], *env[it], 1)
+        if (((*env)[it])
+                ? setenv(env_names[it], (*env)[it], 1)
                 : unsetenv(env_names[it])) {
             perror("bear: setenv");
             exit(EXIT_FAILURE);
@@ -439,15 +433,15 @@ static void bear_restore_env_t(bear_env_t *env) {
 
 static void bear_release_env_t(bear_env_t *env) {
     for (size_t it = 0; it < ENV_SIZE; ++it) {
-        free((void *)*env[it]);
-        *env[it] = 0;
+        free((void *)(*env)[it]);
+        (*env)[it] = 0;
     }
 }
 
 static char const **bear_update_environment(char *const envp[], bear_env_t *env) {
     char const **result = bear_strings_copy((char const **)envp);
-    for (size_t it = 0; it < ENV_SIZE && *env[it]; ++it)
-        result = bear_update_environ(result, env_names[it], *env[it]);
+    for (size_t it = 0; it < ENV_SIZE && (*env)[it]; ++it)
+        result = bear_update_environ(result, env_names[it], (*env)[it]);
     return result;
 }
 
@@ -460,12 +454,19 @@ static char const **bear_update_environ(char const *envs[], char const *key, cha
             (strlen(*it) > key_length) && ('=' == (*it)[key_length]))
             break;
     }
-    // replace or append the new value
-    char *env = 0;
-    if (-1 == asprintf(&env, "%s=%s", key, value)) {
-        perror("bear: asprintf");
+    // allocate a environment entry
+    size_t const value_length = strlen(value);
+    size_t const env_length = key_length + value_length + 2;
+    char *env = malloc(env_length);
+    if (0 == env) {
+        perror("bear: malloc [in env_update]");
         exit(EXIT_FAILURE);
     }
+    if (-1 == snprintf(env, env_length, "%s=%s", key, value)) {
+        perror("bear: snprintf");
+        exit(EXIT_FAILURE);
+    }
+    // replace or append the environment entry
     if (it && *it) {
         free((void *)*it);
         *it = env;

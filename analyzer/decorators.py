@@ -86,7 +86,7 @@ def entry(function):
         except KeyboardInterrupt:
             return 1
         except Exception as exception:
-            logging.error(str(exception))
+            logging.exception("Something unexpected had happened.")
             return 127
 
     return wrapper
