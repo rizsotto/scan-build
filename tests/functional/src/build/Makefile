@@ -1,3 +1,6 @@
+CC=clang
+CXX=clang++
+
 PROGRAM = prg
 
 GOODS = ../main.o ../clean-one.o ../emit-one.o ../emit-two.o
@@ -26,3 +29,6 @@ regular: reset $(GOODS) $(PROGRAM)
 clean: reset $(CLEANS)
 
 broken: reset $(BADS)
+
+all_in_one:
+	$(CXX) -o $(PROGRAM) $(CXXFLAGS) $(LDFLAGS) ../main.cpp ../emit-two.cpp

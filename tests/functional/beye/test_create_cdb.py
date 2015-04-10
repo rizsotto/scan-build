@@ -9,6 +9,14 @@ import unittest
 
 import os.path
 import subprocess
+import json
+
+
+def reset_build():
+    this_dir, _ = os.path.split(__file__)
+    path = os.path.normpath(os.path.join(this_dir, '..', 'src', 'build'))
+    subprocess.call(['make', 'reset'], cwd=path,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
 def run_bear(result, args):
@@ -28,22 +36,52 @@ def run_bear(result, args):
 class CompilationDatabaseTest(unittest.TestCase):
 
     def test_successful_build(self):
+        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             run_bear(result, ['make', 'regular'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
-                import json
                 content = json.load(handler)
                 self.assertEqual(4, len(content))
 
+    def test_successful_build_parallel(self):
+        reset_build()
+        with fixtures.TempDir() as tmpdir:
+            result = os.path.join(tmpdir, 'cdb.json')
+            run_bear(result, ['make', '-j', 'regular'])
+            self.assertTrue(os.path.isfile(result))
+            with open(result, 'r') as handler:
+                content = json.load(handler)
+                self.assertEqual(4, len(content))
+
+    def test_successful_build_on_empty_env(self):
+        reset_build()
+        with fixtures.TempDir() as tmpdir:
+            result = os.path.join(tmpdir, 'cdb.json')
+            run_bear(result, ['env', '-', 'make', 'regular'])
+            self.assertTrue(os.path.isfile(result))
+            with open(result, 'r') as handler:
+                content = json.load(handler)
+                self.assertEqual(4, len(content))
+
+    def test_successful_build_all_in_one(self):
+        reset_build()
+        with fixtures.TempDir() as tmpdir:
+            result = os.path.join(tmpdir, 'cdb.json')
+            run_bear(result, ['make', 'all_in_one'])
+            self.assertTrue(os.path.isfile(result))
+            with open(result, 'r') as handler:
+                content = json.load(handler)
+                self.assertEqual(2, len(content))
+
     def test_not_successful_build(self):
+        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             run_bear(result, ['make', 'broken'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
-                import json
                 content = json.load(handler)
                 self.assertEqual(2, len(content))
 
@@ -51,12 +89,14 @@ class CompilationDatabaseTest(unittest.TestCase):
 class ExitCodeTest(unittest.TestCase):
 
     def test_successful_build(self):
+        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             exit_code, _ = run_bear(result, ['make', 'clean'])
             self.assertFalse(exit_code)
 
     def test_not_successful_build(self):
+        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             exit_code, _ = run_bear(result, ['make', 'broken'])
@@ -66,23 +106,23 @@ class ExitCodeTest(unittest.TestCase):
 class ResumeFeatureTest(unittest.TestCase):
 
     def test_overwrite_existing_cdb(self):
+        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             run_bear(result, ['make', 'clean'])
             run_bear(result, ['make', 'regular'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
-                import json
                 content = json.load(handler)
                 self.assertEqual(4, len(content))
 
     def test_append_to_existing_cdb(self):
+        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             run_bear(result, ['make', 'clean'])
             run_bear(result, ['--append', 'make', 'regular'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
-                import json
                 content = json.load(handler)
                 self.assertEqual(5, len(content))
