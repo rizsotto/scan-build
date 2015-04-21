@@ -13,8 +13,6 @@ import subprocess
 import logging
 import re
 import shlex
-import itertools
-import functools
 from analyzer.decorators import trace
 
 
@@ -73,23 +71,19 @@ def _get_active_checkers(clang, plugins):
     compilation would be called. For input file we specify stdin. And
     pass only language information. """
 
-    def checkers(language, load):
+    def checkers(language):
         """ Returns a list of active checkers for the given language. """
+        load = [elem for plugin in plugins
+                for elem in ['-Xclang', '-load', '-Xclang', plugin]]
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
-        return (pattern.match(arg).group(1)
-                for arg in get_arguments('.', cmd) if pattern.match(arg))
+        return [pattern.match(arg).group(1)
+                for arg in get_arguments('.', cmd) if pattern.match(arg)]
 
-    load = functools.reduce(
-        lambda acc, x: acc + ['-Xclang', '-load', '-Xclang', x],
-        plugins,
-        [])
-
-    return set(
-        itertools.chain.from_iterable(
-            checkers(language, load)
-            for language
-            in ['c', 'c++', 'objective-c', 'objective-c++']))
+    result = set()
+    for language in ['c', 'c++', 'objective-c', 'objective-c++']:
+        result.update(checkers(language))
+    return result
 
 
 @trace
@@ -149,7 +143,7 @@ def get_checkers(clang, plugins):
 
     actives = _get_active_checkers(clang, plugins)
 
-    load = functools.reduce(lambda acc, x: acc + ['-load', x], plugins, [])
+    load = [elem for plugin in plugins for elem in ['-load', plugin]]
     cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']
 
     logging.debug('exec command: {0}'.format(' '.join(cmd)))
