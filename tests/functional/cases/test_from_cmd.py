@@ -5,42 +5,35 @@
 # License. See LICENSE.TXT for details.
 
 from ...unit import fixtures
+from . import make_args, silent_check_call
 import unittest
 
 import os.path
-import subprocess
-
-
-def run_sb(target_dir, args):
-    this_dir, _ = os.path.split(__file__)
-    path = os.path.normpath(os.path.join(this_dir, '..', 'src', 'build'))
-    child = subprocess.Popen(['scan-build', '-o', target_dir] + args,
-                             universal_newlines=True,
-                             cwd=path,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-    output = child.stdout.readlines()
-    child.stdout.close()
-    child.wait()
-    return (child.returncode, output)
 
 
 class OutputDirectoryTest(unittest.TestCase):
 
+    @staticmethod
+    def run_sb(outdir, args):
+        return silent_check_call(['scan-build', '-o', outdir] + args)
+
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             outdir = os.path.join(tmpdir, 'result')
-            run_sb(outdir, ['make', 'regular'])
+            make = make_args(tmpdir) + ['build_regular']
+            self.run_sb(outdir, make)
             self.assertTrue(os.path.isdir(outdir))
 
     def test_clear_deletes_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             outdir = os.path.join(tmpdir, 'result')
-            run_sb(outdir, ['make', 'clean'])
+            make = make_args(tmpdir) + ['build_clean']
+            self.run_sb(outdir, make)
             self.assertFalse(os.path.isdir(outdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
         with fixtures.TempDir() as tmpdir:
             outdir = os.path.join(tmpdir, 'result')
-            run_sb(outdir, ['--keep-empty', 'make', 'clean'])
+            make = make_args(tmpdir) + ['build_clean']
+            self.run_sb(outdir, ['--keep-empty'] + make)
             self.assertTrue(os.path.isdir(outdir))

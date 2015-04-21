@@ -1,8 +1,8 @@
 [
 {
   "directory": "${path}",
-  "command": "g++ -c -o main.o main.cpp -Wall -DDEBUG -Dvariable=value",
-  "file": "${path}/main.cpp"
+  "command": "g++ -c -o main.o main.c -Wall -DDEBUG -Dvariable=value",
+  "file": "${path}/main.c"
 }
 ,
 {
@@ -13,7 +13,7 @@
 ,
 {
   "directory": "${path}",
-  "command": "g++ -c -o clean-two.o clean-two.cpp -Wall -DDEBUG -Dvariable=value -I ./include",
-  "file": "${path}/clean-two.cpp"
+  "command": "g++ -c -o clean-two.o clean-two.c -Wall -DDEBUG -Dvariable=value -I ./include",
+  "file": "${path}/clean-two.c"
 }
 ]

@@ -1,34 +1,33 @@
-CC=clang
-CXX=clang++
+SRCDIR := ..
+OBJDIR := .
 
-PROGRAM = prg
-
-GOODS = ../main.o ../clean-one.o ../emit-one.o ../emit-two.o
-CLEANS = ../main.o ../clean-one.o ../clean-two.o
-BADS = ../main.o ../broken-one.o ../broken-two.o
+GOOD_SRCS := main.c clean-one.c clean-two.c emit-one.c emit-two.c
+CLEAN_SRCS := main.c clean-one.c clean-two.c
+BAD_SRCS := main.c broken-one.c broken-two.c
 
 
-CXXFLAGS = -Wall -DDEBUG -Dvariable=value -I../include
-CFLAGS = -Wall -DDEBUG -Dvariable="value with space" -I ../include
+GOOD_OBJS = $(GOOD_SRCS:%.c=$(OBJDIR)/%.o)
+CLEAN_OBJS = $(CLEAN_SRCS:%.c=$(OBJDIR)/%.o)
+BAD_OBJS = $(BAD_SRCS:%.c=$(OBJDIR)/%.o)
+
+PROGRAM = $(OBJDIR)/prg
+
+CC := clang
+CFLAGS = -Wall -DDEBUG -Dvariable="value with space" -I $(SRCDIR)/include
 LDFLAGS =
 
-%.o: %.c
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-%.o: %.cpp
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+$(PROGRAM): $(GOOD_OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
-$(PROGRAM): $(GOODS)
-	$(CXX) -o $@ $^ $(LDFLAGS)
+build_regular: $(GOOD_OBJS) $(PROGRAM)
 
-reset:
-	rm -rf $(PROGRAM) $(GOODS) $(BADS) $(CLEANS)
+build_clean: $(CLEAN_OBJS)
 
-regular: reset $(GOODS) $(PROGRAM)
+build_broken: $(BAD_OBJS)
 
-clean: reset $(CLEANS)
-
-broken: reset $(BADS)
-
-all_in_one:
-	$(CXX) -o $(PROGRAM) $(CXXFLAGS) $(LDFLAGS) ../main.cpp ../emit-two.cpp
+build_all_in_one:
+	$(CC) -o $(PROGRAM) $(CFLAGS) $(LDFLAGS) $(CLEAN_SRCS:%.c=$(SRCDIR)/%.c)

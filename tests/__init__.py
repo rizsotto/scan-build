@@ -7,12 +7,12 @@
 import unittest
 
 import tests.unit
-import tests.functional.beye
+import tests.functional.cases
 
 
 def suite():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromModule(tests.unit))
-    suite.addTests(loader.loadTestsFromModule(tests.functional.beye))
+    suite.addTests(loader.loadTestsFromModule(tests.functional.cases))
     return suite

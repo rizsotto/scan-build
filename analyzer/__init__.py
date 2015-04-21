@@ -100,6 +100,6 @@ def duplicate_check(method):
 
 
 def tempdir():
-    """ Return the defatul temorary directory. """
+    """ Return the default temorary directory. """
     from os import getenv
     return getenv('TMPDIR', getenv('TEMP', getenv('TMP', '/tmp')))

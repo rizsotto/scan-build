@@ -1,8 +1,8 @@
 [
 {
   "directory": "${path}",
-  "command": "g++ -c -o main.o main.cpp -Wall -DDEBUG -Dvariable=value",
-  "file": "${path}/main.cpp"
+  "command": "g++ -c -o main.o main.c -Wall -DDEBUG -Dvariable=value",
+  "file": "${path}/main.c"
 }
 ,
 {
@@ -13,8 +13,8 @@
 ,
 {
   "directory": "${path}",
-  "command": "g++ -c -o broken-two.o broken-two.cpp -Wall -DDEBUG -Dvariable=value",
-  "file": "${path}/broken-two.cpp"
+  "command": "g++ -c -o broken-two.o broken-two.c -Wall -DDEBUG -Dvariable=value",
+  "file": "${path}/broken-two.c"
 }
 ,
 {
@@ -25,8 +25,8 @@
 ,
 {
   "directory": "${path}",
-  "command": "g++ -c -o clean-two.o clean-two.cpp -Wall -DDEBUG -Dvariable=value -I ./include",
-  "file": "${path}/clean-two.cpp"
+  "command": "g++ -c -o clean-two.o clean-two.c -Wall -DDEBUG -Dvariable=value -I ./include",
+  "file": "${path}/clean-two.c"
 }
 ,
 {
@@ -37,7 +37,7 @@
 ,
 {
   "directory": "${path}",
-  "command": "g++ -c -o emit-two.o emit-two.cpp -Wall -DDEBUG -Dvariable=value",
-  "file": "${path}/emit-two.cpp"
+  "command": "g++ -c -o emit-two.o emit-two.c -Wall -DDEBUG -Dvariable=value",
+  "file": "${path}/emit-two.c"
 }
 ]

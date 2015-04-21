@@ -5,81 +5,61 @@
 # License. See LICENSE.TXT for details.
 
 from ...unit import fixtures
+from . import make_args, silent_check_call, silent_call
 import unittest
 
 import os.path
-import subprocess
 import json
-
-
-def reset_build():
-    this_dir, _ = os.path.split(__file__)
-    path = os.path.normpath(os.path.join(this_dir, '..', 'src', 'build'))
-    subprocess.call(['make', 'reset'], cwd=path,
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-
-def run_bear(result, args):
-    this_dir, _ = os.path.split(__file__)
-    path = os.path.normpath(os.path.join(this_dir, '..', 'src', 'build'))
-    child = subprocess.Popen(['bear', '--cdb', result] + args,
-                             universal_newlines=True,
-                             cwd=path,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-    output = child.stdout.readlines()
-    child.stdout.close()
-    child.wait()
-    return (child.returncode, output)
 
 
 class CompilationDatabaseTest(unittest.TestCase):
 
-    def test_successful_build(self):
-        reset_build()
-        with fixtures.TempDir() as tmpdir:
+    @staticmethod
+    def run_intercept(tmpdir, args):
             result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['make', 'regular'])
+            make = make_args(tmpdir) + args
+            silent_check_call(['bear', '--cdb', result] + make)
+            return result
+
+    def test_successful_build(self):
+        with fixtures.TempDir() as tmpdir:
+            result = self.run_intercept(tmpdir, ['build_regular'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
-                self.assertEqual(4, len(content))
+                self.assertEqual(5, len(content))
 
     def test_successful_build_parallel(self):
-        reset_build()
         with fixtures.TempDir() as tmpdir:
-            result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['make', '-j', 'regular'])
+            result = self.run_intercept(tmpdir, ['-j', 'build_regular'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
-                self.assertEqual(4, len(content))
+                self.assertEqual(5, len(content))
 
     def test_successful_build_on_empty_env(self):
-        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['env', '-', 'make', 'regular'])
+            make = make_args(tmpdir) + ['build_regular']
+            silent_check_call(['bear', '--cdb', result, 'env', '-'] + make)
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
-                self.assertEqual(4, len(content))
+                self.assertEqual(5, len(content))
 
     def test_successful_build_all_in_one(self):
-        reset_build()
         with fixtures.TempDir() as tmpdir:
-            result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['make', 'all_in_one'])
+            result = self.run_intercept(tmpdir, ['-j', 'build_all_in_one'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
-                self.assertEqual(2, len(content))
+                self.assertEqual(3, len(content))
 
     def test_not_successful_build(self):
-        reset_build()
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['make', 'broken'])
+            make = make_args(tmpdir) + ['build_broken']
+            silent_call(['bear', '--cdb', result] + make)
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
@@ -88,40 +68,47 @@ class CompilationDatabaseTest(unittest.TestCase):
 
 class ExitCodeTest(unittest.TestCase):
 
-    def test_successful_build(self):
-        reset_build()
-        with fixtures.TempDir() as tmpdir:
+    @staticmethod
+    def run_intercept(tmpdir, target):
             result = os.path.join(tmpdir, 'cdb.json')
-            exit_code, _ = run_bear(result, ['make', 'clean'])
-            self.assertFalse(exit_code)
+            make = make_args(tmpdir) + [target]
+            return silent_call(['bear', '--cdb', result] + make)
+
+    def test_successful_build(self):
+        with fixtures.TempDir() as tmpdir:
+            exitcode = self.run_intercept(tmpdir, 'build_clean')
+            self.assertFalse(exitcode)
 
     def test_not_successful_build(self):
-        reset_build()
         with fixtures.TempDir() as tmpdir:
-            result = os.path.join(tmpdir, 'cdb.json')
-            exit_code, _ = run_bear(result, ['make', 'broken'])
-            self.assertTrue(exit_code)
+            exitcode = self.run_intercept(tmpdir, 'build_broken')
+            self.assertTrue(exitcode)
 
 
 class ResumeFeatureTest(unittest.TestCase):
 
-    def test_overwrite_existing_cdb(self):
-        reset_build()
-        with fixtures.TempDir() as tmpdir:
+    @staticmethod
+    def run_intercept(tmpdir, target, args):
             result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['make', 'clean'])
-            run_bear(result, ['make', 'regular'])
+            make = make_args(tmpdir) + [target]
+            silent_check_call(['bear', '--cdb', result] + args + make)
+            return result
+
+    def test_overwrite_existing_cdb(self):
+        with fixtures.TempDir() as tmpdir:
+            result = self.run_intercept(tmpdir, 'build_clean', [])
+            self.assertTrue(os.path.isfile(result))
+            result = self.run_intercept(tmpdir, 'build_regular', [])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
-                self.assertEqual(4, len(content))
+                self.assertEqual(2, len(content))
 
     def test_append_to_existing_cdb(self):
-        reset_build()
         with fixtures.TempDir() as tmpdir:
-            result = os.path.join(tmpdir, 'cdb.json')
-            run_bear(result, ['make', 'clean'])
-            run_bear(result, ['--append', 'make', 'regular'])
+            result = self.run_intercept(tmpdir, 'build_clean', [])
+            self.assertTrue(os.path.isfile(result))
+            result = self.run_intercept(tmpdir, 'build_regular', ['--append'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
