@@ -120,67 +120,6 @@ def classify_parameters(command):
             if task(iterator):
                 return
 
-    def take_n(count=1, *keys):
-        def take(values, iterator, _match):
-            updates = []
-            updates.append(iterator.current())
-            for _ in range(count - 1):
-                updates.append(iterator.next())
-            for key in keys:
-                current = values.get(key, [])
-                values.update({key: current + updates})
-        return take
-
-    def take_one(*keys):
-        return take_n(1, *keys)
-
-    def take_two(*keys):
-        return take_n(2, *keys)
-
-    def take_four(*keys):
-        return take_n(4, *keys)
-
-    def take_joined(*keys):
-        def take(values, iterator, match):
-            updates = []
-            updates.append(iterator.current())
-            if not match.group(1):
-                updates.append(iterator.next())
-            for key in keys:
-                current = values.get(key, [])
-                values.update({key: current + updates})
-        return take
-
-    def take_from_file(*keys):
-        def take(values, iterator, _match):
-            with open(iterator.next()) as handle:
-                current = [line.strip() for line in handle.readlines()]
-                for key in keys:
-                    values[key] = current
-        return take
-
-    def take_as(value, *keys):
-        def take(values, _iterator, _match):
-            updates = [value]
-            for key in keys:
-                current = values.get(key, [])
-                values.update({key: current + updates})
-        return take
-
-    def take_second(*keys):
-        def take(values, iterator, _match):
-            current = iterator.next()
-            for key in keys:
-                values[key] = current
-        return take
-
-    def take_action(action):
-        def take(values, _iterator, _match):
-            key = 'action'
-            current = values[key]
-            values[key] = max(current, action)
-        return take
-
     state = {'action': Action.Link,
              'cxx': _is_cplusplus_compiler(command[0])}
 
@@ -226,6 +165,76 @@ class Arguments(object):
             raise StopIteration
         else:
             return self.__sequence[self.__current]
+
+
+def take_n(count=1, *keys):
+    def take(values, iterator, _match):
+        updates = []
+        updates.append(iterator.current())
+        for _ in range(count - 1):
+            updates.append(iterator.next())
+        for key in keys:
+            current = values.get(key, [])
+            values.update({key: current + updates})
+    return take
+
+
+def take_one(*keys):
+    return take_n(1, *keys)
+
+
+def take_two(*keys):
+    return take_n(2, *keys)
+
+
+def take_four(*keys):
+    return take_n(4, *keys)
+
+
+def take_joined(*keys):
+    def take(values, iterator, match):
+        updates = []
+        updates.append(iterator.current())
+        if not match.group(1):
+            updates.append(iterator.next())
+        for key in keys:
+            current = values.get(key, [])
+            values.update({key: current + updates})
+    return take
+
+
+def take_from_file(*keys):
+    def take(values, iterator, _match):
+        with open(iterator.next()) as handle:
+            current = [line.strip() for line in handle.readlines()]
+            for key in keys:
+                values[key] = current
+    return take
+
+
+def take_as(value, *keys):
+    def take(values, _iterator, _match):
+        updates = [value]
+        for key in keys:
+            current = values.get(key, [])
+            values.update({key: current + updates})
+    return take
+
+
+def take_second(*keys):
+    def take(values, iterator, _match):
+        current = iterator.next()
+        for key in keys:
+            values[key] = current
+    return take
+
+
+def take_action(action):
+    def take(values, _iterator, _match):
+        key = 'action'
+        current = values[key]
+        values[key] = max(current, action)
+    return take
 
 
 def _is_cplusplus_compiler(name):
