@@ -15,7 +15,7 @@ from analyzer.decorators import trace
 
 class Action(object):
     """ Enumeration class for compiler action. """
-    Link, Compile, Preprocess, Info = range(4)
+    Link, Compile, Preprocess, Info, Internal = range(5)
 
 
 @trace
@@ -53,7 +53,7 @@ def classify_parameters(command):
             regex(r'^-(E|MM?)$', take_action(Action.Preprocess)),
             anyof({'-c'}, take_action(Action.Compile)),
             anyof({'-print-prog-name'}, take_action(Action.Info)),
-            anyof({'-cc1'}, take_action(Action.Info)),
+            anyof({'-cc1'}, take_action(Action.Internal)),
             #
             anyof({'-arch'}, take_two('archs_seen')),
             #
