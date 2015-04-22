@@ -13,7 +13,6 @@ import os
 import os.path
 import shlex
 import tempfile
-import json
 from analyzer.command import classify_parameters, Action
 from analyzer.decorators import trace, require
 from analyzer.clang import get_arguments, get_version
@@ -27,72 +26,20 @@ def run(opts):
     The missing parameter related to the output of the analyzer. This method
     assemble and execute the final analyzer command. """
 
+    command = opts['command']
     try:
-        return set_analyzer_output(opts)
+        opts.update(classify_parameters(shlex.split(command)))
+        del opts['command']
+
+        for x in _create_commands(
+                _language_check(_arch_check(_action_check([opts])))):
+            logging.debug(x)
+            return set_analyzer_output(x)
+
     except Exception as exception:
-        logging.error(str(exception))
+        logging.error("Problem running the analyzer against '%s'",
+                      command, exc_info=1)
         return None
-
-
-@trace
-def generate_commands(args):
-    """ From compilation database it creates analyzer commands. """
-
-    def extend(opts, direct_args):
-        """ Take a compilation database entry and extend it with classified
-        compiler parameters and direct arguments from command line. """
-
-        opts.update(classify_parameters(shlex.split(opts['command'])))
-        opts.update({'direct_args': direct_args})
-        return opts
-
-    direct_args = _analyzer_params(args)
-    with open(args.cdb, 'r') as handle:
-        generator = (extend(cmd, direct_args) for cmd in json.load(handle))
-        return _create_commands(
-            _language_check(_arch_check(_action_check(generator))))
-
-
-@trace
-def _analyzer_params(args):
-    """ A group of command line arguments can mapped to command
-    line arguments of the analyzer. This method generates those. """
-
-    def prefix_with(constant, pieces):
-        return [elem for piece in pieces for elem in [constant, piece]]
-
-    result = []
-
-    if args.store_model:
-        result.append('-analyzer-store={0}'.format(args.store_model))
-    if args.constraints_model:
-        result.append(
-            '-analyzer-constraints={0}'.format(args.constraints_model))
-    if args.internal_stats:
-        result.append('-analyzer-stats')
-    if args.analyze_headers:
-        result.append('-analyzer-opt-analyze-headers')
-    if args.stats:
-        result.append('-analyzer-checker=debug.Stats')
-    if args.maxloop:
-        result.extend(['-analyzer-max-loop', str(args.maxloop)])
-    if args.output_format:
-        result.append('-analyzer-output={0}'.format(args.output_format))
-    if args.analyzer_config:
-        result.append(args.analyzer_config)
-    if 2 <= args.verbose:
-        result.append('-analyzer-display-progress')
-    if args.plugins:
-        result.extend(prefix_with('-load', args.plugins))
-    if args.enable_checker:
-        result.extend(prefix_with('-analyzer-checker', args.enable_checker))
-    if args.disable_checker:
-        result.extend(
-            prefix_with('-analyzer-disable-checker', args.disable_checker))
-    if args.ubiviz:
-        result.append('-analyzer-viz-egraph-ubigraph')
-
-    return prefix_with('-Xclang', result)
 
 
 @trace
@@ -116,7 +63,11 @@ def _create_commands(iterator):
             'file': current['file'],
             'language': current['language'],
             'analyze': ['--analyze'] + current['direct_args'] + common,
-            'report': ['-fsyntax-only', '-E'] + common}
+            'report': ['-fsyntax-only', '-E'] + common,
+            'out_dir': current['out_dir'],
+            'clang': current['clang'],
+            'report_failures': current['report_failures'],
+            'output_format': current['output_format']}
 
 
 @trace

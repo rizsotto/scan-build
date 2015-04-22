@@ -18,11 +18,12 @@ confusion the 'scan-build' generated report I call "cover".) """
 import logging
 import os
 import time
+import json
 import tempfile
 import multiprocessing
 from analyzer import tempdir
 from analyzer.decorators import to_logging_level, trace
-from analyzer.runner import run, generate_commands
+from analyzer.runner import run
 from analyzer.report import document
 from analyzer.clang import get_checkers
 
@@ -64,24 +65,68 @@ def run_analyzer(args, out_dir):
     enough information to run the analyzer (and the crash report generation
     if that was requested). """
 
-    def wrap(iterable, const):
-        for current in iterable:
-            current.update(const)
-            yield current
+    def extend(current, const):
+        current.update(const)
+        return current
 
-    pool = multiprocessing.Pool(1 if args.sequential else None)
-    for current in pool.imap_unordered(
-            run,
-            wrap(generate_commands(args), {
-                'out_dir': out_dir,
-                'clang': args.clang,
-                'report_failures': args.report_failures,
-                'output_format': args.output_format})):
-        if current is not None:
-            for line in current['error_output']:
-                logging.info(line.rstrip())
-    pool.close()
-    pool.join()
+    consts = {'out_dir': out_dir,
+              'direct_args': analyzer_params(args),
+              'clang': args.clang,
+              'report_failures': args.report_failures,
+              'output_format': args.output_format}
+
+    with open(args.cdb, 'r') as handle:
+        generator = (extend(cmd, consts) for cmd in json.load(handle))
+
+        pool = multiprocessing.Pool(1 if args.sequential else None)
+        for current in pool.imap_unordered(run, generator):
+            if current is not None:
+                for line in current['error_output']:
+                    logging.info(line.rstrip())
+        pool.close()
+        pool.join()
+
+
+@trace
+def analyzer_params(args):
+    """ A group of command line arguments can mapped to command
+    line arguments of the analyzer. This method generates those. """
+
+    def prefix_with(constant, pieces):
+        return [elem for piece in pieces for elem in [constant, piece]]
+
+    result = []
+
+    if args.store_model:
+        result.append('-analyzer-store={0}'.format(args.store_model))
+    if args.constraints_model:
+        result.append(
+            '-analyzer-constraints={0}'.format(args.constraints_model))
+    if args.internal_stats:
+        result.append('-analyzer-stats')
+    if args.analyze_headers:
+        result.append('-analyzer-opt-analyze-headers')
+    if args.stats:
+        result.append('-analyzer-checker=debug.Stats')
+    if args.maxloop:
+        result.extend(['-analyzer-max-loop', str(args.maxloop)])
+    if args.output_format:
+        result.append('-analyzer-output={0}'.format(args.output_format))
+    if args.analyzer_config:
+        result.append(args.analyzer_config)
+    if 2 <= args.verbose:
+        result.append('-analyzer-display-progress')
+    if args.plugins:
+        result.extend(prefix_with('-load', args.plugins))
+    if args.enable_checker:
+        result.extend(prefix_with('-analyzer-checker', args.enable_checker))
+    if args.disable_checker:
+        result.extend(
+            prefix_with('-analyzer-disable-checker', args.disable_checker))
+    if args.ubiviz:
+        result.append('-analyzer-viz-egraph-ubigraph')
+
+    return prefix_with('-Xclang', result)
 
 
 @trace
