@@ -125,3 +125,49 @@ class ReportFailureTest(fixtures.TestCase):
             error_file = pp_file + '.stderr.txt'
             self.assertIn(error_file, result)
             self.assertEqual([error_msg], result[error_file])
+
+
+class AnalyzerTest(unittest.TestCase):
+
+    def test_set_language(self):
+        def test(expected, input):
+            result = None
+            for x in sut._language_check([input]):
+                result = x
+            self.assertEqual(expected, result)
+
+        l = 'language'
+        f = 'file'
+        i = 'cxx'
+        test({f: 'file.c', l: 'c'}, {f: 'file.c', l: 'c'})
+        test({f: 'file.c', l: 'c++'}, {f: 'file.c', l: 'c++'})
+        test({f: 'file.c', l: 'c++', i: True}, {f: 'file.c', i: True})
+        test({f: 'file.c', l: 'c'}, {f: 'file.c'})
+        test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
+        test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i'})
+        test({f: 'f.i', l: 'c-cpp-output'}, {f: 'f.i', l: 'c-cpp-output'})
+        test(None, {f: 'file.java'})
+
+    def test_arch_loop(self):
+        def test(input):
+            result = []
+            for x in sut._arch_check([input]):
+                result.append(x)
+            return result
+
+        input = {'key': 'value'}
+        self.assertEqual([input], test(input))
+
+        input = {'archs_seen': ['-arch', 'i386']}
+        self.assertEqual([{'arch': 'i386'}], test(input))
+
+        input = {'archs_seen': ['-arch', 'ppc']}
+        self.assertEqual([], test(input))
+
+        input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
+        self.assertEqual([{'arch': 'i386'}], test(input))
+
+        input = {'archs_seen': ['-arch', 'i386', '-arch', 'sparc']}
+        result = test(input)
+        self.assertTrue(result == [{'arch': 'i386'}] or
+                        result == [{'arch': 'sparc'}])

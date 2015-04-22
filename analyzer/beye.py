@@ -22,8 +22,7 @@ import tempfile
 import multiprocessing
 from analyzer import tempdir
 from analyzer.decorators import to_logging_level, trace
-from analyzer.command import generate_commands
-from analyzer.runner import run
+from analyzer.runner import run, generate_commands
 from analyzer.report import document
 from analyzer.clang import get_checkers
 
