@@ -15,7 +15,7 @@ import os
 import os.path
 import shlex
 import json
-from analyzer.decorators import trace, require
+from analyzer.decorators import trace
 
 
 @trace
@@ -24,8 +24,8 @@ def generate_commands(args):
 
     def extend(opts, direct_args):
         """ Take a compilation database entry and extend it with classified
-        compiler parameters and direct arguments from command line.
-        """
+        compiler parameters and direct arguments from command line. """
+
         opts.update(classify_parameters(shlex.split(opts['command'])))
         opts.update({'direct_args': direct_args})
         return opts
@@ -33,11 +33,8 @@ def generate_commands(args):
     direct_args = _analyzer_params(args)
     with open(args.cdb, 'r') as handle:
         generator = (extend(cmd, direct_args) for cmd in json.load(handle))
-
-    return (cmd
-            for cmd
-            in (_action_check(cmd) for cmd in generator)
-            if cmd is not None)
+        return _create_commands(
+            _language_check(_arch_check(_action_check(generator))))
 
 
 class Action(object):
@@ -51,13 +48,13 @@ def classify_parameters(command):
 
     To run analysis from a compilation command, first it disassembles the
     compilation command. Classifies the parameters into groups and throws
-    away those which are not relevant.
-    """
+    away those which are not relevant.  """
+
     def match(state, iterator):
         """ This method contains a list of pattern and action tuples.
             The matching start from the top if the list, when the first
-            match happens the action is executed.
-        """
+            match happens the action is executed.  """
+
         def regex(pattern, action):
             regexp = re.compile(pattern)
 
@@ -256,8 +253,8 @@ class Arguments(object):
 
 
 def _is_cplusplus_compiler(name):
-    """ Returns true when the compiler name refer to a C++ compiler.
-    """
+    """ Returns true when the compiler name refer to a C++ compiler. """
+
     match = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', name)
     return False if match is None else True
 
@@ -305,34 +302,37 @@ def _analyzer_params(args):
 
 
 @trace
-@require(['directory', 'file', 'language', 'direct_args'])
-def _create_commands(opts):
+def _create_commands(iterator):
     """ Create command to run analyzer or failure report generation.
 
     If output is passed it returns failure report command.
     If it's not given it returns the analyzer command. """
-    common = []
-    if 'arch' in opts:
-        common.extend(['-arch', opts['arch']])
-    if 'compile_options' in opts:
-        common.extend(opts['compile_options'])
-    common.extend(['-x', opts['language']])
-    common.append(opts['file'])
 
-    return {
-        'directory': opts['directory'],
-        'file': opts['file'],
-        'language': opts['language'],
-        'analyze': ['--analyze'] + opts['direct_args'] + common,
-        'report': ['-fsyntax-only', '-E'] + common}
+    for current in iterator:
+        common = []
+        if 'arch' in current:
+            common.extend(['-arch', current['arch']])
+        if 'compile_options' in current:
+            common.extend(current['compile_options'])
+        common.extend(['-x', current['language']])
+        common.append(current['file'])
+
+        yield {
+            'directory': current['directory'],
+            'file': current['file'],
+            'language': current['language'],
+            'analyze': ['--analyze'] + current['direct_args'] + common,
+            'report': ['-fsyntax-only', '-E'] + common}
 
 
 @trace
-@require(['file'])
-def _language_check(opts, continuation=_create_commands):
+def _language_check(iterator):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
+
     def from_filename(name, cplusplus_compiler):
+        """ Return the language from fille name extension. """
+
         mapping = {
             '.c': 'c++' if cplusplus_compiler else 'c',
             '.cp': 'c++',
@@ -351,60 +351,60 @@ def _language_check(opts, continuation=_create_commands):
         (_, extension) = os.path.splitext(os.path.basename(name))
         return mapping.get(extension)
 
-    accepteds = {
-        'c',
-        'c++',
-        'objective-c',
-        'objective-c++',
-        'c-cpp-output',
-        'c++-cpp-output',
-        'objective-c-cpp-output'
-    }
+    accepteds = {'c', 'c++', 'objective-c', 'objective-c++',
+                 'c-cpp-output', 'c++-cpp-output', 'objective-c-cpp-output'}
 
     key = 'language'
-    language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts.get('cxx', False))
-    if language is None:
-        logging.debug('skip analysis, language not known')
-    elif language not in accepteds:
-        logging.debug('skip analysis, language not supported')
-    else:
-        logging.debug('analysis, language: {0}'.format(language))
-        opts.update({key: language})
-        return continuation(opts)
-    return None
+    for current in iterator:
+        language = current[key] if key in current else \
+            from_filename(current['file'], current.get('cxx', False))
+        if language is None:
+            logging.debug('skip analysis, language not known')
+        elif language not in accepteds:
+            logging.debug('skip analysis, language not supported')
+        else:
+            logging.debug('analysis, language: {0}'.format(language))
+            current.update({key: language})
+            yield current
 
 
 @trace
-@require([])
-def _arch_check(opts, continuation=_language_check):
+def _arch_check(iterator):
     """ Do run analyzer through one of the given architectures. """
+
     disableds = {'ppc', 'ppc64'}
 
     key = 'archs_seen'
-    if key in opts:
-        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
-        if not archs:
-            logging.debug('skip analysis, found not supported arch')
-            return None
-        else:
-            # There should be only one arch given (or the same multiple times)
-            # If there are multiple arch are given, and those are not the same
-            # those should not change the pre-processing step. (But that's the
-            # only pass we have before run the analyzer.)
-            arch = archs.pop()
-            logging.debug('analysis, on arch: {0}'.format(arch))
+    for current in iterator:
+        if key in current:
+            # filter out disabled architectures and -arch switches
+            archs = [a for a in current[key]
+                     if '-arch' != a and a not in disableds]
 
-            opts.update({'arch': arch})
-            del opts[key]
-            return continuation(opts)
-    else:
-        logging.debug('analysis, on default arch')
-        return continuation(opts)
+            if not archs:
+                logging.debug('skip analysis, found not supported arch')
+            else:
+                # There should be only one arch given (or the same multiple
+                # times). If there are multiple arch are given and are not
+                # the same, those should not change the pre-processing step.
+                # But that's the only pass we have before run the analyzer.
+                arch = archs.pop()
+                logging.debug('analysis, on arch: {0}'.format(arch))
+
+                current.update({'arch': arch})
+                del current[key]
+                yield current
+        else:
+            logging.debug('analysis, on default arch')
+            yield current
 
 
 @trace
-@require(['action'])
-def _action_check(opts, continuation=_arch_check):
+def _action_check(iterator):
     """ Continue analysis only if it compilation or link. """
-    return continuation(opts) if opts['action'] <= Action.Compile else None
+
+    for current in iterator:
+        if current['action'] <= Action.Compile:
+            yield current
+        else:
+            logging.debug('skip analysis, not compilation nor link')

@@ -13,9 +13,10 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_set_language(self):
         def test(expected, input):
-            spy = fixtures.Spy()
-            self.assertEqual(spy.success, sut._language_check(input, spy.call))
-            self.assertEqual(expected, spy.arg)
+            result = None
+            for x in sut._language_check([input]):
+                result = x
+            self.assertEqual(expected, result)
 
         l = 'language'
         f = 'file'
@@ -27,32 +28,31 @@ class AnalyzerTest(unittest.TestCase):
         test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
         test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i'})
         test({f: 'f.i', l: 'c-cpp-output'}, {f: 'f.i', l: 'c-cpp-output'})
+        test(None, {f: 'file.java'})
 
-    def test_set_language_fails(self):
-        def test(expected, input):
-            spy = fixtures.Spy()
-            self.assertEqual(None, sut._language_check(input, spy.call))
-            self.assertEqual(expected, spy.arg)
+    def test_arch_loop(self):
+        def test(input):
+            result = []
+            for x in sut._arch_check([input]):
+                result.append(x)
+            return result
 
-        test(None, {'file': 'file.java'})
-
-    def test_arch_loop_default_forwards_call(self):
-        spy = fixtures.Spy()
         input = {'key': 'value'}
-        self.assertEqual(spy.success, sut._arch_check(input, spy.call))
-        self.assertEqual(input, spy.arg)
+        self.assertEqual([input], test(input))
 
-    def test_arch_loop_specified_forwards_call(self):
-        spy = fixtures.Spy()
+        input = {'archs_seen': ['-arch', 'i386']}
+        self.assertEqual([{'arch': 'i386'}], test(input))
+
+        input = {'archs_seen': ['-arch', 'ppc']}
+        self.assertEqual([], test(input))
+
         input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
-        self.assertEqual(spy.success, sut._arch_check(input, spy.call))
-        self.assertEqual({'arch': 'i386'}, spy.arg)
+        self.assertEqual([{'arch': 'i386'}], test(input))
 
-    def test_arch_loop_forwards_call(self):
-        spy = fixtures.Spy()
         input = {'archs_seen': ['-arch', 'i386', '-arch', 'sparc']}
-        self.assertEqual(spy.success, sut._arch_check(input, spy.call))
-        self.assertEqual({'arch': 'sparc'}, spy.arg)
+        result = test(input)
+        self.assertTrue(result == [{'arch': 'i386'}] or
+                        result == [{'arch': 'sparc'}])
 
 
 class ParseTest(unittest.TestCase):
