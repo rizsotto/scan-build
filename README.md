@@ -41,18 +41,15 @@ environment.
 How to use
 ----------
 
-This package contains 3 executable scripts. One called `bear` which takes
-a build command as argument and produce a compilation database file.
-(Compilation database is a JSON file described [here][JCDB].) The second
-called `beye` which takes a compilation database and run the analyzer
-against it and generates a report. The third called `scan-build` which does
-what `bear` and `beye` together do.
+To run the Clang static analyzer against a project goes like this:
 
-After installation the usage is like this:
+    $ scan-build run <your build command>
 
-    $ scan-build <your build command>
+To generate a compilation database file (compilation database is a JSON
+file described [here][JCDB]) goes like this: 
 
-It runs the analyzer and print out the location of the report at the end.
+    $ scan-build intercept <your build command>
+
 Use `--help` to know more about the commands.
 
   [JCDB]: http://clang.llvm.org/docs/JSONCompilationDatabase.html

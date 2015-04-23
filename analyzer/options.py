@@ -14,36 +14,55 @@ import argparse
 from analyzer import tempdir
 
 
-def create_parser(program):
+def create_parser():
     """ Parser factory method. """
 
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='subparser_name')
+
+    run = subparsers.add_parser(
+        'run',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        add_help=False)
+        help="""Run the static analyzer against the given
+                build command.""")
 
-    option_builders = {
-        'bear': [_common, _bear, _bear_only],
-        'beye': [_common, _beye],
-        'scan-build': [_common, _bear, _beye]}
+    _common_parameters(run)
+    _analyze_parameters(run)
+    _build_command(run)
 
-    for builder in option_builders[program]:
-        builder(parser)
+    intercept = subparsers.add_parser(
+        'intercept',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="""Only runs the build and write compilation database.""")
+
+    _common_parameters(intercept)
+    _intercept_parameters(intercept)
+    _cdb_parameters(intercept)
+    _build_command(intercept)
+
+    analyze = subparsers.add_parser(
+        'analyze',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="""Only run the static analyzer against the given
+                compilation database.""")
+
+    _common_parameters(analyze)
+    _analyze_parameters(analyze)
+    _cdb_parameters(analyze)
 
     return parser
 
 
-def _common(parser):
-    parser.add_argument(
-        '--help', '-h',
-        action='store_true',
-        dest='help',
-        help="""show this help message and exit""")
+def _common_parameters(parser):
     parser.add_argument(
         '--verbose', '-v',
         action='count',
         default=0,
         help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
+
+
+def _cdb_parameters(parser):
     parser.add_argument(
         '--cdb',
         metavar='<file>',
@@ -51,27 +70,27 @@ def _common(parser):
         help="""The JSON compilation database.""")
 
 
-def _bear(parser):
+def _build_command(parser):
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
         help="""Command to run.""")
 
 
-def _bear_only(parser):
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
+def _intercept_parameters(parser):
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         '--append',
         action='store_true',
         help="""Append new entries to existing compilation database.""")
-    advanced.add_argument(
+    group.add_argument(
         '--disable-filter', '-n',
         dest='raw_entries',
         action='store_true',
         help="""Disable filter, unformated output.""")
 
 
-def _beye(parser):
+def _analyze_parameters(parser):
     parser.add_argument(
         '--output', '-o',
         metavar='<path>',
@@ -97,10 +116,6 @@ def _beye(parser):
         help="""Also analyze functions in #included files. By default, such
                 functions are skipped unless they are called by functions
                 within the main source file.""")
-    parser.add_argument(
-        '--sequential',
-        action='store_true',
-        help="""Execute analyzer sequentialy.""")
     format_group = parser.add_mutually_exclusive_group()
     format_group.add_argument(
         '--plist',
@@ -190,13 +205,6 @@ def _beye(parser):
                 Switch the page naming to:
                 report-<filename>-<function/method name>-<id>.html
                 instead of report-XXXXXX.html""")
-    advanced.add_argument(
-        '--ubiviz',
-        action='store_true',
-        help="""Meant to display the analysis path graph (aka 'exploded graph')
-                as it gets explored by the analyzer. The ubigraph support is
-                not enabled in a release build of clang. And you also need the
-                'ubiviz' script in your path.""")
 
     plugins = parser.add_argument_group('checker options')
     plugins.add_argument(
@@ -222,3 +230,7 @@ def _beye(parser):
                 Exactly which checkers constitute the default group is a
                 function of the operating system in use. These can be printed
                 with this flag.""")
+    plugins.add_argument(
+        '--help-checkers-verbose',
+        action='store_true',
+        help="""Print all available checkers and mark the enabled ones.""")

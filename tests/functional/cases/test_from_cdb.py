@@ -29,7 +29,7 @@ def prepare_cdb(name, target_dir):
 
 
 def run_beye(directory, cdb, args):
-    cmd = ['beye', '--cdb', cdb, '--output', directory] + args
+    cmd = ['scan-build', 'analyze', '--cdb', cdb, '--output', directory] + args
     child = subprocess.Popen(cmd,
                              universal_newlines=True,
                              stdout=subprocess.PIPE,

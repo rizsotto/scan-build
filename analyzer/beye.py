@@ -17,6 +17,8 @@ confusion the 'scan-build' generated report I call "cover".) """
 
 import logging
 import os
+import os.path
+import sys
 import time
 import json
 import tempfile
@@ -24,37 +26,60 @@ import multiprocessing
 from analyzer import tempdir
 from analyzer.decorators import to_logging_level, trace
 from analyzer.runner import run
+from analyzer.bear import main as intercept
+from analyzer.options import create_parser
 from analyzer.report import document
 from analyzer.clang import get_checkers
 
 
-def main(parser, intercept):
-    """ The reusable entry point of 'beye'.
+def main():
+    def run_analyze(args):
+        return args.subparser_name in {'run', 'analyze'}
 
-    The 'scan-build' and 'beye' are the two entry points of this code.
+    def run_intercept(args):
+        return args.subparser_name in {'run', 'intercept'}
 
-    parser      -- the command line parser.
-    intercept   -- the compilation database builder function. """
+    try:
+        program = os.path.basename(sys.argv[0])
+        logging.basicConfig(
+            format='{0}: %(levelname)s: %(message)s'.format(program))
 
-    args = parser.parse_args()
+        parser = create_parser()
+        args = parser.parse_args()
 
-    logging.getLogger().setLevel(to_logging_level(args.verbose))
-    logging.debug(args)
+        logging.getLogger().setLevel(to_logging_level(args.verbose))
+        logging.debug('Parsed arguments: '.format(args))
 
-    if args.help:
-        parser.print_help()
-        print_checkers(get_checkers(args.clang, args.plugins))
-        return 0
-    elif args.help_checkers:
-        print_active_checkers(get_checkers(args.clang, args.plugins))
-        return 0
+        if run_analyze(args):
+            if args.help_checkers_verbose:
+                print_checkers(get_checkers(args.clang, args.plugins))
+                return 0
+            elif args.help_checkers:
+                print_active_checkers(get_checkers(args.clang, args.plugins))
+                return 0
+            # hack the cdb parameter in args when that is not a parameter.
+            elif args.subparser_name == 'run':
+                args.cdb = 'compile_commands.json'
 
-    exit_code = intercept(args)
-    with ReportDirectory(args.output, args.keep_empty) as target_dir:
-        run_analyzer(args, target_dir.name)
-        number_of_bugs = document(args, target_dir.name)
+            exit_code = intercept(args) if run_intercept(args) else 0
+            with ReportDirectory(args.output, args.keep_empty) as target_dir:
+                run_analyzer(args, target_dir.name)
+                number_of_bugs = document(args, target_dir.name)
 
-        return number_of_bugs if args.status_bugs else exit_code
+                # remove cdb when that is not a parameter.
+                if args.subparser_name == 'run':
+                    os.unlink(args.cdb)
+
+                return number_of_bugs if args.status_bugs else exit_code
+
+        elif run_intercept(args):
+            return intercept(args)
+
+    except KeyboardInterrupt:
+        return 1
+    except Exception as exception:
+        logging.exception("Something unexpected had happened.")
+        return 127
 
 
 @trace
@@ -78,7 +103,7 @@ def run_analyzer(args, out_dir):
     with open(args.cdb, 'r') as handle:
         generator = (extend(cmd, consts) for cmd in json.load(handle))
 
-        pool = multiprocessing.Pool(1 if args.sequential else None)
+        pool = multiprocessing.Pool(1 if 2 <= args.verbose else None)
         for current in pool.imap_unordered(run, generator):
             if current is not None:
                 for line in current['error_output']:
@@ -123,7 +148,7 @@ def analyzer_params(args):
     if args.disable_checker:
         result.extend(
             prefix_with('-analyzer-disable-checker', args.disable_checker))
-    if args.ubiviz:
+    if os.getenv('UBIVIZ'):
         result.append('-analyzer-viz-egraph-ubigraph')
 
     return prefix_with('-Xclang', result)
@@ -142,9 +167,9 @@ def print_active_checkers(checkers):
 @trace
 def print_checkers(checkers):
     """ Print checker help to stdout. """
-    print()
+    print('')
     print('available checkers:')
-    print()
+    print('')
     for name in sorted(checkers.keys()):
         description, active = checkers[name]
         prefix = '+' if active else ' '
@@ -153,9 +178,9 @@ def print_checkers(checkers):
             print(' ' * 35 + description)
         else:
             print(' {0} {1: <30}  {2}'.format(prefix, name, description))
-    print()
+    print('')
     print('NOTE: "+" indicates that an analysis is enabled by default.')
-    print()
+    print('')
 
 
 class ReportDirectory(object):

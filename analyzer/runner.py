@@ -26,9 +26,9 @@ def run(opts):
     The missing parameter related to the output of the analyzer. This method
     assemble and execute the final analyzer command. """
 
-    command = opts['command']
     try:
-        opts.update(classify_parameters(shlex.split(command)))
+        logging.debug("Run analyzer against '%s'", opts['command'])
+        opts.update(classify_parameters(shlex.split(opts['command'])))
         del opts['command']
 
         for x in _create_commands(
@@ -37,8 +37,7 @@ def run(opts):
             return set_analyzer_output(x)
 
     except Exception as exception:
-        logging.error("Problem running the analyzer against '%s'",
-                      command, exc_info=1)
+        logging.error("Problem occured during analyzis.", exc_info=1)
         return None
 
 

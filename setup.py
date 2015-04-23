@@ -52,7 +52,7 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.md').read(),
     zip_safe=False,
-    scripts=['bin/bear', 'bin/beye', 'bin/scan-build'],
+    scripts=['bin/scan-build'],
     packages=['analyzer'],
     package_data={'analyzer': ['resources/*']},
     cmdclass={'buildear': BuildEAR, 'install': Install, 'build': Build},

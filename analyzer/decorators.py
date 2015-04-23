@@ -70,23 +70,3 @@ def require(required):
         return wrapper
 
     return decorator
-
-
-def entry(function):
-    """ Decorator for program entry points. """
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        from sys import argv
-        from os.path import basename
-        program = basename(argv[0])
-        logging.basicConfig(format='{0}: %(message)s'.format(program))
-
-        try:
-            return function(*args, **kwargs)
-        except KeyboardInterrupt:
-            return 1
-        except Exception as exception:
-            logging.exception("Something unexpected had happened.")
-            return 127
-
-    return wrapper
