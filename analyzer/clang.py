@@ -16,6 +16,9 @@ import shlex
 from analyzer.decorators import trace
 
 
+__all__ = ['get_version', 'get_arguments', 'get_checkers']
+
+
 @trace
 def get_version(cmd):
     """ Returns the compiler version as string. """
@@ -66,7 +69,7 @@ def get_arguments(cwd, command):
 
 
 @trace
-def _get_active_checkers(clang, plugins):
+def get_active_checkers(clang, plugins):
     """ To get the default plugins we execute Clang to print how this
     compilation would be called. For input file we specify stdin. And
     pass only language information. """
@@ -141,7 +144,7 @@ def get_checkers(clang, plugins):
         on 'unix.API', 'unix.Malloc' and 'unix.MallocSizeof'. """
         return any(re.match(r'^' + a + r'(\.|$)', entry) for a in actives)
 
-    actives = _get_active_checkers(clang, plugins)
+    actives = get_active_checkers(clang, plugins)
 
     load = [elem for plugin in plugins for elem in ['-load', plugin]]
     cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']

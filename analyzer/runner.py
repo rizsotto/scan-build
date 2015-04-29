@@ -18,6 +18,9 @@ from analyzer.decorators import trace, require
 from analyzer.clang import get_arguments, get_version
 
 
+__all__ = ['run']
+
+
 @trace
 def run(opts):
     """ Execute given analyzer command.
@@ -31,8 +34,8 @@ def run(opts):
         opts.update(classify_parameters(shlex.split(opts['command'])))
         del opts['command']
 
-        for x in _create_commands(
-                _language_check(_arch_check(_action_check([opts])))):
+        for x in create_commands(
+                language_check(arch_check(action_check([opts])))):
             logging.debug(x)
             return set_analyzer_output(x)
 
@@ -42,7 +45,7 @@ def run(opts):
 
 
 @trace
-def _create_commands(iterator):
+def create_commands(iterator):
     """ Create command to run analyzer or failure report generation.
 
     If output is passed it returns failure report command.
@@ -70,7 +73,7 @@ def _create_commands(iterator):
 
 
 @trace
-def _language_check(iterator):
+def language_check(iterator):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
 
@@ -113,7 +116,7 @@ def _language_check(iterator):
 
 
 @trace
-def _arch_check(iterator):
+def arch_check(iterator):
     """ Do run analyzer through one of the given architectures. """
 
     disableds = {'ppc', 'ppc64'}
@@ -144,7 +147,7 @@ def _arch_check(iterator):
 
 
 @trace
-def _action_check(iterator):
+def action_check(iterator):
     """ Continue analysis only if it compilation or link. """
 
     for current in iterator:

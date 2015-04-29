@@ -13,7 +13,7 @@ class BearUtilTest(fixtures.TestCase):
 
     def test_compiler_call_filter(self):
         def test(command):
-            return sut._compiler_call({'command': [command]})
+            return sut.is_compiler_call({'command': [command]})
 
         self.assertTrue(test('clang'))
         self.assertTrue(test('clang-3.6'))
@@ -33,7 +33,7 @@ class BearUtilTest(fixtures.TestCase):
 
     def test_format_entry_filters_action(self):
         def test(command):
-            return list(sut._format_entry(
+            return list(sut.format_entry(
                 {'command': command, 'directory': '/opt/src/project'}))
 
         self.assertTrue(test(['cc', '-c', 'file.c', '-o', 'file.o']))
@@ -46,7 +46,7 @@ class BearUtilTest(fixtures.TestCase):
         directory = os.path.join(os.sep, 'home', 'me', 'project')
 
         def test(command):
-            result = list(sut._format_entry(
+            result = list(sut.format_entry(
                 {'command': command, 'directory': directory}))
             return result[0]['file']
 

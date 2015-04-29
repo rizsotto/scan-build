@@ -27,43 +27,46 @@ from analyzer.decorators import trace
 from analyzer.clang import get_version
 
 
+__all__ = ['document']
+
+
 @trace
 def document(args, out_dir):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html = 'html' == args.output_format or 'plist-html' == args.output_format
 
-    crash_count = sum(1 for _ in _read_crashes(out_dir))
-    bug_count = _create_counters()
-    for bug in _read_bugs(out_dir, html):
+    crash_count = sum(1 for _ in read_crashes(out_dir))
+    bug_count = create_counters()
+    for bug in read_bugs(out_dir, html):
         bug_count(bug)
 
     result = crash_count + bug_count.total
     if html and result:
         with open(args.cdb, 'r') as handle:
-            prefix = _commonprefix(item['file'] for item in json.load(handle))
+            prefix = commonprefix(item['file'] for item in json.load(handle))
 
         try:
             fragments = []
             if bug_count.total:
-                fragments.append(_bug_summary(out_dir, bug_count))
-                fragments.append(_bug_report(out_dir, prefix))
+                fragments.append(bug_summary(out_dir, bug_count))
+                fragments.append(bug_report(out_dir, prefix))
             if crash_count:
-                fragments.append(_crash_report(out_dir, prefix))
+                fragments.append(crash_report(out_dir, prefix))
 
-            _assemble_cover(out_dir, prefix, args, fragments)
+            assemble_cover(out_dir, prefix, args, fragments)
         finally:
             for fragment in fragments:
                 os.remove(fragment)
 
-        _copy_resource_files(out_dir)
+        copy_resource_files(out_dir)
         shutil.copy(args.cdb, out_dir)
 
     return result
 
 
 @trace
-def _assemble_cover(out_dir, prefix, args, fragments):
+def assemble_cover(out_dir, prefix, args, fragments):
     """ Put together the fragments into a final report. """
     import getpass
     import socket
@@ -74,7 +77,7 @@ def _assemble_cover(out_dir, prefix, args, fragments):
 
     with open(os.path.join(out_dir, 'index.html'), 'w') as handle:
         indent = 0
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |<!DOCTYPE html>
         |<html>
         |  <head>
@@ -83,8 +86,8 @@ def _assemble_cover(out_dir, prefix, args, fragments):
         |    <script type='text/javascript' src="sorttable.js"></script>
         |    <script type='text/javascript' src='selectable.js'></script>
         |  </head>""", indent).format(html_title=args.html_title))
-        handle.write(_comment('SUMMARYENDHEAD'))
-        handle.write(_reindent("""
+        handle.write(comment('SUMMARYENDHEAD'))
+        handle.write(reindent("""
         |  <body>
         |    <h1>{html_title}</h1>
         |    <table>
@@ -106,18 +109,18 @@ def _assemble_cover(out_dir, prefix, args, fragments):
             with open(fragment, 'r') as input_handle:
                 for line in input_handle:
                     handle.write(line)
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |  </body>
         |</html>""", indent))
 
 
 @trace
-def _bug_summary(out_dir, bug_counter):
+def bug_summary(out_dir, bug_counter):
     """ Bug summary is a HTML table to give a better overview of the bugs. """
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |<h2>Bug Summary</h2>
         |<table>
         |  <thead>
@@ -128,7 +131,7 @@ def _bug_summary(out_dir, bug_counter):
         |    </tr>
         |  </thead>
         |  <tbody>""", indent))
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |    <tr style="font-weight:bold">
         |      <td class="SUMM_DESC">All Bugs</td>
         |      <td class="Q">{0}</td>
@@ -140,12 +143,12 @@ def _bug_summary(out_dir, bug_counter):
         |      </td>
         |    </tr>""", indent).format(bug_counter.total))
         for category, types in bug_counter.categories.items():
-            handle.write(_reindent("""
+            handle.write(reindent("""
         |    <tr>
         |      <th>{0}</th><th colspan=2></th>
         |    </tr>""", indent).format(category))
             for bug_type in types.values():
-                handle.write(_reindent("""
+                handle.write(reindent("""
         |    <tr>
         |      <td class="SUMM_DESC">{bug_type}</td>
         |      <td class="Q">{bug_count}</td>
@@ -156,24 +159,24 @@ def _bug_summary(out_dir, bug_counter):
         |        </center>
         |      </td>
         |    </tr>""", indent).format(**bug_type))
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
-        handle.write(_comment('SUMMARYBUGEND'))
+        handle.write(comment('SUMMARYBUGEND'))
     return name
 
 
 @trace
-def _bug_report(out_dir, prefix):
+def bug_report(out_dir, prefix):
     """ Creates a fragment from the analyzer reports. """
 
-    pretty = _prettify_bug(prefix, out_dir)
-    bugs = (pretty(bug) for bug in _read_bugs(out_dir, True))
+    pretty = prettify_bug(prefix, out_dir)
+    bugs = (pretty(bug) for bug in read_bugs(out_dir, True))
 
     name = os.path.join(out_dir, 'bugs.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |<h2>Reports</h2>
         |<table class="sortable" style="table-layout:automatic">
         |  <thead>
@@ -191,9 +194,9 @@ def _bug_report(out_dir, prefix):
         |    </tr>
         |  </thead>
         |  <tbody>""", indent))
-        handle.write(_comment('REPORTBUGCOL'))
+        handle.write(comment('REPORTBUGCOL'))
         for current in bugs:
-            handle.write(_reindent("""
+            handle.write(reindent("""
         |    <tr class="{bug_type_class}">
         |      <td class="DESC">{bug_category}</td>
         |      <td class="DESC">{bug_type}</td>
@@ -203,25 +206,25 @@ def _bug_report(out_dir, prefix):
         |      <td class="Q">{bug_path_length}</td>
         |      <td><a href="{report_file}#EndPath">View Report</a></td>
         |    </tr>""", indent).format(**current))
-            handle.write(_comment('REPORTBUG', {'id': current['report_file']}))
-        handle.write(_reindent("""
+            handle.write(comment('REPORTBUG', {'id': current['report_file']}))
+        handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
-        handle.write(_comment('REPORTBUGEND'))
+        handle.write(comment('REPORTBUGEND'))
     return name
 
 
 @trace
-def _crash_report(out_dir, prefix):
+def crash_report(out_dir, prefix):
     """ Creates a fragment from the compiler crashes. """
 
-    pretty = _prettify_crash(prefix, out_dir)
-    crashes = (pretty(crash) for crash in _read_crashes(out_dir))
+    pretty = prettify_crash(prefix, out_dir)
+    crashes = (pretty(crash) for crash in read_crashes(out_dir))
 
     name = os.path.join(out_dir, 'crashes.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
-        handle.write(_reindent("""
+        handle.write(reindent("""
         |<h2>Analyzer Failures</h2>
         |<p>The analyzer had problems processing the following files:</p>
         |<table>
@@ -235,38 +238,38 @@ def _crash_report(out_dir, prefix):
         |  </thead>
         |  <tbody>""", indent))
         for current in crashes:
-            handle.write(_reindent("""
+            handle.write(reindent("""
         |    <tr>
         |      <td>{problem}</td>
         |      <td>{source}</td>
         |      <td><a href="{file}">preprocessor output</a></td>
         |      <td><a href="{stderr}">analyzer std err</a></td>
         |    </tr>""", indent).format(**current))
-            handle.write(_comment('REPORTPROBLEM', current))
-        handle.write(_reindent("""
+            handle.write(comment('REPORTPROBLEM', current))
+        handle.write(reindent("""
         |  </tbody>
         |</table>""", indent))
-        handle.write(_comment('REPORTCRASHES'))
+        handle.write(comment('REPORTCRASHES'))
     return name
 
 
 @trace
-def _read_crashes(out_dir):
+def read_crashes(out_dir):
     """ Generate a unique sequence of crashes from given output directory. """
-    return (_parse_crash(filename)
+    return (parse_crash(filename)
             for filename
             in glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
 
 
 @trace
-def _read_bugs(out_dir, html):
+def read_bugs(out_dir, html):
     """ Generate a unique sequence of bugs from given output directory.
 
     Duplicates can be in a project if the same module was compiled multiple
     times with different compiler options. These would be better to show in
     the final report (cover) only once. """
 
-    parser = _parse_bug_html if html else _parse_bug_plist
+    parser = parse_bug_html if html else parse_bug_plist
     pattern = '*.html' if html else '*.plist'
 
     duplicate = duplicate_check(
@@ -281,7 +284,7 @@ def _read_bugs(out_dir, html):
 
 
 @trace
-def _parse_bug_plist(filename):
+def parse_bug_plist(filename):
     """ Returns the generator of bugs from a single .plist file. """
     content = plistlib.readPlist(filename)
     files = content.get('files')
@@ -299,7 +302,7 @@ def _parse_bug_plist(filename):
 
 
 @trace
-def _parse_bug_html(filename):
+def parse_bug_html(filename):
     """ Parse out the bug information from HTML output. """
     patterns = [
         re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
@@ -329,14 +332,14 @@ def _parse_bug_html(filename):
                     bug.update(match.groupdict())
                     break
 
-    _encode_value(bug, 'bug_line', int)
-    _encode_value(bug, 'bug_path_length', int)
+    encode_value(bug, 'bug_line', int)
+    encode_value(bug, 'bug_path_length', int)
 
     yield bug
 
 
 @trace
-def _parse_crash(filename):
+def parse_crash(filename):
     """ Parse out the crash information from the report file. """
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
@@ -349,16 +352,16 @@ def _parse_crash(filename):
                 'stderr': name + '.stderr.txt'}
 
 
-def _category_type_name(bug):
+def category_type_name(bug):
     """ Create a new bug attribute from bug by category and type.
 
     The result will be used as CSS class selector in the final report. """
     def smash(key):
         return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
-    return _escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
+    return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
 
 
-def _create_counters():
+def create_counters():
     """ Create counters for bug statistics.
 
     Two entries are maintained: 'total' is an integer, represents the
@@ -372,7 +375,7 @@ def _create_counters():
         current_category = predicate.categories.get(bug_category, dict())
         current_type = current_category.get(bug_type, {
             'bug_type': bug_type,
-            'bug_type_class': _category_type_name(bug),
+            'bug_type_class': category_type_name(bug),
             'bug_count': 0})
         current_type.update({'bug_count': current_type['bug_count'] + 1})
         current_category.update({bug_type: current_type})
@@ -384,54 +387,54 @@ def _create_counters():
     return predicate
 
 
-def _prettify_bug(prefix, out_dir):
+def prettify_bug(prefix, out_dir):
     def predicate(bug):
         """ Make safe this values to embed into HTML. """
-        bug['bug_type_class'] = _category_type_name(bug)
+        bug['bug_type_class'] = category_type_name(bug)
 
-        _encode_value(bug, 'bug_file', lambda x: _chop(prefix, x))
-        _encode_value(bug, 'bug_file', _escape)
-        _encode_value(bug, 'bug_category', _escape)
-        _encode_value(bug, 'bug_type', _escape)
-        _encode_value(bug, 'report_file', lambda x: _chop(out_dir, x))
+        encode_value(bug, 'bug_file', lambda x: chop(prefix, x))
+        encode_value(bug, 'bug_file', escape)
+        encode_value(bug, 'bug_category', escape)
+        encode_value(bug, 'bug_type', escape)
+        encode_value(bug, 'report_file', lambda x: chop(out_dir, x))
         return bug
 
     return predicate
 
 
-def _prettify_crash(prefix, out_dir):
+def prettify_crash(prefix, out_dir):
     def predicate(crash):
         """ Make safe this values to embed into HTML. """
-        _encode_value(crash, 'source', lambda x: _chop(prefix, x))
-        _encode_value(crash, 'source', _escape)
-        _encode_value(crash, 'problem', _escape)
-        _encode_value(crash, 'file', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'file', _escape)
-        _encode_value(crash, 'info', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'info', _escape)
-        _encode_value(crash, 'stderr', lambda x: _chop(out_dir, x))
-        _encode_value(crash, 'stderr', _escape)
+        encode_value(crash, 'source', lambda x: chop(prefix, x))
+        encode_value(crash, 'source', escape)
+        encode_value(crash, 'problem', escape)
+        encode_value(crash, 'file', lambda x: chop(out_dir, x))
+        encode_value(crash, 'file', escape)
+        encode_value(crash, 'info', lambda x: chop(out_dir, x))
+        encode_value(crash, 'info', escape)
+        encode_value(crash, 'stderr', lambda x: chop(out_dir, x))
+        encode_value(crash, 'stderr', escape)
         return crash
 
     return predicate
 
 
 @trace
-def _copy_resource_files(out_dir):
+def copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
     resources_dir = pkg_resources.resource_filename('analyzer', 'resources')
     for resource in pkg_resources.resource_listdir('analyzer', 'resources'):
         shutil.copy(os.path.join(resources_dir, resource), out_dir)
 
 
-def _encode_value(container, key, encode):
+def encode_value(container, key, encode):
     """ Run 'encode' on 'container[key]' value and update it. """
     if key in container:
         value = encode(container[key])
         container.update({key: value})
 
 
-def _chop(prefix, filename):
+def chop(prefix, filename):
     """ Create 'filename' from '/prefix/filename' """
     if not len(prefix):
         return filename
@@ -441,7 +444,7 @@ def _chop(prefix, filename):
     return split[1] if len(split) == 2 else split[0]
 
 
-def _escape(text):
+def escape(text):
     """ Paranoid HTML escape method. (Python version independent) """
     escape_table = {'&': '&amp;',
                     '"': '&quot;',
@@ -451,7 +454,7 @@ def _escape(text):
     return ''.join(escape_table.get(c, c) for c in text)
 
 
-def _reindent(text, indent):
+def reindent(text, indent):
     """ Utility function to format html output and keep indentation. """
     result = ''
     for line in text.splitlines():
@@ -460,7 +463,7 @@ def _reindent(text, indent):
     return result
 
 
-def _comment(name, opts=dict()):
+def comment(name, opts=dict()):
     """ Utility function to format meta information as comment. """
     attributes = ''
     for key, value in opts.items():
@@ -470,7 +473,7 @@ def _comment(name, opts=dict()):
 
 
 @trace
-def _commonprefix(files):
+def commonprefix(files):
     """ Fixed version of os.path.commonprefix. Return the longest path prefix
     that is a prefix of all paths in filenames. """
     result = None

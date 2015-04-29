@@ -132,7 +132,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language(self):
         def test(expected, input):
             result = None
-            for x in sut._language_check([input]):
+            for x in sut.language_check([input]):
                 result = x
             self.assertEqual(expected, result)
 
@@ -151,7 +151,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_arch_loop(self):
         def test(input):
             result = []
-            for x in sut._arch_check([input]):
+            for x in sut.arch_check([input]):
                 result.append(x)
             return result
 

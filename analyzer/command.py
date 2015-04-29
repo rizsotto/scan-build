@@ -13,6 +13,9 @@ import re
 from analyzer.decorators import trace
 
 
+__all__ = ['Action', 'classify_parameters']
+
+
 class Action(object):
     """ Enumeration class for compiler action. """
     Link, Compile, Preprocess, Info, Internal = range(5)
@@ -121,7 +124,7 @@ def classify_parameters(command):
                 return
 
     state = {'action': Action.Link,
-             'cxx': _is_cplusplus_compiler(command[0])}
+             'cxx': is_cplusplus_compiler(command[0])}
 
     arguments = Arguments(command)
     for _ in arguments:
@@ -237,7 +240,7 @@ def take_action(action):
     return take
 
 
-def _is_cplusplus_compiler(name):
+def is_cplusplus_compiler(name):
     """ Returns true when the compiler name refer to a C++ compiler. """
 
     match = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', name)

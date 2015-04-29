@@ -16,7 +16,7 @@ def run_bug_parse(content):
         file_name = os.path.join(tmpdir, 'test.html')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
-        for bug in sut._parse_bug_html(file_name):
+        for bug in sut.parse_bug_html(file_name):
             return bug
 
 
@@ -25,7 +25,7 @@ def run_crash_parse(content, preproc):
         file_name = os.path.join(tmpdir, preproc + '.info.txt')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
-        return sut._parse_crash(file_name)
+        return sut.parse_crash(file_name)
 
 
 class ParseFileTest(unittest.TestCase):
@@ -101,7 +101,7 @@ class ParseFileTest(unittest.TestCase):
                         pp_file = key
             self.assertIsNot(pp_file, None)
             # read the failure report back
-            result = sut._parse_crash(pp_file + '.info.txt')
+            result = sut.parse_crash(pp_file + '.info.txt')
             self.assertEqual(result['source'], filename)
             self.assertEqual(result['problem'], 'Other Error')
             self.assertEqual(result['file'], pp_file)
@@ -112,31 +112,31 @@ class ParseFileTest(unittest.TestCase):
 class ReportMethodTest(unittest.TestCase):
 
     def test_chop(self):
-        self.assertEqual('file', sut._chop('/prefix', '/prefix/file'))
-        self.assertEqual('file', sut._chop('/prefix/', '/prefix/file'))
-        self.assertEqual('lib/file', sut._chop('/prefix/', '/prefix/lib/file'))
-        self.assertEqual('/prefix/file', sut._chop('', '/prefix/file'))
-        self.assertEqual('/prefix/file', sut._chop('apple', '/prefix/file'))
+        self.assertEqual('file', sut.chop('/prefix', '/prefix/file'))
+        self.assertEqual('file', sut.chop('/prefix/', '/prefix/file'))
+        self.assertEqual('lib/file', sut.chop('/prefix/', '/prefix/lib/file'))
+        self.assertEqual('/prefix/file', sut.chop('', '/prefix/file'))
+        self.assertEqual('/prefix/file', sut.chop('apple', '/prefix/file'))
 
 
 class GetPrefixFromCompilationDatabaseTest(fixtures.TestCase):
 
     def test_with_different_filenames(self):
         self.assertEqual(
-            sut._commonprefix(['/tmp/a.c', '/tmp/b.c']), '/tmp')
+            sut.commonprefix(['/tmp/a.c', '/tmp/b.c']), '/tmp')
 
     def test_with_different_dirnames(self):
         self.assertEqual(
-            sut._commonprefix(['/tmp/abs/a.c', '/tmp/ack/b.c']), '/tmp')
+            sut.commonprefix(['/tmp/abs/a.c', '/tmp/ack/b.c']), '/tmp')
 
     def test_no_common_prefix(self):
         self.assertEqual(
-            sut._commonprefix(['/tmp/abs/a.c', '/usr/ack/b.c']), '/')
+            sut.commonprefix(['/tmp/abs/a.c', '/usr/ack/b.c']), '/')
 
     def test_with_single_file(self):
         self.assertEqual(
-            sut._commonprefix(['/tmp/a.c']), '/tmp')
+            sut.commonprefix(['/tmp/a.c']), '/tmp')
 
     def test_empty(self):
         self.assertEqual(
-            sut._commonprefix([]), '')
+            sut.commonprefix([]), '')

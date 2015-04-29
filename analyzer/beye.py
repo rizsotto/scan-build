@@ -32,7 +32,12 @@ from analyzer.report import document
 from analyzer.clang import get_checkers
 
 
+__all__ = ['main']
+
+
 def main():
+    """ Entry point for 'scan-build'. """
+
     def run_analyze(args):
         return args.subparser_name in {'run', 'analyze'}
 

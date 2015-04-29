@@ -8,6 +8,9 @@ import logging
 import functools
 
 
+__all__ = ['trace', 'to_logging_level']
+
+
 TRACE_LEVEL = 5
 
 
