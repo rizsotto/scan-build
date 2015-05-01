@@ -18,7 +18,8 @@ def run(target_dir):
     result_file = os.path.join(target_dir, 'result.json')
     expected_file = os.path.join(target_dir, 'expected.json')
     subprocess.check_call(
-        ['bear', '--cdb', result_file, test_executable, expected_file],
+        ['scan-build', 'intercept', '--cdb', result_file,
+         test_executable, expected_file],
         cwd=target_dir)
     return (expected_file, result_file)
 

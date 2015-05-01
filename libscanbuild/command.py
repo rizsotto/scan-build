@@ -10,7 +10,7 @@ into an analyzer invocation. To execute the analyzer is done in other module.
 
 
 import re
-from analyzer.decorators import trace
+from libscanbuild.decorators import trace
 
 
 __all__ = ['Action', 'classify_parameters']

@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.command as sut
+import libscanbuild.command as sut
 from . import fixtures
 import unittest
 

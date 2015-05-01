@@ -13,7 +13,7 @@ import subprocess
 import logging
 import re
 import shlex
-from analyzer.decorators import trace
+from libscanbuild.decorators import trace
 
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']

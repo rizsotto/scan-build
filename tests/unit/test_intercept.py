@@ -4,12 +4,12 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.bear as sut
+import libscanbuild.intercept as sut
 from . import fixtures
 import os.path
 
 
-class BearUtilTest(fixtures.TestCase):
+class InterceptUtilTest(fixtures.TestCase):
 
     def test_compiler_call_filter(self):
         def test(command):

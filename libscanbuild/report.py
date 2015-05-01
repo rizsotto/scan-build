@@ -22,9 +22,9 @@ import glob
 import pkg_resources
 import plistlib
 import itertools
-from analyzer import duplicate_check
-from analyzer.decorators import trace
-from analyzer.clang import get_version
+from libscanbuild import duplicate_check
+from libscanbuild.decorators import trace
+from libscanbuild.clang import get_version
 
 
 __all__ = ['document']
@@ -422,8 +422,9 @@ def prettify_crash(prefix, out_dir):
 @trace
 def copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
-    resources_dir = pkg_resources.resource_filename('analyzer', 'resources')
-    for resource in pkg_resources.resource_listdir('analyzer', 'resources'):
+    this_package = 'libscanbuild'
+    resources_dir = pkg_resources.resource_filename(this_package, 'resources')
+    for resource in pkg_resources.resource_listdir(this_package, 'resources'):
         shutil.copy(os.path.join(resources_dir, resource), out_dir)
 
 

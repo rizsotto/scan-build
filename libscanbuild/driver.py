@@ -23,13 +23,13 @@ import time
 import json
 import tempfile
 import multiprocessing
-from analyzer import tempdir
-from analyzer.decorators import to_logging_level, trace
-from analyzer.runner import run
-from analyzer.bear import main as intercept
-from analyzer.options import create_parser
-from analyzer.report import document
-from analyzer.clang import get_checkers
+from libscanbuild import tempdir
+from libscanbuild.decorators import to_logging_level, trace
+from libscanbuild.runner import run
+from libscanbuild.intercept import main as intercept
+from libscanbuild.options import create_parser
+from libscanbuild.report import document
+from libscanbuild.clang import get_checkers
 
 
 __all__ = ['main']

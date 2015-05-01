@@ -13,9 +13,9 @@ import os
 import os.path
 import shlex
 import tempfile
-from analyzer.command import classify_parameters, Action
-from analyzer.decorators import trace, require
-from analyzer.clang import get_arguments, get_version
+from libscanbuild.command import classify_parameters, Action
+from libscanbuild.decorators import trace, require
+from libscanbuild.clang import get_arguments, get_version
 
 
 __all__ = ['run']

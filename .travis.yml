@@ -17,10 +17,10 @@ install:
   - pip install pep8 coveralls
 
 script:
-  - pep8 analyzer tests
+  - pep8 libscanbuild tests
   - python setup.py check
   - python setup.py install
-  - coverage run --source=analyzer setup.py test
+  - coverage run --source=libscanbuild setup.py test
 
 after_success:
   coveralls

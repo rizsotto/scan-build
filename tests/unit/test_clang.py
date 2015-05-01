@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.clang as sut
+import libscanbuild.clang as sut
 from . import fixtures
 import os.path
 

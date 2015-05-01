@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import analyzer.report as sut
+import libscanbuild.report as sut
 from . import fixtures
 import unittest
 import os
@@ -75,7 +75,7 @@ class ParseFileTest(unittest.TestCase):
                          'file.i.stderr.txt')
 
     def test_parse_real_crash(self):
-        import analyzer.runner as sut2
+        import libscanbuild.runner as sut2
         import re
         with fixtures.TempDir() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')

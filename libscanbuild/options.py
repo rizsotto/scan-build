@@ -11,7 +11,7 @@ the major force to be compatible with newer versions only. """
 
 
 import argparse
-from analyzer import tempdir
+from libscanbuild import tempdir
 
 
 def create_parser():

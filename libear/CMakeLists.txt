@@ -35,6 +35,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_library(ear SHARED ear.c)
 target_link_libraries(ear ${CMAKE_DL_LIBS})
 
-install(TARGETS ear LIBRARY DESTINATION analyzer)
+install(TARGETS ear LIBRARY DESTINATION libscanbuild)
 
 add_executable(exec_anatomy exec_anatomy.c)

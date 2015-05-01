@@ -23,7 +23,7 @@ class Spy(object):
 class TempDir(object):
 
     def __init__(self):
-        self.name = tempfile.mkdtemp(prefix='beye-test-')
+        self.name = tempfile.mkdtemp(prefix='scan-build-test-')
 
     def __enter__(self):
         return self.name

@@ -31,9 +31,9 @@ import re
 import shlex
 import pkg_resources
 import itertools
-from analyzer import duplicate_check, tempdir
-from analyzer.decorators import trace
-from analyzer.command import Action, classify_parameters
+from libscanbuild import duplicate_check, tempdir
+from libscanbuild.decorators import trace
+from libscanbuild.command import Action, classify_parameters
 
 
 __all__ = ['main']
@@ -97,7 +97,7 @@ def run_build(command, destination):
 
     def get_ear_so_file():
         lib_name = 'libear.dylib' if 'darwin' == sys.platform else 'libear.so'
-        return pkg_resources.resource_filename('analyzer', lib_name)
+        return pkg_resources.resource_filename('libscanbuild', lib_name)
 
     environment = dict(os.environ)
     for alias, key in ENVIRONMENTS:
