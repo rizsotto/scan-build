@@ -14,14 +14,13 @@ import os.path
 import shlex
 import tempfile
 from libscanbuild.command import classify_parameters, Action
-from libscanbuild.decorators import trace, require
+from libscanbuild.decorators import require
 from libscanbuild.clang import get_arguments, get_version
 
 
 __all__ = ['run']
 
 
-@trace
 def run(opts):
     """ Execute given analyzer command.
 
@@ -44,7 +43,6 @@ def run(opts):
         return None
 
 
-@trace
 def create_commands(iterator):
     """ Create command to run analyzer or failure report generation.
 
@@ -72,7 +70,6 @@ def create_commands(iterator):
             'output_format': current['output_format']}
 
 
-@trace
 def language_check(iterator):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
@@ -115,7 +112,6 @@ def language_check(iterator):
             yield current
 
 
-@trace
 def arch_check(iterator):
     """ Do run analyzer through one of the given architectures. """
 
@@ -146,7 +142,6 @@ def arch_check(iterator):
             yield current
 
 
-@trace
 def action_check(iterator):
     """ Continue analysis only if it compilation or link. """
 
@@ -157,7 +152,6 @@ def action_check(iterator):
             logging.debug('skip analysis, not compilation nor link')
 
 
-@trace
 @require(['report', 'directory',
           'clang', 'out_dir', 'language',
           'file', 'error_type', 'error_output', 'exit_code'])
@@ -210,7 +204,6 @@ def report_failure(opts):
             'exit_code': opts['exit_code']}
 
 
-@trace
 @require(['clang', 'analyze', 'directory', 'output'])
 def run_analyzer(opts, continuation=report_failure):
     """ From the state parameter it assembles the analysis command line and
@@ -240,7 +233,6 @@ def run_analyzer(opts, continuation=report_failure):
             'exit_code': child.returncode}
 
 
-@trace
 @require(['out_dir'])
 def set_analyzer_output(opts, continuation=run_analyzer):
     """ Create output file if was requested.

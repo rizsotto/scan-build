@@ -8,50 +8,12 @@ import logging
 import functools
 
 
-__all__ = ['trace', 'to_logging_level']
-
-
-TRACE_LEVEL = 5
-
-
-def _trace(message):
-    logging.log(TRACE_LEVEL, message)
+__all__ = ['require']
 
 
 def _name(function):
     return function.__qualname__\
         if dir(function).count('__qualname__') else function.__name__
-
-
-TRACE_METHOD = _trace
-
-
-def to_logging_level(num):
-    """ Convert the count of verbose flags to logging level. """
-    if 0 == num:
-        return logging.WARNING
-    elif 1 == num:
-        return logging.INFO
-    elif 2 == num:
-        return logging.DEBUG
-    else:
-        return TRACE_LEVEL
-
-
-def trace(function):
-    """ Decorator to simplify debugging. """
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        try:
-            TRACE_METHOD('entering {0}'.format(_name(function)))
-            return function(*args, **kwargs)
-        except:
-            TRACE_METHOD('exception in {0}'.format(_name(function)))
-            raise
-        finally:
-            TRACE_METHOD('leaving {0}'.format(_name(function)))
-
-    return wrapper
 
 
 def require(required):

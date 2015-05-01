@@ -13,20 +13,17 @@ import subprocess
 import logging
 import re
 import shlex
-from libscanbuild.decorators import trace
 
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
 
 
-@trace
 def get_version(cmd):
     """ Returns the compiler version as string. """
     lines = subprocess.check_output([cmd, '-v'], stderr=subprocess.STDOUT)
     return lines.decode('ascii').splitlines()[0]
 
 
-@trace
 def get_arguments(cwd, command):
     """ Capture Clang invocation.
 
@@ -68,7 +65,6 @@ def get_arguments(cwd, command):
         raise Exception(line)
 
 
-@trace
 def get_active_checkers(clang, plugins):
     """ To get the default plugins we execute Clang to print how this
     compilation would be called. For input file we specify stdin. And
@@ -89,7 +85,6 @@ def get_active_checkers(clang, plugins):
     return result
 
 
-@trace
 def get_checkers(clang, plugins):
     """ Get all the available checkers from default and from the plugins.
 

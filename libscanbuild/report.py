@@ -23,14 +23,12 @@ import pkg_resources
 import plistlib
 import itertools
 from libscanbuild import duplicate_check
-from libscanbuild.decorators import trace
 from libscanbuild.clang import get_version
 
 
 __all__ = ['document']
 
 
-@trace
 def document(args, out_dir):
     """ Generates cover report and returns the number of bugs/crashes. """
 
@@ -65,7 +63,6 @@ def document(args, out_dir):
     return result
 
 
-@trace
 def assemble_cover(out_dir, prefix, args, fragments):
     """ Put together the fragments into a final report. """
     import getpass
@@ -114,7 +111,6 @@ def assemble_cover(out_dir, prefix, args, fragments):
         |</html>""", indent))
 
 
-@trace
 def bug_summary(out_dir, bug_counter):
     """ Bug summary is a HTML table to give a better overview of the bugs. """
     name = os.path.join(out_dir, 'summary.html.fragment')
@@ -166,7 +162,6 @@ def bug_summary(out_dir, bug_counter):
     return name
 
 
-@trace
 def bug_report(out_dir, prefix):
     """ Creates a fragment from the analyzer reports. """
 
@@ -214,7 +209,6 @@ def bug_report(out_dir, prefix):
     return name
 
 
-@trace
 def crash_report(out_dir, prefix):
     """ Creates a fragment from the compiler crashes. """
 
@@ -253,7 +247,6 @@ def crash_report(out_dir, prefix):
     return name
 
 
-@trace
 def read_crashes(out_dir):
     """ Generate a unique sequence of crashes from given output directory. """
     return (parse_crash(filename)
@@ -261,7 +254,6 @@ def read_crashes(out_dir):
             in glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
 
 
-@trace
 def read_bugs(out_dir, html):
     """ Generate a unique sequence of bugs from given output directory.
 
@@ -283,7 +275,6 @@ def read_bugs(out_dir, html):
             if not duplicate(bug))
 
 
-@trace
 def parse_bug_plist(filename):
     """ Returns the generator of bugs from a single .plist file. """
     content = plistlib.readPlist(filename)
@@ -301,7 +292,6 @@ def parse_bug_plist(filename):
                'bug_file': files[int(bug['location']['file'])]}
 
 
-@trace
 def parse_bug_html(filename):
     """ Parse out the bug information from HTML output. """
     patterns = [
@@ -338,7 +328,6 @@ def parse_bug_html(filename):
     yield bug
 
 
-@trace
 def parse_crash(filename):
     """ Parse out the crash information from the report file. """
     match = re.match(r'(.*)\.info\.txt', filename)
@@ -419,7 +408,6 @@ def prettify_crash(prefix, out_dir):
     return predicate
 
 
-@trace
 def copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
     this_package = 'libscanbuild'
@@ -473,7 +461,6 @@ def comment(name, opts=dict()):
     return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)
 
 
-@trace
 def commonprefix(files):
     """ Fixed version of os.path.commonprefix. Return the longest path prefix
     that is a prefix of all paths in filenames. """

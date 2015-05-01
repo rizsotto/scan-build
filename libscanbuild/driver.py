@@ -16,15 +16,14 @@ confusion the 'scan-build' generated report I call "cover".) """
 
 
 import logging
+import sys
 import os
 import os.path
-import sys
 import time
 import json
 import tempfile
 import multiprocessing
 from libscanbuild import tempdir
-from libscanbuild.decorators import to_logging_level, trace
 from libscanbuild.runner import run
 from libscanbuild.intercept import main as intercept
 from libscanbuild.options import create_parser
@@ -45,15 +44,10 @@ def main():
         return args.subparser_name in {'run', 'intercept'}
 
     try:
-        program = os.path.basename(sys.argv[0])
-        logging.basicConfig(
-            format='{0}: %(levelname)s: %(message)s'.format(program))
+        args = create_parser().parse_args()
 
-        parser = create_parser()
-        args = parser.parse_args()
-
-        logging.getLogger().setLevel(to_logging_level(args.verbose))
-        logging.debug('Parsed arguments: '.format(args))
+        initialize_logging(args)
+        logging.debug('Parsed arguments: {0} '.format(args))
 
         if run_analyze(args):
             if args.help_checkers_verbose:
@@ -87,7 +81,23 @@ def main():
         return 127
 
 
-@trace
+def initialize_logging(args):
+    FORMAT = '{0}: %(levelname)s: %(message)s'
+
+    if 0 == args.verbose:
+        LEVEL = logging.WARNING
+    elif 1 == args.verbose:
+        LEVEL = logging.INFO
+    elif 2 == args.verbose:
+        LEVEL = logging.DEBUG
+    else:
+        LEVEL = logging.DEBUG
+        FORMAT = '{0}: %(levelname)s: %(funcName)s: %(message)s'
+
+    program = os.path.basename(sys.argv[0])
+    logging.basicConfig(format=FORMAT.format(program), level=LEVEL)
+
+
 def run_analyzer(args, out_dir):
     """ Runs the analyzer.
 
@@ -117,7 +127,6 @@ def run_analyzer(args, out_dir):
         pool.join()
 
 
-@trace
 def analyzer_params(args):
     """ A group of command line arguments can mapped to command
     line arguments of the analyzer. This method generates those. """
@@ -159,7 +168,6 @@ def analyzer_params(args):
     return prefix_with('-Xclang', result)
 
 
-@trace
 def print_active_checkers(checkers):
     """ Print active checkers to stdout. """
     for name in sorted(name
@@ -169,7 +177,6 @@ def print_active_checkers(checkers):
         print(name)
 
 
-@trace
 def print_checkers(checkers):
     """ Print checker help to stdout. """
     print('')
@@ -201,7 +208,6 @@ class ReportDirectory(object):
     def __enter__(self):
         return self
 
-    @trace
     def __exit__(self, _type, _value, _traceback):
         if os.listdir(self.name):
             msg = "Run 'scan-view {0}' to examine bug reports."

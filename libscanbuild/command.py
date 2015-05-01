@@ -10,7 +10,6 @@ into an analyzer invocation. To execute the analyzer is done in other module.
 
 
 import re
-from libscanbuild.decorators import trace
 
 
 __all__ = ['Action', 'classify_parameters']
@@ -21,7 +20,6 @@ class Action(object):
     Link, Compile, Preprocess, Info, Internal = range(5)
 
 
-@trace
 def classify_parameters(command):
     """ Parses the command line arguments of the given invocation.
 

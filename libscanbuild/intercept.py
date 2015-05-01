@@ -32,7 +32,6 @@ import shlex
 import pkg_resources
 import itertools
 from libscanbuild import duplicate_check, tempdir
-from libscanbuild.decorators import trace
 from libscanbuild.command import Action, classify_parameters
 
 
@@ -88,7 +87,6 @@ def main(args):
         return exit_code
 
 
-@trace
 def run_build(command, destination):
     """ Runs the original build command.
 
