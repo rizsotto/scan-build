@@ -25,7 +25,7 @@ import tempfile
 import multiprocessing
 from libscanbuild import tempdir
 from libscanbuild.runner import run
-from libscanbuild.intercept import main as intercept
+from libscanbuild.intercept import capture
 from libscanbuild.options import create_parser
 from libscanbuild.report import document
 from libscanbuild.clang import get_checkers
@@ -60,7 +60,7 @@ def main():
             elif args.subparser_name == 'run':
                 args.cdb = 'compile_commands.json'
 
-            exit_code = intercept(args) if run_intercept(args) else 0
+            exit_code = capture(args) if run_intercept(args) else 0
             with ReportDirectory(args.output, args.keep_empty) as target_dir:
                 run_analyzer(args, target_dir.name)
                 number_of_bugs = document(args, target_dir.name)
@@ -72,7 +72,7 @@ def main():
                 return number_of_bugs if args.status_bugs else exit_code
 
         elif run_intercept(args):
-            return intercept(args)
+            return capture(args)
 
     except KeyboardInterrupt:
         return 1

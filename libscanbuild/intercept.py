@@ -35,7 +35,7 @@ from libscanbuild import duplicate_check, tempdir
 from libscanbuild.command import Action, classify_parameters
 
 
-__all__ = ['main']
+__all__ = ['capture']
 
 
 if 'darwin' == sys.platform:
@@ -47,7 +47,7 @@ else:
                     ("ENV_PRELOAD", "LD_PRELOAD")]
 
 
-def main(args):
+def capture(args):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
