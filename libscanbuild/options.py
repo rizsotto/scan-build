@@ -14,31 +14,36 @@ import argparse
 from libscanbuild import tempdir
 
 
+__all__ = ['create_parser']
+
+
 def create_parser():
     """ Parser factory method. """
 
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='subparser_name')
+    subparsers = parser.add_subparsers(
+        dest='action',
+        help="""Run static analyzer against a build is done in multiple steps.
+                This controls which steps to take.""")
 
-    run = subparsers.add_parser(
-        'run',
+    everything = subparsers.add_parser(
+        'all',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         help="""Run the static analyzer against the given
                 build command.""")
 
-    _common_parameters(run)
-    _analyze_parameters(run)
-    _build_command(run)
+    common_parameters(everything)
+    analyze_parameters(everything)
+    build_command(everything)
 
     intercept = subparsers.add_parser(
         'intercept',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         help="""Only runs the build and write compilation database.""")
 
-    _common_parameters(intercept)
-    _intercept_parameters(intercept)
-    _cdb_parameters(intercept)
-    _build_command(intercept)
+    common_parameters(intercept)
+    intercept_parameters(intercept)
+    build_command(intercept)
 
     analyze = subparsers.add_parser(
         'analyze',
@@ -46,23 +51,19 @@ def create_parser():
         help="""Only run the static analyzer against the given
                 compilation database.""")
 
-    _common_parameters(analyze)
-    _analyze_parameters(analyze)
-    _cdb_parameters(analyze)
+    common_parameters(analyze)
+    analyze_parameters(analyze)
 
     return parser
 
 
-def _common_parameters(parser):
+def common_parameters(parser):
     parser.add_argument(
         '--verbose', '-v',
         action='count',
         default=0,
         help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
-
-
-def _cdb_parameters(parser):
     parser.add_argument(
         '--cdb',
         metavar='<file>',
@@ -70,14 +71,14 @@ def _cdb_parameters(parser):
         help="""The JSON compilation database.""")
 
 
-def _build_command(parser):
+def build_command(parser):
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
         help="""Command to run.""")
 
 
-def _intercept_parameters(parser):
+def intercept_parameters(parser):
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         '--append',
@@ -90,7 +91,7 @@ def _intercept_parameters(parser):
         help="""Disable filter, unformated output.""")
 
 
-def _analyze_parameters(parser):
+def analyze_parameters(parser):
     parser.add_argument(
         '--output', '-o',
         metavar='<path>',

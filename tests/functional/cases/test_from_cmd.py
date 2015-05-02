@@ -15,7 +15,7 @@ class OutputDirectoryTest(unittest.TestCase):
 
     @staticmethod
     def run_sb(outdir, args):
-        return silent_check_call(['scan-build', 'run', '-o', outdir] + args)
+        return silent_check_call(['scan-build', 'all', '-o', outdir] + args)
 
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:

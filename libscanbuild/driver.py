@@ -4,15 +4,13 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-""" This module is responsible to run the analyzer against a compilation
-database.
+""" This module implements the 'scan-build' command API.
 
-This is done by revisit each entry in the database and run only the analyzer
-against that file. The output of the analyzer is directed into a result folder,
-which is post-processed for a "cover" generation. (There is a bit terminology
-confusion here. I would rather say the 'scan-build' generates a report on the
-build. While 'clang' is also generates report on individual files. To avoid
-confusion the 'scan-build' generated report I call "cover".) """
+To run the static analyzer against a build is done in multiple steps:
+
+ -- Intercept: capture the compilation command during the build,
+ -- Analyze:   run the analyzer against the captured commands,
+ -- Report:    create a cover report from the analyzer outputs.  """
 
 
 import logging
@@ -22,6 +20,7 @@ import os.path
 import time
 import json
 import tempfile
+import argparse
 import multiprocessing
 from libscanbuild import tempdir
 from libscanbuild.runner import run
@@ -37,42 +36,26 @@ __all__ = ['main']
 def main():
     """ Entry point for 'scan-build'. """
 
-    def run_analyze(args):
-        return args.subparser_name in {'run', 'analyze'}
-
-    def run_intercept(args):
-        return args.subparser_name in {'run', 'intercept'}
-
     try:
-        args = create_parser().parse_args()
+        parser = create_parser()
+        args = parser.parse_args()
+        validate(parser, args)
 
         initialize_logging(args)
         logging.debug('Parsed arguments: {0} '.format(args))
 
-        if run_analyze(args):
-            if args.help_checkers_verbose:
-                print_checkers(get_checkers(args.clang, args.plugins))
-                return 0
-            elif args.help_checkers:
-                print_active_checkers(get_checkers(args.clang, args.plugins))
-                return 0
-            # hack the cdb parameter in args when that is not a parameter.
-            elif args.subparser_name == 'run':
-                args.cdb = 'compile_commands.json'
-
-            exit_code = capture(args) if run_intercept(args) else 0
-            with ReportDirectory(args.output, args.keep_empty) as target_dir:
-                run_analyzer(args, target_dir.name)
-                number_of_bugs = document(args, target_dir.name)
-
-                # remove cdb when that is not a parameter.
-                if args.subparser_name == 'run':
-                    os.unlink(args.cdb)
-
-                return number_of_bugs if args.status_bugs else exit_code
-
-        elif run_intercept(args):
-            return capture(args)
+        # run build command and capture compiler executions
+        exit_code = capture(args) if args.action in {'all', 'intercept'} else 0
+        # when we only do interception the job is done
+        if args.action == 'intercept':
+            return exit_code
+        # next step to run the analyzer against the captured commands
+        with ReportDirectory(args.output, args.keep_empty) as target_dir:
+            run_analyzer(args, target_dir.name)
+            # cover report generation and bug counting
+            number_of_bugs = document(args, target_dir.name)
+            # set exit status as it was requested
+            return number_of_bugs if args.status_bugs else exit_code
 
     except KeyboardInterrupt:
         return 1
@@ -82,6 +65,8 @@ def main():
 
 
 def initialize_logging(args):
+    """ Logging format controlled by the 'verbose' command line argument. """
+
     FORMAT = '{0}: %(levelname)s: %(message)s'
 
     if 0 == args.verbose:
@@ -98,12 +83,27 @@ def initialize_logging(args):
     logging.basicConfig(format=FORMAT.format(program), level=LEVEL)
 
 
-def run_analyzer(args, out_dir):
-    """ Runs the analyzer.
+def validate(parser, args):
+    """ Validation done by the parser itself, but semantic check still
+    needs to be done. This method is doing that. """
 
-    It generates commands (from compilation database entries) which contains
-    enough information to run the analyzer (and the crash report generation
-    if that was requested). """
+    if not args.action:
+        parser.error('missing action')
+
+    if args.action in {'all', 'analyze'}:
+        if args.help_checkers_verbose:
+            print_checkers(get_checkers(args.clang, args.plugins))
+            parser.exit()
+        elif args.help_checkers:
+            print_active_checkers(get_checkers(args.clang, args.plugins))
+            parser.exit()
+
+    if args.action in {'all', 'intercept'} and not args.build:
+        parser.error('missing build command')
+
+
+def run_analyzer(args, out_dir):
+    """ Runs the analyzer against the given compilation database. """
 
     def extend(current, const):
         current.update(const)
@@ -170,6 +170,7 @@ def analyzer_params(args):
 
 def print_active_checkers(checkers):
     """ Print active checkers to stdout. """
+
     for name in sorted(name
                        for name, (_, active)
                        in checkers.items()
@@ -178,7 +179,8 @@ def print_active_checkers(checkers):
 
 
 def print_checkers(checkers):
-    """ Print checker help to stdout. """
+    """ Print verbose checker help to stdout. """
+
     print('')
     print('available checkers:')
     print('')

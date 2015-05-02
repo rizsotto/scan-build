@@ -46,8 +46,9 @@ def run(opts):
 def create_commands(iterator):
     """ Create command to run analyzer or failure report generation.
 
-    If output is passed it returns failure report command.
-    If it's not given it returns the analyzer command. """
+    It generates commands (from compilation database entries) which contains
+    enough information to run the analyzer (and the crash report generation
+    if that was requested). """
 
     for current in iterator:
         common = []
