@@ -59,7 +59,7 @@ def main():
 
     except KeyboardInterrupt:
         return 1
-    except Exception as exception:
+    except Exception:
         logging.exception("Something unexpected had happened.")
         return 127
 
@@ -67,20 +67,20 @@ def main():
 def initialize_logging(args):
     """ Logging format controlled by the 'verbose' command line argument. """
 
-    FORMAT = '{0}: %(levelname)s: %(message)s'
+    fmt_string = '{0}: %(levelname)s: %(message)s'
 
     if 0 == args.verbose:
-        LEVEL = logging.WARNING
+        level = logging.WARNING
     elif 1 == args.verbose:
-        LEVEL = logging.INFO
+        level = logging.INFO
     elif 2 == args.verbose:
-        LEVEL = logging.DEBUG
+        level = logging.DEBUG
     else:
-        LEVEL = logging.DEBUG
-        FORMAT = '{0}: %(levelname)s: %(funcName)s: %(message)s'
+        level = logging.DEBUG
+        fmt_string = '{0}: %(levelname)s: %(funcName)s: %(message)s'
 
     program = os.path.basename(sys.argv[0])
-    logging.basicConfig(format=FORMAT.format(program), level=LEVEL)
+    logging.basicConfig(format=fmt_string.format(program), level=level)
 
 
 def validate(parser, args):
