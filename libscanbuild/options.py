@@ -3,16 +3,13 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module implements a command line parser based on argparse.
 
 Since 'argparse' module is available only 2.7 and afterwards, this is
 the major force to be compatible with newer versions only. """
 
-
 import argparse
 from libscanbuild import tempdir
-
 
 __all__ = ['create_parser']
 
@@ -64,18 +61,16 @@ def common_parameters(parser):
         default=0,
         help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
+    parser.add_argument('--cdb',
+                        metavar='<file>',
+                        default="compile_commands.json",
+                        help="""The JSON compilation database.""")
 
 
 def build_command(parser):
-    parser.add_argument(
-        dest='build',
-        nargs=argparse.REMAINDER,
-        help="""Command to run.""")
+    parser.add_argument(dest='build',
+                        nargs=argparse.REMAINDER,
+                        help="""Command to run.""")
 
 
 def intercept_parameters(parser):
@@ -84,11 +79,10 @@ def intercept_parameters(parser):
         '--append',
         action='store_true',
         help="""Append new entries to existing compilation database.""")
-    group.add_argument(
-        '--disable-filter', '-n',
-        dest='raw_entries',
-        action='store_true',
-        help="""Disable filter, unformated output.""")
+    group.add_argument('--disable-filter', '-n',
+                       dest='raw_entries',
+                       action='store_true',
+                       help="""Disable filter, unformated output.""")
 
 
 def analyze_parameters(parser):
@@ -106,10 +100,9 @@ def analyze_parameters(parser):
                 executed build command. Specifying this option causes the exit
                 status of '%(prog)s' to be non zero if it found potential bugs
                 and zero otherwise.""")
-    parser.add_argument(
-        '--html-title',
-        metavar='<title>',
-        help="""Specify the title used on generated HTML pages.
+    parser.add_argument('--html-title',
+                        metavar='<title>',
+                        help="""Specify the title used on generated HTML pages.
                 If not specified, a default title will be used.""")
     parser.add_argument(
         '--analyze-headers',
@@ -152,10 +145,9 @@ def analyze_parameters(parser):
         action='store_true',
         help="""Generates visitation statistics for the project being analyzed.
                 """)
-    advanced.add_argument(
-        '--internal-stats',
-        action='store_true',
-        help="""Generate internal analyzer statistics.""")
+    advanced.add_argument('--internal-stats',
+                          action='store_true',
+                          help="""Generate internal analyzer statistics.""")
     advanced.add_argument(
         '--maxloop',
         metavar='<loop count>',
@@ -164,13 +156,12 @@ def analyze_parameters(parser):
         help="""Specifiy the number of times a block can be visited before
                 giving up. Increase for more comprehensive coverage at a cost
                 of speed.""")
-    advanced.add_argument(
-        '--store',
-        metavar='<model>',
-        dest='store_model',
-        default='region',
-        choices=['region', 'basic'],
-        help="""Specify the store model used by the analyzer.
+    advanced.add_argument('--store',
+                          metavar='<model>',
+                          dest='store_model',
+                          default='region',
+                          choices=['region', 'basic'],
+                          help="""Specify the store model used by the analyzer.
                 'region' specifies a field- sensitive store model.
                 'basic' which is far less precise but can more quickly
                 analyze code. 'basic' was the default store model for
@@ -214,16 +205,14 @@ def analyze_parameters(parser):
         dest='plugins',
         action='append',
         help="""Loading external checkers using the clang plugin interface.""")
-    plugins.add_argument(
-        '--enable-checker',
-        metavar='<checker name>',
-        action='append',
-        help="""Enable specific checker.""")
-    plugins.add_argument(
-        '--disable-checker',
-        metavar='<checker name>',
-        action='append',
-        help="""Disable specific checker.""")
+    plugins.add_argument('--enable-checker',
+                         metavar='<checker name>',
+                         action='append',
+                         help="""Enable specific checker.""")
+    plugins.add_argument('--disable-checker',
+                         metavar='<checker name>',
+                         action='append',
+                         help="""Disable specific checker.""")
     plugins.add_argument(
         '--help-checkers',
         action='store_true',

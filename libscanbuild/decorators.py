@@ -4,9 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import logging
 import functools
-
 
 __all__ = ['require']
 
@@ -22,6 +20,7 @@ def require(required):
     It checks the required attributes in the passed state and stop when
     any of those is missing.
     """
+
     def decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):

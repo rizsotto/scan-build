@@ -3,9 +3,7 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module is responsible to run the analyzer commands. """
-
 
 import subprocess
 import logging
@@ -16,7 +14,6 @@ import tempfile
 from libscanbuild.command import classify_parameters, Action
 from libscanbuild.decorators import require
 from libscanbuild.clang import get_arguments, get_version
-
 
 __all__ = ['run']
 
@@ -33,12 +30,11 @@ def run(opts):
         opts.update(classify_parameters(shlex.split(opts['command'])))
         del opts['command']
 
-        for x in create_commands(
+        for command in create_commands(
                 language_check(arch_check(action_check([opts])))):
-            logging.debug(x)
-            return set_analyzer_output(x)
-
-    except Exception as exception:
+            logging.debug(command)
+            return set_analyzer_output(command)
+    except Exception:
         logging.error("Problem occured during analyzis.", exc_info=1)
         return None
 
@@ -68,7 +64,8 @@ def create_commands(iterator):
             'out_dir': current['out_dir'],
             'clang': current['clang'],
             'report_failures': current['report_failures'],
-            'output_format': current['output_format']}
+            'output_format': current['output_format']
+        }
 
 
 def language_check(iterator):
@@ -96,8 +93,10 @@ def language_check(iterator):
         (_, extension) = os.path.splitext(os.path.basename(name))
         return mapping.get(extension)
 
-    accepteds = {'c', 'c++', 'objective-c', 'objective-c++',
-                 'c-cpp-output', 'c++-cpp-output', 'objective-c-cpp-output'}
+    accepteds = {
+        'c', 'c++', 'objective-c', 'objective-c++', 'c-cpp-output',
+        'c++-cpp-output', 'objective-c-cpp-output'
+    }
 
     key = 'language'
     for current in iterator:
@@ -108,7 +107,7 @@ def language_check(iterator):
         elif language not in accepteds:
             logging.debug('skip analysis, language not supported')
         else:
-            logging.debug('analysis, language: {0}'.format(language))
+            logging.debug('analysis, language: %s', language)
             current.update({key: language})
             yield current
 
@@ -133,7 +132,7 @@ def arch_check(iterator):
                 # the same, those should not change the pre-processing step.
                 # But that's the only pass we have before run the analyzer.
                 arch = archs.pop()
-                logging.debug('analysis, on arch: {0}'.format(arch))
+                logging.debug('analysis, on arch: %s', arch)
 
                 current.update({'arch': arch})
                 del current[key]
@@ -153,9 +152,8 @@ def action_check(iterator):
             logging.debug('skip analysis, not compilation nor link')
 
 
-@require(['report', 'directory',
-          'clang', 'out_dir', 'language',
-          'file', 'error_type', 'error_output', 'exit_code'])
+@require(['report', 'directory', 'clang', 'out_dir', 'language', 'file',
+          'error_type', 'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
 
@@ -163,13 +161,10 @@ def report_failure(opts):
     randomly. The compiler output also captured into '.stderr.txt' file. And
     some more execution context also saved into '.info.txt' file.
     """
+
     def extension(opts):
         """ Generate preprocessor file extension. """
-        mapping = {
-            'objective-c++': '.mii',
-            'objective-c': '.mi',
-            'c++': '.ii'
-        }
+        mapping = {'objective-c++': '.mii', 'objective-c': '.mi', 'c++': '.ii'}
         return mapping.get(opts['language'], '.i')
 
     def destination(opts):
@@ -186,7 +181,7 @@ def report_failure(opts):
     os.close(handle)
     cwd = opts['directory']
     cmd = get_arguments(cwd, [opts['clang']] + opts['report'] + ['-o', name])
-    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
     subprocess.call(cmd, cwd=cwd)
 
     with open(name + '.info.txt', 'w') as handle:
@@ -201,8 +196,10 @@ def report_failure(opts):
         handle.writelines(opts['error_output'])
         handle.close()
 
-    return {'error_output': opts['error_output'],
-            'exit_code': opts['exit_code']}
+    return {
+        'error_output': opts['error_output'],
+        'exit_code': opts['exit_code']
+    }
 
 
 @require(['clang', 'analyze', 'directory', 'output'])
@@ -213,7 +210,7 @@ def run_analyzer(opts, continuation=report_failure):
     """
     cwd = opts['directory']
     cmd = [opts['clang']] + opts['analyze'] + opts['output']
-    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
     child = subprocess.Popen(cmd,
                              cwd=cwd,
                              universal_newlines=True,
@@ -225,13 +222,13 @@ def run_analyzer(opts, continuation=report_failure):
     child.wait()
     if opts.get('report_failures', False) and child.returncode:
         error_type = 'crash' if child.returncode & 127 else 'other_error'
-        opts.update(
-            {'error_type': error_type,
-             'error_output': output,
-             'exit_code': child.returncode})
+        opts.update({
+            'error_type': error_type,
+            'error_output': output,
+            'exit_code': child.returncode
+        })
         return continuation(opts)
-    return {'error_output': output,
-            'exit_code': child.returncode}
+    return {'error_output': output, 'exit_code': child.returncode}
 
 
 @require(['out_dir'])
@@ -239,6 +236,7 @@ def set_analyzer_output(opts, continuation=run_analyzer):
     """ Create output file if was requested.
 
     This plays a role only if .plist files are requested. """
+
     def needs_output_file():
         output_format = opts.get('output_format')
         return 'plist' == output_format or 'plist-html' == output_format

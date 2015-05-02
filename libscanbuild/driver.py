@@ -3,7 +3,6 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module implements the 'scan-build' command API.
 
 To run the static analyzer against a build is done in multiple steps:
@@ -12,7 +11,6 @@ To run the static analyzer against a build is done in multiple steps:
  -- Analyze:   run the analyzer against the captured commands,
  -- Report:    create a cover report from the analyzer outputs.  """
 
-
 import logging
 import sys
 import os
@@ -20,7 +18,6 @@ import os.path
 import time
 import json
 import tempfile
-import argparse
 import multiprocessing
 from libscanbuild import tempdir
 from libscanbuild.runner import run
@@ -28,7 +25,6 @@ from libscanbuild.intercept import capture
 from libscanbuild.options import create_parser
 from libscanbuild.report import document
 from libscanbuild.clang import get_checkers
-
 
 __all__ = ['main']
 
@@ -40,15 +36,16 @@ def main():
         parser = create_parser()
         args = parser.parse_args()
         validate(parser, args)
-
+        # setup logging
         initialize_logging(args)
-        logging.debug('Parsed arguments: {0} '.format(args))
+        logging.debug('Parsed arguments: %s', args)
 
         # run build command and capture compiler executions
         exit_code = capture(args) if args.action in {'all', 'intercept'} else 0
         # when we only do interception the job is done
         if args.action == 'intercept':
             return exit_code
+
         # next step to run the analyzer against the captured commands
         with ReportDirectory(args.output, args.keep_empty) as target_dir:
             run_analyzer(args, target_dir.name)
@@ -56,7 +53,6 @@ def main():
             number_of_bugs = document(args, target_dir.name)
             # set exit status as it was requested
             return number_of_bugs if args.status_bugs else exit_code
-
     except KeyboardInterrupt:
         return 1
     except Exception:
@@ -109,11 +105,13 @@ def run_analyzer(args, out_dir):
         current.update(const)
         return current
 
-    consts = {'out_dir': out_dir,
-              'direct_args': analyzer_params(args),
-              'clang': args.clang,
-              'report_failures': args.report_failures,
-              'output_format': args.output_format}
+    consts = {
+        'out_dir': out_dir,
+        'direct_args': analyzer_params(args),
+        'clang': args.clang,
+        'report_failures': args.report_failures,
+        'output_format': args.output_format
+    }
 
     with open(args.cdb, 'r') as handle:
         generator = (extend(cmd, consts) for cmd in json.load(handle))
@@ -132,6 +130,11 @@ def analyzer_params(args):
     line arguments of the analyzer. This method generates those. """
 
     def prefix_with(constant, pieces):
+        """ From a sequence create another sequence where every second element
+        is from the original sequence and the odd elements are the prefix.
+
+        eg.: prefix_with(0, [1,2,3]) creates [0, 1, 0, 2, 0, 3] """
+
         return [elem for piece in pieces for elem in [constant, piece]]
 
     result = []
@@ -171,9 +174,7 @@ def analyzer_params(args):
 def print_active_checkers(checkers):
     """ Print active checkers to stdout. """
 
-    for name in sorted(name
-                       for name, (_, active)
-                       in checkers.items()
+    for name in sorted(name for name, (_, active) in checkers.items()
                        if active):
         print(name)
 
@@ -212,14 +213,14 @@ class ReportDirectory(object):
 
     def __exit__(self, _type, _value, _traceback):
         if os.listdir(self.name):
-            msg = "Run 'scan-view {0}' to examine bug reports."
+            msg = "Run 'scan-view %s' to examine bug reports."
             self.keep = True
         else:
             if self.keep:
-                msg = "Report directory '{0}' contans no report, but kept."
+                msg = "Report directory '%s' contans no report, but kept."
             else:
-                msg = "Removing directory '{0}' because it contains no report."
-        logging.warning(msg.format(self.name))
+                msg = "Removing directory '%s' because it contains no report."
+        logging.warning(msg, self.name)
 
         if not self.keep:
             os.rmdir(self.name)

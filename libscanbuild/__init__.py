@@ -3,7 +3,6 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """
 This module responsible to run the Clang static analyzer against any build
 and generate reports.
@@ -87,6 +86,7 @@ def duplicate_check(method):
 
     This method returns a method which can detect the duplicate values.
     """
+
     def predicate(entry):
         entry_hash = predicate.unique(entry)
         if entry_hash not in predicate.state:

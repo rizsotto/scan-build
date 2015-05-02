@@ -3,13 +3,11 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module is responsible to generate the "cover" report.
 
 The input for this step is the output directory, where individual reports
 could be found. It parses those reports and generates a final HTML "cover"
 report. """
-
 
 import logging
 import re
@@ -24,7 +22,6 @@ import plistlib
 import itertools
 from libscanbuild import duplicate_check
 from libscanbuild.clang import get_version
-
 
 __all__ = ['document']
 
@@ -65,6 +62,7 @@ def document(args, out_dir):
 
 def assemble_cover(out_dir, prefix, args, fragments):
     """ Put together the fragments into a final report. """
+
     import getpass
     import socket
     import datetime
@@ -84,7 +82,8 @@ def assemble_cover(out_dir, prefix, args, fragments):
         |    <script type='text/javascript' src='selectable.js'></script>
         |  </head>""", indent).format(html_title=args.html_title))
         handle.write(comment('SUMMARYENDHEAD'))
-        handle.write(reindent("""
+        handle.write(reindent(
+            """
         |  <body>
         |    <h1>{html_title}</h1>
         |    <table>
@@ -93,14 +92,14 @@ def assemble_cover(out_dir, prefix, args, fragments):
         |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
         |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
         |      <tr><th>Date:</th><td>{date}</td></tr>
-        |    </table>""", indent).format(
-            html_title=args.html_title,
-            user_name=getpass.getuser(),
-            host_name=socket.gethostname(),
-            current_dir=prefix,
-            cmd_args=' '.join(sys.argv),
-            clang_version=get_version(args.clang),
-            date=datetime.datetime.today().strftime('%c')))
+        |    </table>""",
+            indent).format(html_title=args.html_title,
+                           user_name=getpass.getuser(),
+                           host_name=socket.gethostname(),
+                           current_dir=prefix,
+                           cmd_args=' '.join(sys.argv),
+                           clang_version=get_version(args.clang),
+                           date=datetime.datetime.today().strftime('%c')))
         for fragment in fragments:
             # copy the content of fragments
             with open(fragment, 'r') as input_handle:
@@ -113,6 +112,7 @@ def assemble_cover(out_dir, prefix, args, fragments):
 
 def bug_summary(out_dir, bug_counter):
     """ Bug summary is a HTML table to give a better overview of the bugs. """
+
     name = os.path.join(out_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
@@ -249,9 +249,9 @@ def crash_report(out_dir, prefix):
 
 def read_crashes(out_dir):
     """ Generate a unique sequence of crashes from given output directory. """
-    return (parse_crash(filename)
-            for filename
-            in glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
+
+    return (parse_crash(filename) for filename in
+            glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
 
 
 def read_bugs(out_dir, html):
@@ -267,48 +267,51 @@ def read_bugs(out_dir, html):
     duplicate = duplicate_check(
         lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
 
-    return (bug
-            for bug
-            in itertools.chain.from_iterable(
-                # parser creates a bug generator not the bug itself
-                map(parser, glob.iglob(os.path.join(out_dir, pattern))))
+    return (bug for bug in itertools.chain.from_iterable(
+        # parser creates a bug generator not the bug itself
+        map(parser, glob.iglob(os.path.join(out_dir, pattern))))
             if not duplicate(bug))
 
 
 def parse_bug_plist(filename):
     """ Returns the generator of bugs from a single .plist file. """
+
     content = plistlib.readPlist(filename)
     files = content.get('files')
     for bug in content.get('diagnostics', []):
         if len(files) <= int(bug['location']['file']):
-            logging.warning('Parsing bug from "{0}" failed'.format(filename))
+            logging.warning('Parsing bug from "%s" failed', filename)
             continue
 
-        yield {'result': filename,
-               'bug_type': bug['type'],
-               'bug_category': bug['category'],
-               'bug_line': int(bug['location']['line']),
-               'bug_bug_path_length': int(bug['location']['col']),
-               'bug_file': files[int(bug['location']['file'])]}
+        yield {
+            'result': filename,
+            'bug_type': bug['type'],
+            'bug_category': bug['category'],
+            'bug_line': int(bug['location']['line']),
+            'bug_bug_path_length': int(bug['location']['col']),
+            'bug_file': files[int(bug['location']['file'])]
+        }
 
 
 def parse_bug_html(filename):
     """ Parse out the bug information from HTML output. """
-    patterns = [
-        re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
-        re.compile(r'<!-- BUGFILE (?P<bug_file>.*) -->$'),
-        re.compile(r'<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
-        re.compile(r'<!-- BUGLINE (?P<bug_line>.*) -->$'),
-        re.compile(r'<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
-        re.compile(r'<!-- BUGDESC (?P<bug_description>.*) -->$'),
-        re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
+
+    patterns = [re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
+                re.compile(r'<!-- BUGFILE (?P<bug_file>.*) -->$'),
+                re.compile(r'<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
+                re.compile(r'<!-- BUGLINE (?P<bug_line>.*) -->$'),
+                re.compile(r'<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
+                re.compile(r'<!-- BUGDESC (?P<bug_description>.*) -->$'),
+                re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
     endsign = re.compile(r'<!-- BUGMETAEND -->')
 
-    bug = {'report_file': filename,
-           'bug_function': 'n/a',  # compatibility with < clang-3.5
-           'bug_category': 'Other',
-           'bug_line': 0,
-           'bug_path_length': 1}
+    bug = {
+        'report_file': filename,
+        'bug_function': 'n/a',  # compatibility with < clang-3.5
+        'bug_category': 'Other',
+        'bug_line': 0,
+        'bug_path_length': 1
+    }
 
     with open(filename) as handler:
         for line in handler.readlines():
@@ -330,23 +333,28 @@ def parse_bug_html(filename):
 
 def parse_crash(filename):
     """ Parse out the crash information from the report file. """
+
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
     with open(filename) as handler:
         lines = handler.readlines()
-        return {'source': lines[0].rstrip(),
-                'problem': lines[1].rstrip(),
-                'file': name,
-                'info': name + '.info.txt',
-                'stderr': name + '.stderr.txt'}
+        return {
+            'source': lines[0].rstrip(),
+            'problem': lines[1].rstrip(),
+            'file': name,
+            'info': name + '.info.txt',
+            'stderr': name + '.stderr.txt'
+        }
 
 
 def category_type_name(bug):
     """ Create a new bug attribute from bug by category and type.
 
     The result will be used as CSS class selector in the final report. """
+
     def smash(key):
         return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
+
     return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
 
 
@@ -358,6 +366,7 @@ def create_counters():
     counters. The first level is 'bug category' the second is 'bug type'.
     Each entry in this classification is a dictionary of 'count', 'type'
     and 'label'. """
+
     def predicate(bug):
         bug_category = bug['bug_category']
         bug_type = bug['bug_type']
@@ -365,7 +374,8 @@ def create_counters():
         current_type = current_category.get(bug_type, {
             'bug_type': bug_type,
             'bug_type_class': category_type_name(bug),
-            'bug_count': 0})
+            'bug_count': 0
+        })
         current_type.update({'bug_count': current_type['bug_count'] + 1})
         current_category.update({bug_type: current_type})
         predicate.categories.update({bug_category: current_category})
@@ -379,6 +389,7 @@ def create_counters():
 def prettify_bug(prefix, out_dir):
     def predicate(bug):
         """ Make safe this values to embed into HTML. """
+
         bug['bug_type_class'] = category_type_name(bug)
 
         encode_value(bug, 'bug_file', lambda x: chop(prefix, x))
@@ -394,6 +405,7 @@ def prettify_bug(prefix, out_dir):
 def prettify_crash(prefix, out_dir):
     def predicate(crash):
         """ Make safe this values to embed into HTML. """
+
         encode_value(crash, 'source', lambda x: chop(prefix, x))
         encode_value(crash, 'source', escape)
         encode_value(crash, 'problem', escape)
@@ -410,6 +422,7 @@ def prettify_crash(prefix, out_dir):
 
 def copy_resource_files(out_dir):
     """ Copy the javascript and css files to the report directory. """
+
     this_package = 'libscanbuild'
     resources_dir = pkg_resources.resource_filename(this_package, 'resources')
     for resource in pkg_resources.resource_listdir(this_package, 'resources'):
@@ -418,6 +431,7 @@ def copy_resource_files(out_dir):
 
 def encode_value(container, key, encode):
     """ Run 'encode' on 'container[key]' value and update it. """
+
     if key in container:
         value = encode(container[key])
         container.update({key: value})
@@ -425,6 +439,7 @@ def encode_value(container, key, encode):
 
 def chop(prefix, filename):
     """ Create 'filename' from '/prefix/filename' """
+
     if not len(prefix):
         return filename
     if prefix[-1] != os.path.sep:
@@ -435,16 +450,20 @@ def chop(prefix, filename):
 
 def escape(text):
     """ Paranoid HTML escape method. (Python version independent) """
-    escape_table = {'&': '&amp;',
-                    '"': '&quot;',
-                    "'": '&apos;',
-                    '>': '&gt;',
-                    '<': '&lt;'}
+
+    escape_table = {
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&apos;',
+        '>': '&gt;',
+        '<': '&lt;'
+    }
     return ''.join(escape_table.get(c, c) for c in text)
 
 
 def reindent(text, indent):
     """ Utility function to format html output and keep indentation. """
+
     result = ''
     for line in text.splitlines():
         if len(line.strip()):
@@ -454,6 +473,7 @@ def reindent(text, indent):
 
 def comment(name, opts=dict()):
     """ Utility function to format meta information as comment. """
+
     attributes = ''
     for key, value in opts.items():
         attributes += ' {0}="{1}"'.format(key, value)
@@ -464,6 +484,7 @@ def comment(name, opts=dict()):
 def commonprefix(files):
     """ Fixed version of os.path.commonprefix. Return the longest path prefix
     that is a prefix of all paths in filenames. """
+
     result = None
     for current in files:
         if result is not None:

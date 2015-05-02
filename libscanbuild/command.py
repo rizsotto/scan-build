@@ -3,18 +3,16 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module is responsible for to parse a compiler invocation. """
 
-
 import re
-
 
 __all__ = ['Action', 'classify_parameters']
 
 
 class Action(object):
     """ Enumeration class for compiler action. """
+
     Link, Compile, Preprocess, Info, Internal = range(5)
 
 
@@ -23,12 +21,12 @@ def classify_parameters(command):
 
     To run analysis from a compilation command, first it disassembles the
     compilation command. Classifies the parameters into groups and throws
-    away those which are not relevant.  """
+    away those which are not relevant. """
 
     def match(state, iterator):
         """ This method contains a list of pattern and action tuples.
             The matching start from the top if the list, when the first
-            match happens the action is executed.  """
+            match happens the action is executed. """
 
         def regex(pattern, action):
             """ Matching expression for regex. """
@@ -68,11 +66,9 @@ def classify_parameters(command):
             # output
             anyof({'-o'}, take_second('output')),
             # relevant compiler flags
-            anyof({'-write-strings',
-                   '-v'}, take_one('compile_options')),
-            anyof({'-ftrapv-handler',
-                   '--sysroot',
-                   '-target'}, take_two('compile_options')),
+            anyof({'-write-strings', '-v'}, take_one('compile_options')),
+            anyof({'-ftrapv-handler', '--sysroot', '-target'},
+                  take_two('compile_options')),
             regex(r'^-isysroot', take_two('compile_options')),
             regex(r'^-m(32|64)$', take_one('compile_options')),
             regex(r'^-mios-simulator-version-min(.*)',
@@ -89,12 +85,10 @@ def classify_parameters(command):
             anyof({'-nostdinc'}, take_one('compile_options')),
             regex(r'^-std=', take_one('compile_options')),
             regex(r'^-include', take_two('compile_options')),
-            anyof({'-idirafter',
-                   '-imacros',
-                   '-iprefix',
-                   '-isystem',
-                   '-iwithprefix',
-                   '-iwithprefixbefore'}, take_two('compile_options')),
+            anyof({
+                '-idirafter', '-imacros', '-iprefix', '-isystem',
+                '-iwithprefix', '-iwithprefixbefore'
+            }, take_two('compile_options')),
             regex(r'^-m.*', take_one('compile_options')),
             regex(r'^-iquote(.*)', take_joined('compile_options')),
             regex(r'^-Wno-', take_one('compile_options')),
@@ -104,18 +98,13 @@ def classify_parameters(command):
             regex(r'^-[lL]', take_one()),
             regex(r'^-M[TF]$', take_two()),
             regex(r'^-[eu]$', take_two()),
-            anyof({'-fsyntax-only',
-                   '-save-temps'}, take_one()),
-            anyof({'-install_name',
-                   '-exported_symbols_list',
-                   '-current_version',
-                   '-compatibility_version',
-                   '-init',
-                   '-seg1addr',
-                   '-bundle_loader',
-                   '-multiply_defined',
-                   '--param',
-                   '--serialize-diagnostics'}, take_two()),
+            anyof({'-fsyntax-only', '-save-temps'}, take_one()),
+            anyof({
+                '-install_name', '-exported_symbols_list', '-current_version',
+                '-compatibility_version', '-init', '-seg1addr',
+                '-bundle_loader', '-multiply_defined', '--param',
+                '--serialize-diagnostics'
+            }, take_two()),
             anyof({'-sectorder'}, take_four()),
             # relevant compiler flags
             regex(r'^-[fF](.+)$', take_one('compile_options'))
@@ -124,8 +113,7 @@ def classify_parameters(command):
             if task(iterator):
                 return
 
-    state = {'action': Action.Link,
-             'cxx': is_cplusplus_compiler(command[0])}
+    state = {'action': Action.Link, 'cxx': is_cplusplus_compiler(command[0])}
 
     arguments = Arguments(command)
     for _ in arguments:
@@ -182,6 +170,7 @@ def take_n(count=1, *keys):
         for key in keys:
             current = values.get(key, [])
             values.update({key: current + updates})
+
     return take
 
 
@@ -206,11 +195,10 @@ def take_four(*keys):
 def take_joined(*keys):
     """ Take one or two arguments and append to the 'key' values.
 
-    E.g.: '-Isomething' shall take only one.
-          '-I something' shall take two.
+    eg.: '-Isomething' shall take only one.
+         '-I something' shall take two.
 
-    This action should go with regex matcher only.
-    """
+    This action should go with regex matcher only. """
 
     def take(values, iterator, match):
         updates = []
@@ -220,6 +208,7 @@ def take_joined(*keys):
         for key in keys:
             current = values.get(key, [])
             values.update({key: current + updates})
+
     return take
 
 
@@ -233,6 +222,7 @@ def take_from_file(*keys):
             current = [line.strip() for line in handle.readlines()]
             for key in keys:
                 values[key] = current
+
     return take
 
 
@@ -246,6 +236,7 @@ def take_as(value, *keys):
         for key in keys:
             current = values.get(key, [])
             values.update({key: current + updates})
+
     return take
 
 
@@ -256,6 +247,7 @@ def take_second(*keys):
         current = iterator.next()
         for key in keys:
             values[key] = current
+
     return take
 
 
@@ -266,6 +258,7 @@ def take_action(action):
         key = 'action'
         current = values[key]
         values[key] = max(current, action)
+
     return take
 
 

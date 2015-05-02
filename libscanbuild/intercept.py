@@ -3,7 +3,6 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module is responsible to capture the compiler invocation of any
 build process. The result of that should be a compilation database.
 
@@ -20,7 +19,6 @@ The module implements the build command execution with the 'libear' library
 and the post-processing of the output files, which will condensates into a
 (might be empty) compilation database. """
 
-
 import logging
 import subprocess
 import json
@@ -34,9 +32,7 @@ import itertools
 from libscanbuild import duplicate_check, tempdir
 from libscanbuild.command import Action, classify_parameters
 
-
 __all__ = ['capture']
-
 
 if 'darwin' == sys.platform:
     ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
@@ -66,19 +62,17 @@ def capture(args):
                 previous = iter([])
             # filter out duplicate entries from both
             duplicate = duplicate_check(entry_hash)
-            return (entry
-                    for entry in itertools.chain(previous, current)
+            return (entry for entry in itertools.chain(previous, current)
                     if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
     with TemporaryDirectory(prefix='bear-', dir=tempdir()) as tmpdir:
         # run the build command
         exit_code = run_build(args.build, tmpdir)
-        logging.debug('build finished with exit code: {0}'.format(exit_code))
+        logging.debug('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
         commands = (parse_exec_trace(os.path.join(tmpdir, filename))
-                    for filename
-                    in sorted(os.listdir(tmpdir)))
+                    for filename in sorted(os.listdir(tmpdir)))
         # do post processing
         entries = post_processing(itertools.chain.from_iterable(commands))
         # dump the compilation database
@@ -123,15 +117,18 @@ def parse_exec_trace(filename):
         content = handler.read()
         for group in filter(bool, content.split(GS)):
             records = group.split(RS)
-            yield {'pid': records[0],
-                   'ppid': records[1],
-                   'function': records[2],
-                   'directory': records[3],
-                   'command': records[4].split(US)[:-1]}
+            yield {
+                'pid': records[0],
+                'ppid': records[1],
+                'function': records[2],
+                'directory': records[3],
+                'command': records[4].split(US)[:-1]
+            }
 
 
 def format_entry(entry):
     """ Generate the desired fields for compilation database entries. """
+
     def join_command(args):
         return ' '.join([shell_escape(arg) for arg in args])
 
@@ -144,9 +141,11 @@ def format_entry(entry):
     if atoms['action'] <= Action.Compile:
         for filename in atoms.get('files', []):
             if is_source_file(filename):
-                yield {'directory': entry['directory'],
-                       'command': join_command(entry['command']),
-                       'file': abspath(entry['directory'], filename)}
+                yield {
+                    'directory': entry['directory'],
+                    'command': join_command(entry['command']),
+                    'file': abspath(entry['directory'], filename)
+                }
 
 
 def shell_escape(arg):
@@ -154,6 +153,7 @@ def shell_escape(arg):
 
     The major challenge, to deal with white spaces. Which are used by
     the shell as separator. (Eg.: -D_KEY="Value with spaces") """
+
     def quote(arg):
         table = {'\\': '\\\\', '"': '\\"', "'": "\\'"}
         return '"' + ''.join([table.get(c, c) for c in arg]) + '"'
@@ -163,15 +163,18 @@ def shell_escape(arg):
 
 def is_source_file(filename):
     """ A predicate to decide the filename is a source file or not. """
-    accepted = {'.c', '.C', '.cc', '.CC', '.cxx', '.cp', '.cpp', '.c++',
-                '.m', '.mm',
-                '.i', '.ii', '.mii'}
+
+    accepted = {
+        '.c', '.C', '.cc', '.CC', '.cxx', '.cp', '.cpp', '.c++', '.m', '.mm',
+        '.i', '.ii', '.mii'
+    }
     __, ext = os.path.splitext(filename)
     return ext in accepted
 
 
 def is_compiler_call(entry):
     """ A predicate to decide the entry is a compiler call or not. """
+
     patterns = [
         re.compile(r'^([^/]*/)*c(c|\+\+)$'),
         re.compile(r'^([^/]*/)*([^-]*-)*g(cc|\+\+)(-\d+(\.\d+){0,2})?$'),
@@ -201,6 +204,7 @@ def entry_hash(entry):
 if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
     from tempfile import TemporaryDirectory
 else:
+
     class TemporaryDirectory(object):
         """ This function creates a temporary directory using mkdtemp() (the
         supplied arguments are passed directly to the underlying function).
@@ -208,6 +212,7 @@ else:
         of the context or destruction of the temporary directory object the
         newly created temporary directory and all its contents are removed
         from the filesystem. """
+
         def __init__(self, **kwargs):
             from tempfile import mkdtemp
             self.name = mkdtemp(**kwargs)

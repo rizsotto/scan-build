@@ -3,7 +3,6 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-
 """ This module is responsible for the Clang executable.
 
 Since Clang command line interface is so reach, but this project is using only
@@ -14,12 +13,12 @@ import logging
 import re
 import shlex
 
-
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
 
 
 def get_version(cmd):
     """ Returns the compiler version as string. """
+
     lines = subprocess.check_output([cmd, '-v'], stderr=subprocess.STDOUT)
     return lines.decode('ascii').splitlines()[0]
 
@@ -48,7 +47,7 @@ def get_arguments(cwd, command):
 
     cmd = command[:]
     cmd.insert(1, '-###')
-    logging.debug('exec command in {0}: {1}'.format(cwd, ' '.join(cmd)))
+    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
     child = subprocess.Popen(cmd,
                              cwd=cwd,
                              universal_newlines=True,
@@ -72,12 +71,12 @@ def get_active_checkers(clang, plugins):
 
     def checkers(language):
         """ Returns a list of active checkers for the given language. """
-        load = [elem for plugin in plugins
-                for elem in ['-Xclang', '-load', '-Xclang', plugin]]
+        load = [elem for plugin in plugins for elem in ['-Xclang', '-load',
+                                                        '-Xclang', plugin]]
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
-        return [pattern.match(arg).group(1)
-                for arg in get_arguments('.', cmd) if pattern.match(arg)]
+        return [pattern.match(arg).group(1) for arg in get_arguments('.', cmd)
+                if pattern.match(arg)]
 
     result = set()
     for language in ['c', 'c++', 'objective-c', 'objective-c++']:
@@ -107,8 +106,8 @@ def get_checkers(clang, plugins):
         The plugin name is always prefixed with two space character. The
         name contains no whitespaces. Then followed by newline (if it's
         too long) or other space characters comes the description of the
-        plugin. The description ends with a newline character.
-        """
+        plugin. The description ends with a newline character. """
+
         # find checkers header
         for line in stream:
             if re.match(r'^CHECKERS:', line):
@@ -137,6 +136,7 @@ def get_checkers(clang, plugins):
         The active plugin names are specific plugin names or prefix of some
         names. One example for prefix, when it say 'unix' and it shall match
         on 'unix.API', 'unix.Malloc' and 'unix.MallocSizeof'. """
+
         return any(re.match(r'^' + a + r'(\.|$)', entry) for a in actives)
 
     actives = get_active_checkers(clang, plugins)
@@ -144,14 +144,15 @@ def get_checkers(clang, plugins):
     load = [elem for plugin in plugins for elem in ['-load', plugin]]
     cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']
 
-    logging.debug('exec command: {0}'.format(' '.join(cmd)))
+    logging.debug('exec command: %s', ' '.join(cmd))
     child = subprocess.Popen(cmd,
                              universal_newlines=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
-    checkers = {k: (v, is_active(actives, k))
-                for k, v
-                in parse_checkers(child.stdout)}
+    checkers = {
+        k: (v, is_active(actives, k))
+        for k, v in parse_checkers(child.stdout)
+    }
     child.stdout.close()
     child.wait()
     if 0 == child.returncode and len(checkers):
