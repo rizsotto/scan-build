@@ -1,9 +1,6 @@
-project(ear C)
+project(exec C)
 
 cmake_minimum_required(VERSION 2.8)
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag("-std=c99" C99_SUPPORTED)
@@ -27,12 +24,8 @@ check_function_exists(execlp HAVE_EXECLP)
 check_function_exists(execle HAVE_EXECLE)
 check_function_exists(posix_spawn HAVE_POSIX_SPAWN)
 check_function_exists(posix_spawnp HAVE_POSIX_SPAWNP)
-check_symbol_exists(_NSGetEnviron crt_externs.h HAVE_NSGETENVIRON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_library(ear SHARED ear.c)
-target_link_libraries(ear ${CMAKE_DL_LIBS})
-
-install(TARGETS ear LIBRARY DESTINATION libscanbuild)
+add_executable(exec main.c)
