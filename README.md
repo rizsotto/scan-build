@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/rizsotto/Beye.svg?branch=master)](https://travis-ci.org/rizsotto/Beye)
+[![Coverage Status](https://coveralls.io/repos/rizsotto/Beye/badge.svg?branch=master)](https://coveralls.io/r/rizsotto/Beye?branch=master)
+
 Build EYE
 =========
 
@@ -43,7 +46,7 @@ How to use
 
 To run the Clang static analyzer against a project goes like this:
 
-    $ scan-build run <your build command>
+    $ scan-build all <your build command>
 
 To generate a compilation database file (compilation database is a JSON
 file described [here][JCDB]) goes like this: 
