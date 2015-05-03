@@ -11,8 +11,8 @@ import os
 import os.path
 import shlex
 import tempfile
+import functools
 from libscanbuild.command import classify_parameters, Action
-from libscanbuild.decorators import require
 from libscanbuild.clang import get_arguments, get_version
 
 __all__ = ['run']
@@ -37,6 +37,28 @@ def run(opts):
     except Exception:
         logging.error("Problem occured during analyzis.", exc_info=1)
         return None
+
+
+def require(required):
+    """ Decorator for checking the required values in state.
+
+    It checks the required attributes in the passed state and stop when
+    any of those is missing.
+    """
+
+    def decorator(function):
+        @functools.wraps(function)
+        def wrapper(*args, **kwargs):
+            for key in required:
+                if key not in args[0]:
+                    raise KeyError(
+                        '{0} not passed to {1}'.format(key, function.__name__))
+
+            return function(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def create_commands(iterator):
