@@ -54,9 +54,17 @@ class RunAnalyzerTest(unittest.TestCase):
 
 class SetAnalyzerOutputTest(fixtures.TestCase):
 
+    def test_not_defined(self):
+        with fixtures.TempDir() as tmpdir:
+            opts = {'output_dir': tmpdir}
+            spy = fixtures.Spy()
+            sut.set_analyzer_output(opts, spy.call)
+            self.assertTrue(os.path.exists(spy.arg['output'][1]))
+            self.assertTrue(os.path.isdir(spy.arg['output'][1]))
+
     def test_html(self):
         with fixtures.TempDir() as tmpdir:
-            opts = {'out_dir': tmpdir, 'output_format': 'html'}
+            opts = {'output_dir': tmpdir, 'output_format': 'html'}
             spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
             self.assertTrue(os.path.exists(spy.arg['output'][1]))
@@ -64,7 +72,7 @@ class SetAnalyzerOutputTest(fixtures.TestCase):
 
     def test_plist_html(self):
         with fixtures.TempDir() as tmpdir:
-            opts = {'out_dir': tmpdir, 'output_format': 'plist-html'}
+            opts = {'output_dir': tmpdir, 'output_format': 'plist-html'}
             spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
             self.assertTrue(os.path.exists(spy.arg['output'][1]))
@@ -72,7 +80,7 @@ class SetAnalyzerOutputTest(fixtures.TestCase):
 
     def test_plist(self):
         with fixtures.TempDir() as tmpdir:
-            opts = {'out_dir': tmpdir, 'output_format': 'plist'}
+            opts = {'output_dir': tmpdir, 'output_format': 'plist'}
             spy = fixtures.Spy()
             sut.set_analyzer_output(opts, spy.call)
             self.assertTrue(os.path.exists(spy.arg['output'][1]))
@@ -98,7 +106,7 @@ class ReportFailureTest(fixtures.TestCase):
                     'file': filename,
                     'report': ['-fsyntax-only', '-E', filename],
                     'language': 'c',
-                    'out_dir': tmpdir,
+                    'output_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': error_msg,
                     'exit_code': 13}
@@ -131,10 +139,9 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_set_language(self):
         def test(expected, input):
-            result = None
-            for x in sut.language_check([input]):
-                result = x
-            self.assertEqual(expected, result)
+            spy = fixtures.Spy()
+            self.assertEqual(spy.success, sut.language_check(input, spy.call))
+            self.assertEqual(expected, spy.arg)
 
         l = 'language'
         f = 'file'
@@ -146,31 +153,29 @@ class AnalyzerTest(unittest.TestCase):
         test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
         test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i'})
         test({f: 'f.i', l: 'c-cpp-output'}, {f: 'f.i', l: 'c-cpp-output'})
-        test(None, {f: 'file.java'})
 
     def test_arch_loop(self):
         def test(input):
-            result = []
-            for x in sut.arch_check([input]):
-                result.append(x)
-            return result
+            spy = fixtures.Spy()
+            sut.arch_check(input, spy.call)
+            return spy.arg
 
         input = {'key': 'value'}
-        self.assertEqual([input], test(input))
+        self.assertEqual(input, test(input))
 
         input = {'archs_seen': ['-arch', 'i386']}
-        self.assertEqual([{'arch': 'i386'}], test(input))
+        self.assertEqual({'arch': 'i386'}, test(input))
 
         input = {'archs_seen': ['-arch', 'ppc']}
-        self.assertEqual([], test(input))
+        self.assertEqual(None, test(input))
 
         input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
-        self.assertEqual([{'arch': 'i386'}], test(input))
+        self.assertEqual({'arch': 'i386'}, test(input))
 
         input = {'archs_seen': ['-arch', 'i386', '-arch', 'sparc']}
         result = test(input)
-        self.assertTrue(result == [{'arch': 'i386'}] or
-                        result == [{'arch': 'sparc'}])
+        self.assertTrue(result == {'arch': 'i386'} or
+                        result == {'arch': 'sparc'})
 
 
 @sut.require([])

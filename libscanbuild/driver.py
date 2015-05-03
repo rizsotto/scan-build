@@ -98,7 +98,7 @@ def validate(parser, args):
         parser.error('missing build command')
 
 
-def run_analyzer(args, out_dir):
+def run_analyzer(args, output_dir):
     """ Runs the analyzer against the given compilation database. """
 
     def extend(current, const):
@@ -106,11 +106,11 @@ def run_analyzer(args, out_dir):
         return current
 
     consts = {
-        'out_dir': out_dir,
-        'direct_args': analyzer_params(args),
         'clang': args.clang,
+        'output_dir': output_dir,
+        'output_format': args.output_format,
         'report_failures': args.report_failures,
-        'output_format': args.output_format
+        'direct_args': analyzer_params(args)
     }
 
     with open(args.cdb, 'r') as handle:

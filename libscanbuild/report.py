@@ -26,14 +26,14 @@ from libscanbuild.clang import get_version
 __all__ = ['document']
 
 
-def document(args, out_dir):
+def document(args, output_dir):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html = 'html' == args.output_format or 'plist-html' == args.output_format
 
-    crash_count = sum(1 for _ in read_crashes(out_dir))
+    crash_count = sum(1 for _ in read_crashes(output_dir))
     bug_count = create_counters()
-    for bug in read_bugs(out_dir, html):
+    for bug in read_bugs(output_dir, html):
         bug_count(bug)
 
     result = crash_count + bug_count.total
@@ -44,23 +44,23 @@ def document(args, out_dir):
         try:
             fragments = []
             if bug_count.total:
-                fragments.append(bug_summary(out_dir, bug_count))
-                fragments.append(bug_report(out_dir, prefix))
+                fragments.append(bug_summary(output_dir, bug_count))
+                fragments.append(bug_report(output_dir, prefix))
             if crash_count:
-                fragments.append(crash_report(out_dir, prefix))
+                fragments.append(crash_report(output_dir, prefix))
 
-            assemble_cover(out_dir, prefix, args, fragments)
+            assemble_cover(output_dir, prefix, args, fragments)
         finally:
             for fragment in fragments:
                 os.remove(fragment)
 
-        copy_resource_files(out_dir)
-        shutil.copy(args.cdb, out_dir)
+        copy_resource_files(output_dir)
+        shutil.copy(args.cdb, output_dir)
 
     return result
 
 
-def assemble_cover(out_dir, prefix, args, fragments):
+def assemble_cover(output_dir, prefix, args, fragments):
     """ Put together the fragments into a final report. """
 
     import getpass
@@ -70,7 +70,7 @@ def assemble_cover(out_dir, prefix, args, fragments):
     if args.html_title is None:
         args.html_title = os.path.basename(prefix) + ' - analyzer results'
 
-    with open(os.path.join(out_dir, 'index.html'), 'w') as handle:
+    with open(os.path.join(output_dir, 'index.html'), 'w') as handle:
         indent = 0
         handle.write(reindent("""
         |<!DOCTYPE html>
@@ -110,10 +110,10 @@ def assemble_cover(out_dir, prefix, args, fragments):
         |</html>""", indent))
 
 
-def bug_summary(out_dir, bug_counter):
+def bug_summary(output_dir, bug_counter):
     """ Bug summary is a HTML table to give a better overview of the bugs. """
 
-    name = os.path.join(out_dir, 'summary.html.fragment')
+    name = os.path.join(output_dir, 'summary.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
         handle.write(reindent("""
@@ -162,13 +162,13 @@ def bug_summary(out_dir, bug_counter):
     return name
 
 
-def bug_report(out_dir, prefix):
+def bug_report(output_dir, prefix):
     """ Creates a fragment from the analyzer reports. """
 
-    pretty = prettify_bug(prefix, out_dir)
-    bugs = (pretty(bug) for bug in read_bugs(out_dir, True))
+    pretty = prettify_bug(prefix, output_dir)
+    bugs = (pretty(bug) for bug in read_bugs(output_dir, True))
 
-    name = os.path.join(out_dir, 'bugs.html.fragment')
+    name = os.path.join(output_dir, 'bugs.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
         handle.write(reindent("""
@@ -209,13 +209,13 @@ def bug_report(out_dir, prefix):
     return name
 
 
-def crash_report(out_dir, prefix):
+def crash_report(output_dir, prefix):
     """ Creates a fragment from the compiler crashes. """
 
-    pretty = prettify_crash(prefix, out_dir)
-    crashes = (pretty(crash) for crash in read_crashes(out_dir))
+    pretty = prettify_crash(prefix, output_dir)
+    crashes = (pretty(crash) for crash in read_crashes(output_dir))
 
-    name = os.path.join(out_dir, 'crashes.html.fragment')
+    name = os.path.join(output_dir, 'crashes.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
         handle.write(reindent("""
@@ -247,14 +247,14 @@ def crash_report(out_dir, prefix):
     return name
 
 
-def read_crashes(out_dir):
+def read_crashes(output_dir):
     """ Generate a unique sequence of crashes from given output directory. """
 
     return (parse_crash(filename) for filename in
-            glob.iglob(os.path.join(out_dir, 'failures', '*.info.txt')))
+            glob.iglob(os.path.join(output_dir, 'failures', '*.info.txt')))
 
 
-def read_bugs(out_dir, html):
+def read_bugs(output_dir, html):
     """ Generate a unique sequence of bugs from given output directory.
 
     Duplicates can be in a project if the same module was compiled multiple
@@ -269,7 +269,7 @@ def read_bugs(out_dir, html):
 
     return (bug for bug in itertools.chain.from_iterable(
         # parser creates a bug generator not the bug itself
-        map(parser, glob.iglob(os.path.join(out_dir, pattern))))
+        map(parser, glob.iglob(os.path.join(output_dir, pattern))))
             if not duplicate(bug))
 
 
@@ -386,7 +386,7 @@ def create_counters():
     return predicate
 
 
-def prettify_bug(prefix, out_dir):
+def prettify_bug(prefix, output_dir):
     def predicate(bug):
         """ Make safe this values to embed into HTML. """
 
@@ -396,37 +396,37 @@ def prettify_bug(prefix, out_dir):
         encode_value(bug, 'bug_file', escape)
         encode_value(bug, 'bug_category', escape)
         encode_value(bug, 'bug_type', escape)
-        encode_value(bug, 'report_file', lambda x: chop(out_dir, x))
+        encode_value(bug, 'report_file', lambda x: chop(output_dir, x))
         return bug
 
     return predicate
 
 
-def prettify_crash(prefix, out_dir):
+def prettify_crash(prefix, output_dir):
     def predicate(crash):
         """ Make safe this values to embed into HTML. """
 
         encode_value(crash, 'source', lambda x: chop(prefix, x))
         encode_value(crash, 'source', escape)
         encode_value(crash, 'problem', escape)
-        encode_value(crash, 'file', lambda x: chop(out_dir, x))
+        encode_value(crash, 'file', lambda x: chop(output_dir, x))
         encode_value(crash, 'file', escape)
-        encode_value(crash, 'info', lambda x: chop(out_dir, x))
+        encode_value(crash, 'info', lambda x: chop(output_dir, x))
         encode_value(crash, 'info', escape)
-        encode_value(crash, 'stderr', lambda x: chop(out_dir, x))
+        encode_value(crash, 'stderr', lambda x: chop(output_dir, x))
         encode_value(crash, 'stderr', escape)
         return crash
 
     return predicate
 
 
-def copy_resource_files(out_dir):
+def copy_resource_files(output_dir):
     """ Copy the javascript and css files to the report directory. """
 
     this_package = 'libscanbuild'
     resources_dir = pkg_resources.resource_filename(this_package, 'resources')
     for resource in pkg_resources.resource_listdir(this_package, 'resources'):
-        shutil.copy(os.path.join(resources_dir, resource), out_dir)
+        shutil.copy(os.path.join(resources_dir, resource), output_dir)
 
 
 def encode_value(container, key, encode):

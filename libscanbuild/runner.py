@@ -19,21 +19,19 @@ __all__ = ['run']
 
 
 def run(opts):
-    """ Execute given analyzer command.
+    """ Entry point to run (or not) static analyzer against a single entry
+    of the compilation database.
 
-    Other modules prepared the command line arguments for analyzer execution.
-    The missing parameter related to the output of the analyzer. This method
-    assemble and execute the final analyzer command. """
+    This complex task is decomposed into smaller methods which are calling
+    each other in chain. If the analyzis is not possibe the given method
+    just return and break the chain. """
 
     try:
         logging.debug("Run analyzer against '%s'", opts['command'])
         opts.update(classify_parameters(shlex.split(opts['command'])))
         del opts['command']
 
-        for command in create_commands(
-                language_check(arch_check(action_check([opts])))):
-            logging.debug(command)
-            return set_analyzer_output(command)
+        return action_check(opts)
     except Exception:
         logging.error("Problem occured during analyzis.", exc_info=1)
         return None
@@ -43,8 +41,7 @@ def require(required):
     """ Decorator for checking the required values in state.
 
     It checks the required attributes in the passed state and stop when
-    any of those is missing.
-    """
+    any of those is missing. """
 
     def decorator(function):
         @functools.wraps(function)
@@ -61,137 +58,25 @@ def require(required):
     return decorator
 
 
-def create_commands(iterator):
-    """ Create command to run analyzer or failure report generation.
-
-    It generates commands (from compilation database entries) which contains
-    enough information to run the analyzer (and the crash report generation
-    if that was requested). """
-
-    for current in iterator:
-        common = []
-        if 'arch' in current:
-            common.extend(['-arch', current['arch']])
-        if 'compile_options' in current:
-            common.extend(current['compile_options'])
-        common.extend(['-x', current['language']])
-        common.append(current['file'])
-
-        yield {
-            'directory': current['directory'],
-            'file': current['file'],
-            'language': current['language'],
-            'analyze': ['--analyze'] + current['direct_args'] + common,
-            'report': ['-fsyntax-only', '-E'] + common,
-            'out_dir': current['out_dir'],
-            'clang': current['clang'],
-            'report_failures': current['report_failures'],
-            'output_format': current['output_format']
-        }
-
-
-def language_check(iterator):
-    """ Find out the language from command line parameters or file name
-    extension. The decision also influenced by the compiler invocation. """
-
-    def from_filename(name, cplusplus_compiler):
-        """ Return the language from fille name extension. """
-
-        mapping = {
-            '.c': 'c++' if cplusplus_compiler else 'c',
-            '.cp': 'c++',
-            '.cpp': 'c++',
-            '.cxx': 'c++',
-            '.txx': 'c++',
-            '.cc': 'c++',
-            '.C': 'c++',
-            '.ii': 'c++-cpp-output',
-            '.i': 'c++-cpp-output' if cplusplus_compiler else 'c-cpp-output',
-            '.m': 'objective-c',
-            '.mi': 'objective-c-cpp-output',
-            '.mm': 'objective-c++',
-            '.mii': 'objective-c++-cpp-output'
-        }
-        (_, extension) = os.path.splitext(os.path.basename(name))
-        return mapping.get(extension)
-
-    accepteds = {
-        'c', 'c++', 'objective-c', 'objective-c++', 'c-cpp-output',
-        'c++-cpp-output', 'objective-c-cpp-output'
-    }
-
-    key = 'language'
-    for current in iterator:
-        language = current[key] if key in current else \
-            from_filename(current['file'], current.get('cxx', False))
-        if language is None:
-            logging.debug('skip analysis, language not known')
-        elif language not in accepteds:
-            logging.debug('skip analysis, language not supported')
-        else:
-            logging.debug('analysis, language: %s', language)
-            current.update({key: language})
-            yield current
-
-
-def arch_check(iterator):
-    """ Do run analyzer through one of the given architectures. """
-
-    disableds = {'ppc', 'ppc64'}
-
-    key = 'archs_seen'
-    for current in iterator:
-        if key in current:
-            # filter out disabled architectures and -arch switches
-            archs = [a for a in current[key]
-                     if '-arch' != a and a not in disableds]
-
-            if not archs:
-                logging.debug('skip analysis, found not supported arch')
-            else:
-                # There should be only one arch given (or the same multiple
-                # times). If there are multiple arch are given and are not
-                # the same, those should not change the pre-processing step.
-                # But that's the only pass we have before run the analyzer.
-                arch = archs.pop()
-                logging.debug('analysis, on arch: %s', arch)
-
-                current.update({'arch': arch})
-                del current[key]
-                yield current
-        else:
-            logging.debug('analysis, on default arch')
-            yield current
-
-
-def action_check(iterator):
-    """ Continue analysis only if it compilation or link. """
-
-    for current in iterator:
-        if current['action'] <= Action.Compile:
-            yield current
-        else:
-            logging.debug('skip analysis, not compilation nor link')
-
-
-@require(['report', 'directory', 'clang', 'out_dir', 'language', 'file',
+@require(['report', 'directory', 'clang', 'output_dir', 'language', 'file',
           'error_type', 'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
 
     The major report is the preprocessor output. The output filename generated
-    randomly. The compiler output also captured into '.stderr.txt' file. And
-    some more execution context also saved into '.info.txt' file.
-    """
+    randomly. The compiler output also captured into '.stderr.txt' file.
+    And some more execution context also saved into '.info.txt' file. """
 
     def extension(opts):
         """ Generate preprocessor file extension. """
+
         mapping = {'objective-c++': '.mii', 'objective-c': '.mi', 'c++': '.ii'}
         return mapping.get(opts['language'], '.i')
 
     def destination(opts):
         """ Creates failures directory if not exits yet. """
-        name = os.path.join(opts['out_dir'], 'failures')
+
+        name = os.path.join(opts['output_dir'], 'failures')
         if not os.path.isdir(name):
             os.makedirs(name)
         return name
@@ -226,10 +111,10 @@ def report_failure(opts):
 
 @require(['clang', 'analyze', 'directory', 'output'])
 def run_analyzer(opts, continuation=report_failure):
-    """ From the state parameter it assembles the analysis command line and
-    executes it. Capture the output of the analysis and returns with it. If
-    failure reports are requested, it calls the continuation to generate it.
-    """
+    """ It assembles the analysis command line and executes it. Capture the
+    output of the analysis and returns with it. If failure reports are
+    requested, it calls the continuation to generate it. """
+
     cwd = opts['directory']
     cmd = [opts['clang']] + opts['analyze'] + opts['output']
     logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
@@ -253,23 +138,134 @@ def run_analyzer(opts, continuation=report_failure):
     return {'error_output': output, 'exit_code': child.returncode}
 
 
-@require(['out_dir'])
+@require(['output_dir'])
 def set_analyzer_output(opts, continuation=run_analyzer):
     """ Create output file if was requested.
 
     This plays a role only if .plist files are requested. """
 
-    def needs_output_file():
-        output_format = opts.get('output_format')
-        return 'plist' == output_format or 'plist-html' == output_format
-
-    if needs_output_file():
+    if opts.get('output_format') in {'plist', 'plist-html'}:
         with tempfile.NamedTemporaryFile(prefix='report-',
                                          suffix='.plist',
-                                         delete='out_dir' not in opts,
-                                         dir=opts.get('out_dir')) as output:
+                                         delete=False,
+                                         dir=opts['output_dir']) as output:
             opts.update({'output': ['-o', output.name]})
             return continuation(opts)
     else:
-        opts.update({'output': ['-o', opts['out_dir']]})
+        opts.update({'output': ['-o', opts['output_dir']]})
         return continuation(opts)
+
+
+@require(['file', 'directory', 'clang', 'language', 'direct_args',
+          'report_failures', 'output_dir', 'output_format'])
+def create_commands(opts, continuation=set_analyzer_output):
+    """ Create command to run analyzer or failure report generation.
+
+    It generates commands (from compilation database entries) which contains
+    enough information to run the analyzer (and the crash report generation
+    if that was requested). """
+
+    common = []
+    if 'arch' in opts:
+        common.extend(['-arch', opts['arch']])
+        del opts['arch']
+    if 'compile_options' in opts:
+        common.extend(opts['compile_options'])
+        del opts['compile_options']
+    common.extend(['-x', opts['language']])
+    common.append(opts['file'])
+
+    opts.update({'analyze': ['--analyze'] + opts['direct_args'] + common,
+                 'report': ['-fsyntax-only', '-E'] + common})
+
+    return continuation(opts)
+
+
+@require(['file'])
+def language_check(opts, continuation=create_commands):
+    """ Find out the language from command line parameters or file name
+    extension. The decision also influenced by the compiler invocation. """
+
+    def from_filename(name, cplusplus_compiler):
+        """ Return the language from fille name extension. """
+
+        mapping = {
+            '.c': 'c++' if cplusplus_compiler else 'c',
+            '.cp': 'c++',
+            '.cpp': 'c++',
+            '.cxx': 'c++',
+            '.txx': 'c++',
+            '.cc': 'c++',
+            '.C': 'c++',
+            '.ii': 'c++-cpp-output',
+            '.i': 'c++-cpp-output' if cplusplus_compiler else 'c-cpp-output',
+            '.m': 'objective-c',
+            '.mi': 'objective-c-cpp-output',
+            '.mm': 'objective-c++',
+            '.mii': 'objective-c++-cpp-output'
+        }
+        (_, extension) = os.path.splitext(os.path.basename(name))
+        return mapping.get(extension)
+
+    accepteds = {
+        'c', 'c++', 'objective-c', 'objective-c++', 'c-cpp-output',
+        'c++-cpp-output', 'objective-c-cpp-output'
+    }
+
+    key = 'language'
+    language = opts[key] if key in opts else \
+        from_filename(opts['file'], opts.get('cxx', False))
+
+    if language is None:
+        logging.debug('skip analysis, language not known')
+        return None
+    elif language not in accepteds:
+        logging.debug('skip analysis, language not supported')
+        return None
+    else:
+        logging.debug('analysis, language: %s', language)
+        opts.update({key: language})
+        return continuation(opts)
+
+
+@require([])
+def arch_check(opts, continuation=language_check):
+    """ Do run analyzer through one of the given architectures. """
+
+    disableds = {'ppc', 'ppc64'}
+
+    key = 'archs_seen'
+    if key in opts:
+        # filter out disabled architectures and -arch switches
+        archs = [a for a in opts[key]
+                 if '-arch' != a and a not in disableds]
+
+        if not archs:
+            logging.debug('skip analysis, found not supported arch')
+            return None
+        else:
+            # There should be only one arch given (or the same multiple
+            # times). If there are multiple arch are given and are not
+            # the same, those should not change the pre-processing step.
+            # But that's the only pass we have before run the analyzer.
+            arch = archs.pop()
+            logging.debug('analysis, on arch: %s', arch)
+
+            opts.update({'arch': arch})
+            del opts[key]
+            return continuation(opts)
+    else:
+        logging.debug('analysis, on default arch')
+        return continuation(opts)
+
+
+@require(['action'])
+def action_check(opts, continuation=arch_check):
+    """ Continue analysis only if it compilation or link. """
+
+    if opts['action'] <= Action.Compile:
+        del opts['action']
+        return continuation(opts)
+    else:
+        logging.debug('skip analysis, not compilation nor link')
+        return None

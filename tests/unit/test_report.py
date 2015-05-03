@@ -87,7 +87,7 @@ class ParseFileTest(unittest.TestCase):
                     'file': filename,
                     'report': ['-fsyntax-only', '-E', filename],
                     'language': 'c',
-                    'out_dir': tmpdir,
+                    'output_dir': tmpdir,
                     'error_type': 'other_error',
                     'error_output': 'some output',
                     'exit_code': 13}
