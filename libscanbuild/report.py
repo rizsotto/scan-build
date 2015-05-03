@@ -29,22 +29,23 @@ __all__ = ['document']
 def document(args, output_dir):
     """ Generates cover report and returns the number of bugs/crashes. """
 
-    html = 'html' == args.output_format or 'plist-html' == args.output_format
-
+    html_reports_available = args.output_format in {'html', 'plist-html'}
+    # count crashes and bugs
     crash_count = sum(1 for _ in read_crashes(output_dir))
-    bug_count = create_counters()
-    for bug in read_bugs(output_dir, html):
-        bug_count(bug)
-
-    result = crash_count + bug_count.total
-    if html and result:
+    bug_counter = create_counters()
+    for bug in read_bugs(output_dir, html_reports_available):
+        bug_counter(bug)
+    result = crash_count + bug_counter.total
+    # generate cover file when it's needed
+    if html_reports_available and result:
+        # generate common prefix for source files to have sort filenames
         with open(args.cdb, 'r') as handle:
             prefix = commonprefix(item['file'] for item in json.load(handle))
-
+        # assemble the cover from multiple fragments
         try:
             fragments = []
-            if bug_count.total:
-                fragments.append(bug_summary(output_dir, bug_count))
+            if bug_counter.total:
+                fragments.append(bug_summary(output_dir, bug_counter))
                 fragments.append(bug_report(output_dir, prefix))
             if crash_count:
                 fragments.append(crash_report(output_dir, prefix))
@@ -53,10 +54,9 @@ def document(args, output_dir):
         finally:
             for fragment in fragments:
                 os.remove(fragment)
-
+        # copy additinal files to the report
         copy_resource_files(output_dir)
         shutil.copy(args.cdb, output_dir)
-
     return result
 
 
@@ -353,6 +353,8 @@ def category_type_name(bug):
     The result will be used as CSS class selector in the final report. """
 
     def smash(key):
+        """ Make value ready to be HTML attribute value. """
+
         return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
 
     return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
@@ -392,11 +394,10 @@ def prettify_bug(prefix, output_dir):
 
         bug['bug_type_class'] = category_type_name(bug)
 
-        encode_value(bug, 'bug_file', lambda x: chop(prefix, x))
-        encode_value(bug, 'bug_file', escape)
+        encode_value(bug, 'bug_file', lambda x: escape(chop(prefix, x)))
         encode_value(bug, 'bug_category', escape)
         encode_value(bug, 'bug_type', escape)
-        encode_value(bug, 'report_file', lambda x: chop(output_dir, x))
+        encode_value(bug, 'report_file', lambda x: escape(chop(output_dir, x)))
         return bug
 
     return predicate
@@ -406,15 +407,11 @@ def prettify_crash(prefix, output_dir):
     def predicate(crash):
         """ Make safe this values to embed into HTML. """
 
-        encode_value(crash, 'source', lambda x: chop(prefix, x))
-        encode_value(crash, 'source', escape)
+        encode_value(crash, 'source', lambda x: escape(chop(prefix, x)))
         encode_value(crash, 'problem', escape)
-        encode_value(crash, 'file', lambda x: chop(output_dir, x))
-        encode_value(crash, 'file', escape)
-        encode_value(crash, 'info', lambda x: chop(output_dir, x))
-        encode_value(crash, 'info', escape)
-        encode_value(crash, 'stderr', lambda x: chop(output_dir, x))
-        encode_value(crash, 'stderr', escape)
+        encode_value(crash, 'file', lambda x: escape(chop(output_dir, x)))
+        encode_value(crash, 'info', lambda x: escape(chop(output_dir, x)))
+        encode_value(crash, 'stderr', lambda x: escape(chop(output_dir, x)))
         return crash
 
     return predicate

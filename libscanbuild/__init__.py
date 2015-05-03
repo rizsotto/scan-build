@@ -26,7 +26,7 @@ reports. Then the driver goes through on the reports and generates a "cover"
 for it.
 
 As you can see the driver is the only interface for the user. The wrappers
-are doing the real work. The communication between the two parts does via
+are doing the real work. The communication between the two parts is done via
 environment variables. The driver not only set the 'CC' and 'CXX', but many
 others as well.
 
@@ -73,8 +73,7 @@ command line parameter of the individual compilation. So steps like generate a
 command to analyzer, execute it can be done parallel. Then to collect the
 outputs and generate the "cover" also can be divided and make it parallel.
 
-For more please check the individual modules.
-"""
+For more please check the individual modules. """
 
 
 def duplicate_check(method):
@@ -84,8 +83,7 @@ def duplicate_check(method):
     represented as dictionaries, which has no default hash method.
     This implementation uses a set datatype to store the unique hash values.
 
-    This method returns a method which can detect the duplicate values.
-    """
+    This method returns a method which can detect the duplicate values. """
 
     def predicate(entry):
         entry_hash = predicate.unique(entry)
@@ -101,5 +99,6 @@ def duplicate_check(method):
 
 def tempdir():
     """ Return the default temorary directory. """
+
     from os import getenv
     return getenv('TMPDIR', getenv('TEMP', getenv('TMP', '/tmp')))

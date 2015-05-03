@@ -66,11 +66,13 @@ def get_arguments(cwd, command):
 
 def get_active_checkers(clang, plugins):
     """ To get the default plugins we execute Clang to print how this
-    compilation would be called. For input file we specify stdin. And
-    pass only language information. """
+    compilation would be called.
+
+    For input file we specify stdin and pass only language information. """
 
     def checkers(language):
         """ Returns a list of active checkers for the given language. """
+
         load = [elem for plugin in plugins for elem in ['-Xclang', '-load',
                                                         '-Xclang', plugin]]
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']

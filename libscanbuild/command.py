@@ -25,8 +25,8 @@ def classify_parameters(command):
 
     def match(state, iterator):
         """ This method contains a list of pattern and action tuples.
-            The matching start from the top if the list, when the first
-            match happens the action is executed. """
+        The matching start from the top if the list, when the first match
+        happens the action is executed. """
 
         def regex(pattern, action):
             """ Matching expression for regex. """

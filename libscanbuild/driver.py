@@ -51,6 +51,9 @@ def main():
             run_analyzer(args, target_dir.name)
             # cover report generation and bug counting
             number_of_bugs = document(args, target_dir.name)
+            # remove the compilation database when it was not requested
+            if args.action == 'all' and os.path.exists(args.cdb):
+                os.unlink(args.cdb)
             # set exit status as it was requested
             return number_of_bugs if args.status_bugs else exit_code
     except KeyboardInterrupt:
@@ -115,10 +118,11 @@ def run_analyzer(args, output_dir):
 
     with open(args.cdb, 'r') as handle:
         generator = (extend(cmd, consts) for cmd in json.load(handle))
-
+        # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if 2 <= args.verbose else None)
         for current in pool.imap_unordered(run, generator):
             if current is not None:
+                # display error message from the static analyzer
                 for line in current['error_output']:
                     logging.info(line.rstrip())
         pool.close()

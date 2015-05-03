@@ -87,15 +87,14 @@ def run_build(command, destination):
     It sets the required environment variables and execute the given command.
     The exec calls will be logged by the 'libear' preloaded library. """
 
-    def get_ear_so_file():
-        lib_name = 'libear.dylib' if 'darwin' == sys.platform else 'libear.so'
-        return pkg_resources.resource_filename('libscanbuild', lib_name)
+    lib_name = 'libear.dylib' if 'darwin' == sys.platform else 'libear.so'
+    ear_so_file = pkg_resources.resource_filename('libscanbuild', lib_name)
 
     environment = dict(os.environ)
     for alias, key in ENVIRONMENTS:
         value = '1'
         if alias == 'ENV_PRELOAD':
-            value = get_ear_so_file()
+            value = ear_so_file
         elif alias == 'ENV_OUTPUT':
             value = destination
         environment.update({key: value})
