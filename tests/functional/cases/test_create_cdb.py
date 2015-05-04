@@ -30,6 +30,7 @@ class CompilationDatabaseTest(unittest.TestCase):
                 content = json.load(handler)
                 self.assertEqual(5, len(content))
 
+    @unittest.skipIf(os.getenv('TRAVIS'), 'ubuntu make return -11')
     def test_successful_build_parallel(self):
         with fixtures.TempDir() as tmpdir:
             result = self.run_intercept(tmpdir, ['-j', 'build_regular'])
@@ -38,6 +39,7 @@ class CompilationDatabaseTest(unittest.TestCase):
                 content = json.load(handler)
                 self.assertEqual(5, len(content))
 
+    @unittest.skipIf(os.getenv('TRAVIS'), 'ubuntu env remove clang from path')
     def test_successful_build_on_empty_env(self):
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
