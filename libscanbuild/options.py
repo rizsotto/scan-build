@@ -197,6 +197,17 @@ def analyze_parameters(parser):
                 Switch the page naming to:
                 report-<filename>-<function/method name>-<id>.html
                 instead of report-XXXXXX.html""")
+    advanced.add_argument(
+        '--exclude',
+        metavar='<directory>',
+        dest='excludes',
+        action='append',
+        default=[],
+        help="""Do not run static analyzer against files found in this
+                directory. (You can specify this option multiple times.)
+                Could be usefull when project contains 3rd party libraries.
+                The directory path shall be absolute path as file names in
+                the compilation database.""")
 
     plugins = parser.add_argument_group('checker options')
     plugins.add_argument(

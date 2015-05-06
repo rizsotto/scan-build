@@ -13,6 +13,7 @@ To run the static analyzer against a build is done in multiple steps:
 
 import logging
 import sys
+import re
 import os
 import os.path
 import time
@@ -104,9 +105,10 @@ def validate(parser, args):
 def run_analyzer(args, output_dir):
     """ Runs the analyzer against the given compilation database. """
 
-    def extend(current, const):
-        current.update(const)
-        return current
+    def exclude(filename):
+        """ Return true when any excluded directory prefix the filename. """
+        return any(re.match(r'^' + directory, filename) for directory
+                   in args.excludes)
 
     consts = {
         'clang': args.clang,
@@ -117,7 +119,8 @@ def run_analyzer(args, output_dir):
     }
 
     with open(args.cdb, 'r') as handle:
-        generator = (extend(cmd, consts) for cmd in json.load(handle))
+        generator = (dict(cmd, **consts) for cmd in json.load(handle)
+                     if not exclude(cmd['file']))
         # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if 2 <= args.verbose else None)
         for current in pool.imap_unordered(run, generator):
