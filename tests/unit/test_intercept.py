@@ -25,6 +25,8 @@ class InterceptUtilTest(fixtures.TestCase):
         self.assertTrue(test('g++'))
         self.assertTrue(test('/usr/local/bin/gcc'))
         self.assertTrue(test('/usr/local/bin/g++'))
+        self.assertTrue(test('/usr/local/bin/clang'))
+        self.assertTrue(test('armv7_neno-linux-gnueabi-g++'))
 
         self.assertFalse(test(''))
         self.assertFalse(test('ld'))
