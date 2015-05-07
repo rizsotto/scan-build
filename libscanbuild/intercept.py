@@ -167,7 +167,7 @@ def is_source_file(filename):
         '.c', '.C', '.cc', '.CC', '.cxx', '.cp', '.cpp', '.c++', '.m', '.mm',
         '.i', '.ii', '.mii'
     }
-    __, ext = os.path.splitext(filename)
+    _, ext = os.path.splitext(filename)
     return ext in accepted
 
 

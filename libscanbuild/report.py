@@ -267,10 +267,12 @@ def read_bugs(output_dir, html):
     duplicate = duplicate_check(
         lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
 
-    return (bug for bug in itertools.chain.from_iterable(
+    bugs = itertools.chain.from_iterable(
         # parser creates a bug generator not the bug itself
-        map(parser, glob.iglob(os.path.join(output_dir, pattern))))
-            if not duplicate(bug))
+        parser(filename) for filename
+        in glob.iglob(os.path.join(output_dir, pattern)))
+
+    return (bug for bug in bugs if not duplicate(bug))
 
 
 def parse_bug_plist(filename):
