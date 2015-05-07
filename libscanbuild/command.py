@@ -82,12 +82,13 @@ def classify_parameters(command):
             anyof({'-O'}, take_as('-O1', 'compile_options')),
             anyof({'-Os'}, take_as('-O2', 'compile_options')),
             regex(r'^-[DIU](.*)$', take_joined('compile_options')),
+            regex(r'^-isystem(.*)$', take_joined('compile_options')),
             anyof({'-nostdinc'}, take_one('compile_options')),
             regex(r'^-std=', take_one('compile_options')),
             regex(r'^-include', take_two('compile_options')),
             anyof({
-                '-idirafter', '-imacros', '-iprefix', '-isystem',
-                '-iwithprefix', '-iwithprefixbefore'
+                '-idirafter', '-imacros', '-iprefix', '-iwithprefix',
+                '-iwithprefixbefore'
             }, take_two('compile_options')),
             regex(r'^-m.*', take_one('compile_options')),
             regex(r'^-iquote(.*)', take_joined('compile_options')),
