@@ -107,8 +107,6 @@ class ParseTest(unittest.TestCase):
            test(['clang', '-c', 'src.c', '-I', '/usr/local/include']))
         eq(['-I/opt', '-I', '/opt/otp/include'],
            test(['clang', '-c', 'src.c', '-I/opt', '-I', '/opt/otp/include']))
-        eq(['-I', ''],
-           test(['clang', '-c', 'src.c', '-I', '']))
         eq(['-isystem', '/path'],
            test(['clang', '-c', 'src.c', '-isystem', '/path']))
         eq(['-isystem=/path'],

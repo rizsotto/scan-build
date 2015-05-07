@@ -131,7 +131,7 @@ class Arguments(object):
     def __init__(self, args):
         """ Takes full command line, but iterates on the parameters only. """
 
-        self.__sequence = args[1:]
+        self.__sequence = [arg for arg in args[1:] if arg != '']
         self.__size = len(self.__sequence)
         self.__current = -1
 
