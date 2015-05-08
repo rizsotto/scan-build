@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 """ This module is responsible for the Clang executable.
 
-Since Clang command line interface is so reach, but this project is using only
+Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper. """
 
 import subprocess
