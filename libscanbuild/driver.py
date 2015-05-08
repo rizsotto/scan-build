@@ -122,7 +122,7 @@ def run_analyzer(args, output_dir):
         generator = (dict(cmd, **consts) for cmd in json.load(handle)
                      if not exclude(cmd['file']))
         # when verbose output requested execute sequentially
-        pool = multiprocessing.Pool(1 if 2 <= args.verbose else None)
+        pool = multiprocessing.Pool(1 if 2 < args.verbose else None)
         for current in pool.imap_unordered(run, generator):
             if current is not None:
                 # display error message from the static analyzer
