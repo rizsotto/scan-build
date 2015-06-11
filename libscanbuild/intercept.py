@@ -34,14 +34,6 @@ from libscanbuild.command import Action, classify_parameters
 
 __all__ = ['capture']
 
-if 'darwin' == sys.platform:
-    ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
-                    ("ENV_PRELOAD", "DYLD_INSERT_LIBRARIES"),
-                    ("ENV_FLAT", "DYLD_FORCE_FLAT_NAMESPACE")]
-else:
-    ENVIRONMENTS = [("ENV_OUTPUT", "BEAR_OUTPUT"),
-                    ("ENV_PRELOAD", "LD_PRELOAD")]
-
 
 def capture(args):
     """ The entry point of build command interception. """
@@ -66,9 +58,11 @@ def capture(args):
                     if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
-    with TemporaryDirectory(prefix='bear-', dir=tempdir()) as tmpdir:
+    with TemporaryDirectory(prefix='build-intercept', dir=tempdir()) as tmpdir:
         # run the build command
-        exit_code = run_build(args.build, tmpdir)
+        environment = setup_environment(tmpdir)
+        logging.debug('run build in environment: %s', environment)
+        exit_code = subprocess.call(args.build, env=environment)
         logging.debug('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
         commands = (parse_exec_trace(os.path.join(tmpdir, filename))
@@ -81,8 +75,8 @@ def capture(args):
         return exit_code
 
 
-def run_build(command, destination):
-    """ Runs the original build command.
+def setup_environment(destination):
+    """ Sets up the environment for the build command.
 
     It sets the required environment variables and execute the given command.
     The exec calls will be logged by the 'libear' preloaded library. """
@@ -91,15 +85,16 @@ def run_build(command, destination):
     ear_so_file = pkg_resources.resource_filename('libscanbuild', lib_name)
 
     environment = dict(os.environ)
-    for alias, key in ENVIRONMENTS:
-        value = '1'
-        if alias == 'ENV_PRELOAD':
-            value = ear_so_file
-        elif alias == 'ENV_OUTPUT':
-            value = destination
-        environment.update({key: value})
+    environment.update({"BUILD_INTERCEPT_TARGET_DIR": destination})
+    if 'darwin' == sys.platform:
+        environment.update({
+            "DYLD_INSERT_LIBRARIES": ear_so_file,
+            "DYLD_FORCE_FLAT_NAMESPACE": "1"
+        })
+    else:
+        environment.update({"LD_PRELOAD": ear_so_file})
 
-    return subprocess.call(command, env=environment)
+    return environment
 
 
 def parse_exec_trace(filename):
