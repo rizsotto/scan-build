@@ -92,8 +92,8 @@ def setup_environment(args, destination):
         environment.update({
             'CC': 'intercept-cc',
             'CXX': 'intercept-cxx',
-            'BUILD_INTERCEPT_CC': environment.get('CC', 'cc'),
-            'BUILD_INTERCEPT_CXX': environment.get('CXX', 'c++'),
+            'BUILD_INTERCEPT_CC': args.cc,
+            'BUILD_INTERCEPT_CXX': args.cxx,
             'BUILD_INTERCEPT_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
         })
     elif 'darwin' == sys.platform:

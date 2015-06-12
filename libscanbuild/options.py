@@ -112,14 +112,14 @@ def analyze_parameters(parser):
                 within the main source file.""")
     format_group = parser.add_mutually_exclusive_group()
     format_group.add_argument(
-        '--plist',
+        '--plist', '-plist',
         dest='output_format',
         const='plist',
         default='html',
         action='store_const',
         help="""This option outputs the results as a set of .plist files.""")
     format_group.add_argument(
-        '--plist-html',
+        '--plist-html', '-plist-html',
         dest='output_format',
         const='plist-html',
         default='html',
@@ -135,13 +135,13 @@ def analyze_parameters(parser):
         help="""Don't remove the build results directory even if no issues
                 were reported.""")
     advanced.add_argument(
-        '--no-failure-reports',
+        '--no-failure-reports', '-no-failure-reports',
         dest='report_failures',
         action='store_false',
         help="""Do not create a 'failures' subdirectory that includes analyzer
                 crash reports and preprocessed source files.""")
     advanced.add_argument(
-        '--stats',
+        '--stats', '-stats',
         action='store_true',
         help="""Generates visitation statistics for the project being analyzed.
                 """)
@@ -149,14 +149,14 @@ def analyze_parameters(parser):
                           action='store_true',
                           help="""Generate internal analyzer statistics.""")
     advanced.add_argument(
-        '--maxloop',
+        '--maxloop', '-maxloop',
         metavar='<loop count>',
         type=int,
         default=4,
         help="""Specifiy the number of times a block can be visited before
                 giving up. Increase for more comprehensive coverage at a cost
                 of speed.""")
-    advanced.add_argument('--store',
+    advanced.add_argument('--store', '-store',
                           metavar='<model>',
                           dest='store_model',
                           default='region',
@@ -167,7 +167,7 @@ def analyze_parameters(parser):
                 analyze code. 'basic' was the default store model for
                 checker-0.221 and earlier.""")
     advanced.add_argument(
-        '--constraints',
+        '--constraints', '-constraints',
         metavar='<model>',
         dest='constraints_model',
         default='range',
@@ -185,7 +185,29 @@ def analyze_parameters(parser):
                 option by using the 'clang' packaged with Xcode (on OS X) or
                 from the PATH.""")
     advanced.add_argument(
-        '--analyzer-config',
+        '--use-cc',
+        metavar='<path>',
+        dest='cc',
+        default='cc',
+        help="""When '%(prog)s' analyzes a project by interposing a "fake
+                compiler", which executes a real compiler for compilation and
+                do other tasks (to run the static analyzer or just record the
+                compiler invocation). Because of this interposing, '%(prog)s'
+                does not know what compiler your project normally uses.
+                Instead, it simply overrides the CC environment variable, and
+                guesses your default compiler.
+
+                If you need '%(prog)s' to use a specific compiler for
+                *compilation* then you can use this option to specify a path
+                to that compiler.""")
+    advanced.add_argument(
+        '--use-c++',
+        metavar='<path>',
+        dest='cxx',
+        default='c++',
+        help="""This is the same as "--use-cc" but for C++ code.""")
+    advanced.add_argument(
+        '--analyzer-config', '-analyzer-config',
         metavar='<options>',
         help="""Provide options to pass through to the analyzer's
                 -analyzer-config flag. Several options are separated with
@@ -211,16 +233,16 @@ def analyze_parameters(parser):
 
     plugins = parser.add_argument_group('checker options')
     plugins.add_argument(
-        '--load-plugin',
+        '--load-plugin', '-load-plugin',
         metavar='<plugin library>',
         dest='plugins',
         action='append',
         help="""Loading external checkers using the clang plugin interface.""")
-    plugins.add_argument('--enable-checker',
+    plugins.add_argument('--enable-checker', '-enable-checker',
                          metavar='<checker name>',
                          action='append',
                          help="""Enable specific checker.""")
-    plugins.add_argument('--disable-checker',
+    plugins.add_argument('--disable-checker', '-disable-checker',
                          metavar='<checker name>',
                          action='append',
                          help="""Disable specific checker.""")
