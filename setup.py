@@ -52,7 +52,7 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.md').read(),
     zip_safe=False,
-    scripts=['bin/scan-build'],
+    scripts=['bin/scan-build', 'bin/intercept-cc', 'bin/intercept-c++'],
     packages=['libscanbuild'],
     package_data={'libscanbuild': ['resources/*']},
     cmdclass={'buildear': BuildEAR, 'install': Install, 'build': Build},
