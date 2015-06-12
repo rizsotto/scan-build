@@ -17,7 +17,6 @@ import sys
 import json
 import shutil
 import glob
-import pkg_resources
 import plistlib
 import itertools
 from libscanbuild import duplicate_check
@@ -56,7 +55,8 @@ def document(args, output_dir):
                 os.remove(fragment)
         # copy additinal files to the report
         copy_resource_files(output_dir)
-        shutil.copy(args.cdb, output_dir)
+        if (os.path.exists(args.cdb)):
+            shutil.copy(args.cdb, output_dir)
     return result
 
 
@@ -422,10 +422,17 @@ def prettify_crash(prefix, output_dir):
 def copy_resource_files(output_dir):
     """ Copy the javascript and css files to the report directory. """
 
-    this_package = 'libscanbuild'
-    resources_dir = pkg_resources.resource_filename(this_package, 'resources')
-    for resource in pkg_resources.resource_listdir(this_package, 'resources'):
-        shutil.copy(os.path.join(resources_dir, resource), output_dir)
+    try:
+        import pkg_resources
+        package = 'libscanbuild'
+        resources_dir = pkg_resources.resource_filename(package, 'resources')
+        for resource in pkg_resources.resource_listdir(package, 'resources'):
+            shutil.copy(os.path.join(resources_dir, resource), output_dir)
+    except ImportError:
+        resources_dir = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), 'resources')
+        for resource in os.listdir(resources_dir):
+            shutil.copy(os.path.join(resources_dir, resource), output_dir)
 
 
 def encode_value(container, key, encode):

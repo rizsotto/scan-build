@@ -38,7 +38,7 @@ RS = chr(0x1e)
 US = chr(0x1f)
 
 
-def capture(args):
+def capture(args, wrappers_dir):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
@@ -63,7 +63,7 @@ def capture(args):
 
     with TemporaryDirectory(prefix='build-intercept', dir=tempdir()) as tmpdir:
         # run the build command
-        environment = setup_environment(args, tmpdir)
+        environment = setup_environment(args, tmpdir, wrappers_dir)
         logging.debug('run build in environment: %s', environment)
         exit_code = subprocess.call(args.build, env=environment)
         logging.debug('build finished with exit code: %d', exit_code)
@@ -78,7 +78,7 @@ def capture(args):
         return exit_code
 
 
-def setup_environment(args, destination):
+def setup_environment(args, destination, wrappers_dir):
     """ Sets up the environment for the build command.
 
     It sets the required environment variables and execute the given command.
@@ -90,8 +90,8 @@ def setup_environment(args, destination):
 
     if sys.platform in {'win32', 'cygwin'} or not ear_library_path(False):
         environment.update({
-            'CC': 'intercept-cc',
-            'CXX': 'intercept-cxx',
+            'CC': os.path.join(wrappers_dir, 'intercept-cc'),
+            'CXX': os.path.join(wrappers_dir, 'intercept-cxx'),
             'BUILD_INTERCEPT_CC': args.cc,
             'BUILD_INTERCEPT_CXX': args.cxx,
             'BUILD_INTERCEPT_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'

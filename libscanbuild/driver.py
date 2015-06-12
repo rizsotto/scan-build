@@ -30,7 +30,7 @@ from libscanbuild.clang import get_checkers
 __all__ = ['main']
 
 
-def main():
+def main(bin_dir):
     """ Entry point for 'scan-build'. """
 
     try:
@@ -42,7 +42,8 @@ def main():
         logging.debug('Parsed arguments: %s', args)
 
         # run build command and capture compiler executions
-        exit_code = capture(args) if args.action in {'all', 'intercept'} else 0
+        exit_code = capture(args, bin_dir) \
+            if args.action in {'all', 'intercept'} else 0
         # when we only do interception the job is done
         if args.action == 'intercept':
             return exit_code

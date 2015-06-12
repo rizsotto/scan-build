@@ -5,9 +5,12 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import sys
-from libscanbuild.intercept import wrapper
-
 
 if __name__ == '__main__':
+    import sys
+    import os.path
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    sys.path.append(os.path.dirname(this_dir))
+
+    from libscanbuild.intercept import wrapper
     sys.exit(wrapper(False))
