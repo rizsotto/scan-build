@@ -38,7 +38,7 @@ def document(args, output_dir):
     # generate cover file when it's needed
     if html_reports_available and result:
         # generate common prefix for source files to have sort filenames
-        if (os.path.exists(args.cdb)):
+        if os.path.exists(args.cdb):
             with open(args.cdb, 'r') as handle:
                 prefix = commonprefix(item['file']
                                       for item in json.load(handle))
@@ -59,7 +59,7 @@ def document(args, output_dir):
                 os.remove(fragment)
         # copy additinal files to the report
         copy_resource_files(output_dir)
-        if (os.path.exists(args.cdb)):
+        if os.path.exists(args.cdb):
             shutil.copy(args.cdb, output_dir)
     return result
 

@@ -108,8 +108,8 @@ def run_analyzer(args, output_dir):
 
     def exclude(filename):
         """ Return true when any excluded directory prefix the filename. """
-        return any(re.match(r'^' + directory, filename) for directory
-                   in args.excludes)
+        return any(re.match(r'^' + directory, filename)
+                   for directory in args.excludes)
 
     consts = {
         'clang': args.clang,

@@ -175,8 +175,10 @@ def create_commands(opts, continuation=set_analyzer_output):
     common.extend(['-x', opts['language']])
     common.append(opts['file'])
 
-    opts.update({'analyze': ['--analyze'] + opts['direct_args'] + common,
-                 'report': ['-fsyntax-only', '-E'] + common})
+    opts.update({
+        'analyze': ['--analyze'] + opts['direct_args'] + common,
+        'report': ['-fsyntax-only', '-E'] + common
+    })
 
     return continuation(opts)
 
@@ -237,8 +239,7 @@ def arch_check(opts, continuation=language_check):
     key = 'archs_seen'
     if key in opts:
         # filter out disabled architectures and -arch switches
-        archs = [a for a in opts[key]
-                 if '-arch' != a and a not in disableds]
+        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
 
         if not archs:
             logging.debug('skip analysis, found not supported arch')
