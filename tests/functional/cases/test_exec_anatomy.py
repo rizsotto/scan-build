@@ -14,7 +14,8 @@ import json
 
 def run(source_dir, target_dir):
     def execute(cmd):
-        return subprocess.check_call(cmd, cwd=target_dir,
+        return subprocess.check_call(cmd,
+                                     cwd=target_dir,
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT)
 
@@ -23,13 +24,12 @@ def run(source_dir, target_dir):
 
     result_file = os.path.join(target_dir, 'result.json')
     expected_file = os.path.join(target_dir, 'expected.json')
-    execute(['scan-build', 'intercept', '--cdb', result_file,
-             './exec', expected_file])
+    execute(['intercept-build', 'intercept', '--cdb', result_file, './exec',
+             expected_file])
     return (expected_file, result_file)
 
 
 class ExecAnatomyTest(unittest.TestCase):
-
     def assertEqualJson(self, expected, result):
         def read_json(filename):
             with open(filename) as handler:

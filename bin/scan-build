@@ -1,19 +1,16 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#                     The LLVM Compiler Infrastructure
+#!/usr/bin/env bash
+
+set -o nounset
+set -o errexit
+
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+# depend on which model you want the scan-build to work you need to choose
+# from the two implementations. 'analyze-build' is working as the old Perl
+# implementation was. while the 'intercept-build' is generate compilation
+# database first and then run the analyzer against the entries.
 #
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+#"$SCRIPT_DIR/analyze-build" $@
+#"$SCRIPT_DIR/intercept-build" all $@
 
-
-if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-
-    import sys
-    import os.path
-    this_dir = os.path.dirname(os.path.realpath(__file__))
-    sys.path.append(os.path.dirname(this_dir))
-
-    from libscanbuild.driver import main
-    sys.exit(main(this_dir))
+"$SCRIPT_DIR/intercept-build" all $@

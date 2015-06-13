@@ -29,7 +29,8 @@ def prepare_cdb(name, target_dir):
 
 
 def run_driver(directory, cdb, args):
-    cmd = ['scan-build', 'analyze', '--cdb', cdb, '--output', directory] + args
+    cmd = ['intercept-build', 'analyze', '--cdb', cdb, '--output', directory] \
+        + args
     child = subprocess.Popen(cmd,
                              universal_newlines=True,
                              stdout=subprocess.PIPE,
@@ -41,7 +42,6 @@ def run_driver(directory, cdb, args):
 
 
 class OutputDirectoryTest(unittest.TestCase):
-
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
@@ -65,7 +65,6 @@ class OutputDirectoryTest(unittest.TestCase):
 
 
 class ExitCodeTest(unittest.TestCase):
-
     def test_regular_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
@@ -112,7 +111,6 @@ class ExitCodeTest(unittest.TestCase):
 
 
 class OutputFormatTest(unittest.TestCase):
-
     @staticmethod
     def get_html_count(directory):
         return len(glob.glob(os.path.join(directory, 'report-*.html')))
@@ -151,7 +149,6 @@ class OutputFormatTest(unittest.TestCase):
 
 
 class FailureReportTest(unittest.TestCase):
-
     def test_broken_creates_failure_reports(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
@@ -169,12 +166,12 @@ class FailureReportTest(unittest.TestCase):
 
 
 class TitleTest(unittest.TestCase):
-
     def assertTitleEqual(self, directory, expected):
         import re
         patterns = [
             re.compile(r'<title>(?P<page>.*)</title>'),
-            re.compile(r'<h1>(?P<head>.*)</h1>')]
+            re.compile(r'<h1>(?P<head>.*)</h1>')
+        ]
         result = dict()
 
         index = os.path.join(directory, 'result', 'index.html')

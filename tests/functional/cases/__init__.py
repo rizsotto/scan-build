@@ -23,10 +23,8 @@ def load_tests(loader, suite, pattern):
 def make_args(target):
     this_dir, _ = os.path.split(__file__)
     path = os.path.normpath(os.path.join(this_dir, '..', 'src'))
-    return ['make',
-            'SRCDIR={}'.format(path),
-            'OBJDIR={}'.format(target),
-            '-f', os.path.join(path, 'build', 'Makefile')]
+    return ['make', 'SRCDIR={}'.format(path), 'OBJDIR={}'.format(target), '-f',
+            os.path.join(path, 'build', 'Makefile')]
 
 
 def silent_call(cmd):
