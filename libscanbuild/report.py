@@ -38,8 +38,12 @@ def document(args, output_dir):
     # generate cover file when it's needed
     if html_reports_available and result:
         # generate common prefix for source files to have sort filenames
-        with open(args.cdb, 'r') as handle:
-            prefix = commonprefix(item['file'] for item in json.load(handle))
+        if (os.path.exists(args.cdb)):
+            with open(args.cdb, 'r') as handle:
+                prefix = commonprefix(item['file']
+                                      for item in json.load(handle))
+        else:
+            prefix = ''
         # assemble the cover from multiple fragments
         try:
             fragments = []
@@ -269,8 +273,8 @@ def read_bugs(output_dir, html):
 
     bugs = itertools.chain.from_iterable(
         # parser creates a bug generator not the bug itself
-        parser(filename) for filename
-        in glob.iglob(os.path.join(output_dir, pattern)))
+        parser(filename)
+        for filename in glob.iglob(os.path.join(output_dir, pattern)))
 
     return (bug for bug in bugs if not duplicate(bug))
 
