@@ -177,14 +177,12 @@ def format_entry(entry):
         return os.path.normpath(fullname)
 
     atoms = classify_parameters(entry['command'])
-    if atoms['action'] <= Action.Compile:
-        for filename in atoms.get('files', []):
-            if is_source_file(filename):
-                yield {
-                    'directory': entry['directory'],
-                    'command': join_command(entry['command']),
-                    'file': abspath(entry['directory'], filename)
-                }
+    return ({
+        'directory': entry['directory'],
+        'command': join_command(entry['command']),
+        'file': abspath(entry['directory'], filename)
+    } for filename in atoms.get('files', [])
+            if is_source_file(filename) and atoms['action'] <= Action.Compile)
 
 
 def shell_escape(arg):

@@ -17,7 +17,8 @@ from libscanbuild.driver import (initialize_logging, ReportDirectory,
 from libscanbuild.report import document
 from libscanbuild.clang import get_checkers
 from libscanbuild.runner import action_check
-from libscanbuild.command import classify_parameters, Action
+from libscanbuild.intercept import is_source_file
+from libscanbuild.command import classify_parameters
 
 __all__ = ['main', 'wrapper']
 
@@ -117,19 +118,19 @@ def wrapper(cplusplus):
             'directory': os.getcwd(),
         }
         parameters = classify_parameters(sys.argv)
-        if parameters['action'] == Action.Compile:
-            modules = parameters.get('files', [])
-            del parameters['files']
-            for module in modules:
-                parameters.update({'file': module})
-                parameters.update(consts)
-                logging.debug('analyzer parameters %s', parameters)
 
-                current = action_check(parameters)
-                # display error message from the static analyzer
-                if current is not None:
-                    for line in current['error_output']:
-                        logging.info(line.rstrip())
+        filenames = parameters.get('files', [])
+        del parameters['files']
+        for filename in (name for name in filenames if is_source_file(name)):
+            parameters.update({'file': filename})
+            parameters.update(consts)
+            logging.debug('analyzer parameters %s', parameters)
+
+            current = action_check(parameters)
+            # display error message from the static analyzer
+            if current is not None:
+                for line in current['error_output']:
+                    logging.info(line.rstrip())
     except Exception:
         logging.exception("run analyzer inside compiler wrapper failed.")
     # return compiler exit code
