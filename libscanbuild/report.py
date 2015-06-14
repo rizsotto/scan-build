@@ -43,7 +43,7 @@ def document(args, output_dir):
                 prefix = commonprefix(item['file']
                                       for item in json.load(handle))
         else:
-            prefix = ''
+            prefix = os.getcwd()
         # assemble the cover from multiple fragments
         try:
             fragments = []
