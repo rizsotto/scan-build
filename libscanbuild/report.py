@@ -37,13 +37,9 @@ def document(args, output_dir):
     result = crash_count + bug_counter.total
     # generate cover file when it's needed
     if html_reports_available and result:
-        # generate common prefix for source files to have sort filenames
-        if os.path.exists(args.cdb):
-            with open(args.cdb, 'r') as handle:
-                prefix = commonprefix(item['file']
-                                      for item in json.load(handle))
-        else:
-            prefix = os.getcwd()
+        # common prefix for source files to have sort filenames
+        prefix = commonprefix_from(args.cdb) if os.path.exists(args.cdb) else \
+            os.getcwd()
         # assemble the cover from multiple fragments
         try:
             fragments = []
@@ -52,15 +48,14 @@ def document(args, output_dir):
                 fragments.append(bug_report(output_dir, prefix))
             if crash_count:
                 fragments.append(crash_report(output_dir, prefix))
-
             assemble_cover(output_dir, prefix, args, fragments)
+            # copy additinal files to the report
+            copy_resource_files(output_dir)
+            if os.path.exists(args.cdb):
+                shutil.copy(args.cdb, output_dir)
         finally:
             for fragment in fragments:
                 os.remove(fragment)
-        # copy additinal files to the report
-        copy_resource_files(output_dir)
-        if os.path.exists(args.cdb):
-            shutil.copy(args.cdb, output_dir)
     return result
 
 
@@ -452,10 +447,8 @@ def chop(prefix, filename):
 
     if not len(prefix):
         return filename
-    if prefix[-1] != os.path.sep:
-        prefix += os.path.sep
-    split = filename.split(prefix, 1)
-    return split[1] if len(split) == 2 else split[0]
+    else:
+        return os.path.relpath(filename, prefix)
 
 
 def escape(text):
@@ -489,6 +482,13 @@ def comment(name, opts=dict()):
         attributes += ' {0}="{1}"'.format(key, value)
 
     return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)
+
+
+def commonprefix_from(filename):
+    """ Create file prefix from a compilation database entries. """
+
+    with open(filename, 'r') as handle:
+        return commonprefix(item['file'] for item in json.load(handle))
 
 
 def commonprefix(files):

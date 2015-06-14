@@ -116,7 +116,11 @@ class ReportMethodTest(unittest.TestCase):
         self.assertEqual('file', sut.chop('/prefix/', '/prefix/file'))
         self.assertEqual('lib/file', sut.chop('/prefix/', '/prefix/lib/file'))
         self.assertEqual('/prefix/file', sut.chop('', '/prefix/file'))
-        self.assertEqual('/prefix/file', sut.chop('apple', '/prefix/file'))
+
+    def test_chop_when_cwd(self):
+        self.assertEqual('../src/file', sut.chop('/cwd', '/src/file'))
+        self.assertEqual('../src/file', sut.chop('/prefix/cwd',
+                                                 '/prefix/src/file'))
 
 
 class GetPrefixFromCompilationDatabaseTest(fixtures.TestCase):
