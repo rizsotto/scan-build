@@ -245,7 +245,8 @@ def ear_library_path(darwin):
     try:
         import pkg_resources
         lib_name = 'libear.dylib' if darwin else 'libear.so'
-        return pkg_resources.resource_filename('libscanbuild', lib_name)
+        lib_file = pkg_resources.resource_filename('libscanbuild', lib_name)
+        return lib_file if os.path.exists(lib_file) else None
     except ImportError:
         return None
 
