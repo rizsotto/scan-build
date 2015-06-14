@@ -31,7 +31,6 @@ def main(bin_dir):
         # setup logging
         initialize_logging(args)
         logging.debug('Parsed arguments: %s', args)
-
         # run the build
         with ReportDirectory(args.output, args.keep_empty) as target_dir:
             # run the build command
@@ -53,24 +52,23 @@ def main(bin_dir):
 def parse_and_validate_arguments():
     """ Parse and validate command line arguments. """
 
+    # create parser..
     parser = argparse.ArgumentParser()
-
     common_parameters(parser)
     analyze_parameters(parser)
     build_command(parser)
-
+    # run it..
     args = parser.parse_args()
-
+    # validate..
     if args.help_checkers_verbose:
         print_checkers(get_checkers(args.clang, args.plugins))
         parser.exit()
     elif args.help_checkers:
         print_active_checkers(get_checkers(args.clang, args.plugins))
         parser.exit()
-
     if not args.build:
         parser.error('missing build command')
-
+    # return it..
     return args
 
 
@@ -90,7 +88,6 @@ def setup_environment(args, destination, wrapper_dir):
         'BUILD_ANALYZE_REPORT_FAILURES': 'yes' if args.report_failures else '',
         'BUILD_ANALYZE_PARAMETERS': ' '.join(analyzer_params(args))
     })
-
     return environment
 
 
