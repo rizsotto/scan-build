@@ -27,9 +27,9 @@ def run(opts):
     just return and break the chain. """
 
     try:
-        logging.debug("Run analyzer against '%s'", opts['command'])
-        opts.update(classify_parameters(shlex.split(opts['command'])))
-        del opts['command']
+        command = opts.pop('command')
+        logging.debug("Run analyzer against '%s'", command)
+        opts.update(classify_parameters(shlex.split(command)))
 
         return action_check(opts)
     except Exception:
@@ -167,11 +167,8 @@ def create_commands(opts, continuation=set_analyzer_output):
 
     common = []
     if 'arch' in opts:
-        common.extend(['-arch', opts['arch']])
-        del opts['arch']
-    if 'compile_options' in opts:
-        common.extend(opts['compile_options'])
-        del opts['compile_options']
+        common.extend(['-arch', opts.pop('arch')])
+    common.extend(opts.pop('compile_options', []))
     common.extend(['-x', opts['language']])
     common.append(opts['file'])
 
@@ -264,8 +261,7 @@ def arch_check(opts, continuation=language_check):
 def action_check(opts, continuation=arch_check):
     """ Continue analysis only if it compilation or link. """
 
-    if opts['action'] <= Action.Compile:
-        del opts['action']
+    if opts.pop('action') <= Action.Compile:
         return continuation(opts)
     else:
         logging.debug('skip analysis, not compilation nor link')

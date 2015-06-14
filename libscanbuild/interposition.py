@@ -106,8 +106,8 @@ def wrapper(cplusplus):
     compilation = [compiler] + sys.argv[1:]
     logging.info('execute compiler: %s', compilation)
     result = subprocess.call(compilation)
-    # run analyzer
     try:
+        # collect the needed parameters from environment, crash when missing
         consts = {
             'clang': os.getenv('BUILD_ANALYZE_CLANG'),
             'output_dir': os.getenv('BUILD_ANALYZE_REPORT_DIR'),
@@ -117,15 +117,12 @@ def wrapper(cplusplus):
                                      '').split(' '),
             'directory': os.getcwd(),
         }
-        parameters = classify_parameters(sys.argv)
-
-        filenames = parameters.get('files', [])
-        del parameters['files']
+        # get relevant parameters from command line arguments
+        args = classify_parameters(sys.argv)
+        filenames = args.pop('files', [])
         for filename in (name for name in filenames if is_source_file(name)):
-            parameters.update({'file': filename})
-            parameters.update(consts)
+            parameters = dict(args, file=filename, **consts)
             logging.debug('analyzer parameters %s', parameters)
-
             current = action_check(parameters)
             # display error message from the static analyzer
             if current is not None:
