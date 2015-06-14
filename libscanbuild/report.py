@@ -444,10 +444,7 @@ def encode_value(container, key, encode):
 def chop(prefix, filename):
     """ Create 'filename' from '/prefix/filename' """
 
-    if not len(prefix):
-        return filename
-    else:
-        return os.path.relpath(filename, prefix)
+    return filename if not len(prefix) else os.path.relpath(filename, prefix)
 
 
 def escape(text):
