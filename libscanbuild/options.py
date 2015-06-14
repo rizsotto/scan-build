@@ -29,7 +29,7 @@ def create_parser():
         help="""Run the static analyzer against the given
                 build command.""")
 
-    common_parameters(everything)
+    common_parameters(everything, True)
     analyze_parameters(everything)
     build_command(everything)
 
@@ -38,7 +38,7 @@ def create_parser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         help="""Only runs the build and write compilation database.""")
 
-    common_parameters(intercept)
+    common_parameters(intercept, True)
     intercept_parameters(intercept)
     build_command(intercept)
 
@@ -48,23 +48,24 @@ def create_parser():
         help="""Only run the static analyzer against the given
                 compilation database.""")
 
-    common_parameters(analyze)
+    common_parameters(analyze, True)
     analyze_parameters(analyze)
 
     return parser
 
 
-def common_parameters(parser):
+def common_parameters(parser, add_cdb):
     parser.add_argument(
         '--verbose', '-v',
         action='count',
         default=0,
         help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
-    parser.add_argument('--cdb',
-                        metavar='<file>',
-                        default="compile_commands.json",
-                        help="""The JSON compilation database.""")
+    if add_cdb:
+        parser.add_argument('--cdb',
+                            metavar='<file>',
+                            default="compile_commands.json",
+                            help="""The JSON compilation database.""")
 
 
 def build_command(parser):

@@ -39,7 +39,7 @@ def main(bin_dir):
             exit_code = subprocess.call(args.build, env=environment)
             logging.debug('build finished with exit code: %d', exit_code)
             # cover report generation and bug counting
-            number_of_bugs = document(args, target_dir.name)
+            number_of_bugs = document(args, target_dir.name, False)
             # set exit status as it was requested
             return number_of_bugs if args.status_bugs else exit_code
     except KeyboardInterrupt:
@@ -53,8 +53,9 @@ def parse_and_validate_arguments():
     """ Parse and validate command line arguments. """
 
     # create parser..
-    parser = argparse.ArgumentParser()
-    common_parameters(parser)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    common_parameters(parser, False)
     analyze_parameters(parser)
     build_command(parser)
     # run it..

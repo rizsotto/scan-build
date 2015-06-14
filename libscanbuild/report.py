@@ -25,7 +25,7 @@ from libscanbuild.clang import get_version
 __all__ = ['document']
 
 
-def document(args, output_dir):
+def document(args, output_dir, use_cdb):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html_reports_available = args.output_format in {'html', 'plist-html'}
@@ -38,8 +38,7 @@ def document(args, output_dir):
     # generate cover file when it's needed
     if html_reports_available and result:
         # common prefix for source files to have sort filenames
-        prefix = commonprefix_from(args.cdb) if os.path.exists(args.cdb) else \
-            os.getcwd()
+        prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
         # assemble the cover from multiple fragments
         try:
             fragments = []
@@ -51,7 +50,7 @@ def document(args, output_dir):
             assemble_cover(output_dir, prefix, args, fragments)
             # copy additinal files to the report
             copy_resource_files(output_dir)
-            if os.path.exists(args.cdb):
+            if use_cdb:
                 shutil.copy(args.cdb, output_dir)
         finally:
             for fragment in fragments:

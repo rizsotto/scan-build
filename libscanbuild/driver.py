@@ -52,7 +52,7 @@ def main(bin_dir):
         with ReportDirectory(args.output, args.keep_empty) as target_dir:
             run_analyzer(args, target_dir.name)
             # cover report generation and bug counting
-            number_of_bugs = document(args, target_dir.name)
+            number_of_bugs = document(args, target_dir.name, True)
             # remove the compilation database when it was not requested
             if args.action == 'all' and os.path.exists(args.cdb):
                 os.unlink(args.cdb)
