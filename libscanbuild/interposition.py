@@ -83,7 +83,7 @@ def setup_environment(args, destination, wrapper_dir):
         'BUILD_ANALYZE_CC': args.cc,
         'BUILD_ANALYZE_CXX': args.cxx,
         'BUILD_ANALYZE_CLANG': args.clang,
-        'BUILD_ANALYZE_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO',
+        'BUILD_ANALYZE_VERBOSE': 'DEBUG' if args.verbose > 2 else 'WARNING',
         'BUILD_ANALYZE_REPORT_DIR': destination,
         'BUILD_ANALYZE_REPORT_FORMAT': args.output_format,
         'BUILD_ANALYZE_REPORT_FAILURES': 'yes' if args.report_failures else '',
