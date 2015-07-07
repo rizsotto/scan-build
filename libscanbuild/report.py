@@ -420,17 +420,9 @@ def prettify_crash(prefix, output_dir):
 def copy_resource_files(output_dir):
     """ Copy the javascript and css files to the report directory. """
 
-    try:
-        import pkg_resources
-        package = 'libscanbuild'
-        resources_dir = pkg_resources.resource_filename(package, 'resources')
-        for resource in pkg_resources.resource_listdir(package, 'resources'):
-            shutil.copy(os.path.join(resources_dir, resource), output_dir)
-    except ImportError:
-        resources_dir = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), 'resources')
-        for resource in os.listdir(resources_dir):
-            shutil.copy(os.path.join(resources_dir, resource), output_dir)
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    for resource in os.listdir(os.path.join(this_dir, 'resources')):
+        shutil.copy(os.path.join(this_dir, 'resources', resource), output_dir)
 
 
 def encode_value(container, key, encode):
