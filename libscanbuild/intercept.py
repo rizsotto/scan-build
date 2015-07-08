@@ -27,7 +27,9 @@ import os
 import os.path
 import re
 import shlex
+import glob
 import itertools
+from libear import ear_library
 from libscanbuild import duplicate_check, tempdir
 from libscanbuild.command import Action, classify_parameters
 
@@ -69,7 +71,8 @@ def capture(args, wrappers_dir):
         logging.debug('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
         commands = (parse_exec_trace(os.path.join(tmpdir, filename))
-                    for filename in sorted(os.listdir(tmpdir)))
+                    for filename
+                    in sorted(glob.iglob(os.path.join(tmpdir, '*.cmd'))))
         # do post processing
         entries = post_processing(itertools.chain.from_iterable(commands))
         # dump the compilation database
@@ -85,10 +88,13 @@ def setup_environment(args, destination, wrappers_dir):
     The exec calls will be logged by the 'libear' preloaded library or by the
     'wrapper' programs. """
 
+    compiler = args.clang if 'clang' in args.__dict__ else 'cc'
+    ear_library_path = ear_library(compiler, destination)
+
     environment = dict(os.environ)
     environment.update({'BUILD_INTERCEPT_TARGET_DIR': destination})
 
-    if sys.platform in {'win32', 'cygwin'} or not ear_library_path(False):
+    if sys.platform in {'win32', 'cygwin'} or not ear_library_path:
         environment.update({
             'CC': os.path.join(wrappers_dir, 'intercept-cc'),
             'CXX': os.path.join(wrappers_dir, 'intercept-cxx'),
@@ -98,11 +104,11 @@ def setup_environment(args, destination, wrappers_dir):
         })
     elif 'darwin' == sys.platform:
         environment.update({
-            'DYLD_INSERT_LIBRARIES': ear_library_path(True),
+            'DYLD_INSERT_LIBRARIES': ear_library_path,
             'DYLD_FORCE_FLAT_NAMESPACE': '1'
         })
     else:
-        environment.update({'LD_PRELOAD': ear_library_path(False)})
+        environment.update({'LD_PRELOAD': ear_library_path})
 
     return environment
 
@@ -237,18 +243,6 @@ def entry_hash(entry):
     command = ' '.join(shlex.split(entry['command'])[1:])
 
     return '<>'.join([filename, directory, command])
-
-
-def ear_library_path(darwin):
-    """ Returns the full path to the 'libear' library. """
-
-    try:
-        import pkg_resources
-        lib_name = 'libear.dylib' if darwin else 'libear.so'
-        lib_file = pkg_resources.resource_filename('libscanbuild', lib_name)
-        return lib_file if os.path.exists(lib_file) else None
-    except ImportError:
-        return None
 
 
 if sys.version_info.major >= 3 and sys.version_info.minor >= 2:

@@ -55,8 +55,8 @@ setup(
     scripts=['bin/scan-build',
              'bin/intercept-build', 'bin/intercept-cc', 'bin/intercept-c++',
              'bin/analyze-build', 'bin/analyze-cc', 'bin/analyze-c++'],
-    packages=['libscanbuild'],
-    package_data={'libscanbuild': ['resources/*']},
+    packages=['libscanbuild', 'libear'],
+    package_data={'libscanbuild': ['resources/*'], 'libear': ['config.h.in', 'ear.c']},
     cmdclass={'buildear': BuildEAR, 'install': Install, 'build': Build},
     classifiers=[
         "Development Status :: 4 - Beta",

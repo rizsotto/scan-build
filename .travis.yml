@@ -17,7 +17,7 @@ install:
   - pip install pep8 coveralls
 
 script:
-  - pep8 libscanbuild tests
+  - pep8 libear libscanbuild tests
   - python setup.py check
   - python setup.py install
   - coverage run --source=libscanbuild setup.py test

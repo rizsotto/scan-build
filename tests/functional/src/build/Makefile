@@ -31,3 +31,6 @@ build_broken: $(BAD_OBJS)
 
 build_all_in_one:
 	$(CC) -o $(PROGRAM) $(CFLAGS) $(LDFLAGS) $(CLEAN_SRCS:%.c=$(SRCDIR)/%.c)
+
+clean:
+	rm -f $(PROGRAM) $(OBJDIR)/*.o
