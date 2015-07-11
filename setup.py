@@ -2,44 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup
-from subprocess import check_call
-from distutils.dir_util import mkpath
-from distutils.command.build import build
-from distutils.command.install import install
-
-
-class BuildEAR(build):
-
-    def run(self):
-        import os
-        import os.path
-
-        mkpath(self.build_temp)
-
-        source_dir = os.path.join(os.getcwd(), 'libear')
-        dest_dir = os.path.abspath(self.build_lib)
-
-        cmd = ['cmake', '-DCMAKE_INSTALL_PREFIX=' + dest_dir, source_dir]
-        check_call(cmd, cwd=self.build_temp)
-
-        cmd = ['make', 'install']
-        check_call(cmd, cwd=self.build_temp)
-
-
-class Build(build):
-
-    def run(self):
-        self.run_command('buildear')
-        build.run(self)
-
-
-class Install(install):
-
-    def run(self):
-        self.run_command('build')
-        self.run_command('install_scripts')
-        install.run(self)
-
 
 setup(
     name='beye',
@@ -57,7 +19,6 @@ setup(
              'bin/analyze-build', 'bin/analyze-cc', 'bin/analyze-c++'],
     packages=['libscanbuild', 'libear'],
     package_data={'libscanbuild': ['resources/*'], 'libear': ['config.h.in', 'ear.c']},
-    cmdclass={'buildear': BuildEAR, 'install': Install, 'build': Build},
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
