@@ -20,7 +20,7 @@ def ear_library(compiler, dst_dir):
 
     try:
         src_dir = os.path.dirname(os.path.realpath(__file__))
-        with make_context(sys.platform, src_dir) as context:
+        with make_context(src_dir) as context:
             context.set_compiler(compiler)
             context.set_language_standard('c99')
             context.add_definitions(['-D_GNU_SOURCE'])
@@ -167,12 +167,13 @@ class LinuxContext(UnixContext):
         return ['dl']
 
 
-def make_context(platform, src_dir):
+def make_context(src_dir):
+    platform = sys.platform
     if platform in {'win32', 'cygwin'}:
         raise RuntimeError('not implemented on this platform')
     elif platform == 'darwin':
         return DarwinContext(src_dir)
-    elif platform == 'linux':
+    elif platform in {'linux', 'linux2'}:
         return LinuxContext(src_dir)
     else:
         return UnixContext(src_dir)

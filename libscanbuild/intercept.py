@@ -88,7 +88,7 @@ def setup_environment(args, destination, wrappers_dir):
     The exec calls will be logged by the 'libear' preloaded library or by the
     'wrapper' programs. """
 
-    compiler = args.clang if 'clang' in args.__dict__ else 'cc'
+    compiler = args.cc if 'cc' in args.__dict__ else 'cc'
     ear_library_path = ear_library(compiler, destination)
 
     environment = dict(os.environ)
