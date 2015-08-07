@@ -141,18 +141,19 @@ class AnalyzerTest(unittest.TestCase):
         def test(expected, input):
             spy = fixtures.Spy()
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
-            self.assertEqual(expected, spy.arg)
+            self.assertEqual(expected, spy.arg['language'])
 
         l = 'language'
         f = 'file'
-        i = 'cxx'
-        test({f: 'file.c', l: 'c'}, {f: 'file.c', l: 'c'})
-        test({f: 'file.c', l: 'c++'}, {f: 'file.c', l: 'c++'})
-        test({f: 'file.c', l: 'c++', i: True}, {f: 'file.c', i: True})
-        test({f: 'file.c', l: 'c'}, {f: 'file.c'})
-        test({f: 'file.cxx', l: 'c++'}, {f: 'file.cxx'})
-        test({f: 'file.i', l: 'c-cpp-output'}, {f: 'file.i'})
-        test({f: 'f.i', l: 'c-cpp-output'}, {f: 'f.i', l: 'c-cpp-output'})
+        i = 'c++'
+        test('c',   {f: 'file.c', l: 'c', i: False})
+        test('c++', {f: 'file.c', l: 'c++', i: False})
+        test('c++', {f: 'file.c', i: True})
+        test('c',   {f: 'file.c', i: False})
+        test('c++', {f: 'file.cxx', i: False})
+        test('c-cpp-output',   {f: 'file.i', i: False})
+        test('c++-cpp-output', {f: 'file.i', i: True})
+        test('c-cpp-output',   {f: 'f.i', l: 'c-cpp-output', i: True})
 
     def test_arch_loop(self):
         def test(input):
@@ -163,16 +164,16 @@ class AnalyzerTest(unittest.TestCase):
         input = {'key': 'value'}
         self.assertEqual(input, test(input))
 
-        input = {'archs_seen': ['-arch', 'i386']}
+        input = {'archs_seen': ['i386']}
         self.assertEqual({'arch': 'i386'}, test(input))
 
-        input = {'archs_seen': ['-arch', 'ppc']}
+        input = {'archs_seen': ['ppc']}
         self.assertEqual(None, test(input))
 
-        input = {'archs_seen': ['-arch', 'i386', '-arch', 'ppc']}
+        input = {'archs_seen': ['i386', 'ppc']}
         self.assertEqual({'arch': 'i386'}, test(input))
 
-        input = {'archs_seen': ['-arch', 'i386', '-arch', 'sparc']}
+        input = {'archs_seen': ['i386', 'sparc']}
         result = test(input)
         self.assertTrue(result == {'arch': 'i386'} or
                         result == {'arch': 'sparc'})

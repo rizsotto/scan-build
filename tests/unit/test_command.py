@@ -16,9 +16,6 @@ class ParseTest(unittest.TestCase):
             opts = sut.classify_parameters(cmd)
             self.assertEqual(expected, opts['action'])
 
-        Info = sut.Action.Info
-        test(Info, ['clang', 'source.c', '-print-prog-name'])
-
         Link = sut.Action.Link
         test(Link, ['clang', 'source.c'])
 
@@ -26,7 +23,7 @@ class ParseTest(unittest.TestCase):
         test(Compile, ['clang', '-c', 'source.c'])
         test(Compile, ['clang', '-c', 'source.c', '-MF', 'source.d'])
 
-        Preprocess = sut.Action.Preprocess
+        Preprocess = sut.Action.Ignored
         test(Preprocess, ['clang', '-E', 'source.c'])
         test(Preprocess, ['clang', '-c', '-E', 'source.c'])
         test(Preprocess, ['clang', '-c', '-M', 'source.c'])
@@ -37,11 +34,11 @@ class ParseTest(unittest.TestCase):
             opts = sut.classify_parameters(cmd)
             return opts.get('compile_options', [])
 
-        self.assertEqual(['-O1'], test(['clang', '-c', 'source.c', '-O']))
-        self.assertEqual(['-O1'], test(['clang', '-c', 'source.c', '-O1']))
-        self.assertEqual(['-O2'], test(['clang', '-c', 'source.c', '-Os']))
-        self.assertEqual(['-O2'], test(['clang', '-c', 'source.c', '-O2']))
-        self.assertEqual(['-O3'], test(['clang', '-c', 'source.c', '-O3']))
+        self.assertEqual([], test(['clang', '-c', 'source.c', '-O']))
+        self.assertEqual([], test(['clang', '-c', 'source.c', '-O1']))
+        self.assertEqual([], test(['clang', '-c', 'source.c', '-Os']))
+        self.assertEqual([], test(['clang', '-c', 'source.c', '-O2']))
+        self.assertEqual([], test(['clang', '-c', 'source.c', '-O3']))
 
     def test_language(self):
         def test(cmd):
@@ -60,9 +57,9 @@ class ParseTest(unittest.TestCase):
         eq = self.assertEqual
 
         eq([], test(['clang', '-c', 'source.c']))
-        eq(['-arch', 'mips'],
+        eq(['mips'],
            test(['clang', '-c', 'source.c', '-arch', 'mips']))
-        eq(['-arch', 'mips', '-arch', 'i386'],
+        eq(['mips', 'i386'],
            test(['clang', '-c', 'source.c', '-arch', 'mips', '-arch', 'i386']))
 
     def test_input_file(self):
@@ -75,17 +72,6 @@ class ParseTest(unittest.TestCase):
         eq(['src.c'], test(['clang', 'src.c']))
         eq(['src.c'], test(['clang', '-c', 'src.c']))
         eq(['s1.c', 's2.c'], test(['clang', '-c', 's1.c', 's2.c']))
-
-    def test_output_file(self):
-        def test(cmd):
-            opts = sut.classify_parameters(cmd)
-            return opts.get('output', None)
-
-        eq = self.assertEqual
-
-        eq(None, test(['clang', 'src.c']))
-        eq('src.o', test(['clang', '-c', 'src.c', '-o', 'src.o']))
-        eq('src.o', test(['clang', '-c', '-o', 'src.o', 'src.c']))
 
     def test_include(self):
         def test(cmd):
@@ -130,20 +116,16 @@ class ParseTest(unittest.TestCase):
            test(['clang', '-c', 'src.c', '-Dvar="val ues"']))
 
     def test_ignored_flags(self):
-        def test(cmd):
-            salt = ['-I.', '-D_THIS']
-            opts = sut.classify_parameters(cmd + salt)
-            self.assertEqual(salt, opts.get('compile_options'))
-            return opts.get('link_options', [])
+        def test(flags):
+            cmd = ['clang', 'src.o']
+            opts = sut.classify_parameters(cmd + flags)
+            self.assertEqual(['src.o'], opts.get('compile_options'))
 
-        eq = self.assertEqual
-
-        eq([],
-           test(['clang', 'src.o']))
-        eq([],
-           test(['clang', 'src.o', '-lrt', '-L/opt/company/lib']))
-        eq([],
-           test(['clang', 'src.o', '-framework', 'foo']))
+        test([])
+        test(['-lrt', '-L/opt/company/lib'])
+        test(['-static'])
+        test(['-Wnoexcept', '-Wall', '-Wno-cpp'])
+        test(['-mtune=i386', '-mcpu=i386'])
 
     def test_compile_only_flags(self):
         def test(cmd):
@@ -152,17 +134,8 @@ class ParseTest(unittest.TestCase):
 
         eq = self.assertEqual
 
-        eq([], test(['clang', '-c', 'src.c']))
-        eq([],
-           test(['clang', '-c', 'src.c', '-Wnoexcept']))
-        eq([],
-           test(['clang', '-c', 'src.c', '-Wall']))
-        eq(['-Wno-cpp'],
-           test(['clang', '-c', 'src.c', '-Wno-cpp']))
         eq(['-std=C99'],
            test(['clang', '-c', 'src.c', '-std=C99']))
-        eq(['-mtune=i386', '-mcpu=i386'],
-           test(['clang', '-c', 'src.c', '-mtune=i386', '-mcpu=i386']))
         eq(['-nostdinc'],
            test(['clang', '-c', 'src.c', '-nostdinc']))
         eq(['-isystem', '/image/debian'],
@@ -181,7 +154,7 @@ class ParseTest(unittest.TestCase):
 
         eq = self.assertEqual
 
-        eq([],
+        eq(['-fsyntax-only'],
            test(['clang', '-c', 'src.c', '-fsyntax-only']))
         eq(['-fsinged-char'],
            test(['clang', '-c', 'src.c', '-fsinged-char']))
@@ -193,13 +166,13 @@ class ParseTest(unittest.TestCase):
            test(['clang', '-c', 'src.c', '--sysroot', '/']))
         eq(['-isysroot', '/'],
            test(['clang', '-c', 'src.c', '-isysroot', '/']))
-        eq([],
+        eq(['-sectorder', 'a', 'b', 'c'],
            test(['clang', '-c', 'src.c', '-sectorder', 'a', 'b', 'c']))
 
     def test_detect_cxx_from_compiler_name(self):
         def test(cmd):
             opts = sut.classify_parameters(cmd)
-            return opts.get('cxx')
+            return opts.get('c++')
 
         eq = self.assertEqual
 

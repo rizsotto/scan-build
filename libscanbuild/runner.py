@@ -180,7 +180,7 @@ def create_commands(opts, continuation=set_analyzer_output):
     return continuation(opts)
 
 
-@require(['file'])
+@require(['file', 'c++'])
 def language_check(opts, continuation=create_commands):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
@@ -213,7 +213,7 @@ def language_check(opts, continuation=create_commands):
 
     key = 'language'
     language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts.get('cxx', False))
+        from_filename(opts['file'], opts['c++'])
 
     if language is None:
         logging.debug('skip analysis, language not known')
@@ -236,7 +236,7 @@ def arch_check(opts, continuation=language_check):
     key = 'archs_seen'
     if key in opts:
         # filter out disabled architectures and -arch switches
-        archs = [a for a in opts[key] if '-arch' != a and a not in disableds]
+        archs = [a for a in opts[key] if a not in disableds]
 
         if not archs:
             logging.debug('skip analysis, found not supported arch')

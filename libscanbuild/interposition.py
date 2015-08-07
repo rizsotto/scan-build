@@ -17,8 +17,7 @@ from libscanbuild.driver import (initialize_logging, ReportDirectory,
 from libscanbuild.report import document
 from libscanbuild.clang import get_checkers
 from libscanbuild.runner import action_check
-from libscanbuild.intercept import is_source_file
-from libscanbuild.command import classify_parameters
+from libscanbuild.command import classify_parameters, is_source
 
 __all__ = ['main', 'wrapper']
 
@@ -118,7 +117,7 @@ def wrapper(cplusplus):
         # get relevant parameters from command line arguments
         args = classify_parameters(sys.argv)
         filenames = args.pop('files', [])
-        for filename in (name for name in filenames if is_source_file(name)):
+        for filename in (name for name in filenames if is_source(name)):
             parameters = dict(args, file=filename, **consts)
             logging.debug('analyzer parameters %s', parameters)
             current = action_check(parameters)
