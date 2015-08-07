@@ -47,6 +47,7 @@ def ear_library(compiler, dst_dir):
                 target.add_include(dst_dir)
                 target.add_sources('ear.c')
                 target.link_against(context.dl_libraries())
+                target.link_against(['pthread'])
                 target.build_release(dst_dir)
                 return os.path.join(dst_dir, target.name)
 
