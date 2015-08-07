@@ -8,7 +8,7 @@
 import re
 import os
 
-__all__ = ['Action', 'classify_parameters', 'is_source']
+__all__ = ['Action', 'classify_parameters', 'classify_source']
 
 
 class Action(object):
@@ -61,7 +61,7 @@ def classify_parameters(command):
         elif re.match(r'^-([mW].+|O.*)', arg):
             pass
         # parameters which looks source file are taken...
-        elif re.match(r'^[^-].+', arg) and is_source(arg):
+        elif re.match(r'^[^-].+', arg) and classify_source(arg):
             state['files'].append(arg)
         # and consider everything else as compile option.
         else:
@@ -70,15 +70,30 @@ def classify_parameters(command):
     return state
 
 
-def is_source(filename):
-    """ A predicate to decide the filename is a source file or not. """
+def classify_source(filename, cplusplus=False):
+    """ Return the language from fille name extension. """
 
-    accepted = {
-        '.c', '.cc', '.cp', '.cpp', '.cxx', '.c++', '.m', '.mm', '.i', '.ii',
-        '.mii'
+    mapping = {
+        '.c': 'c++' if cplusplus else 'c',
+        '.i': 'c++-cpp-output' if cplusplus else 'c-cpp-output',
+        '.ii': 'c++-cpp-output',
+        '.m': 'objective-c',
+        '.mi': 'objective-c-cpp-output',
+        '.mm': 'objective-c++',
+        '.mii': 'objective-c++-cpp-output',
+        '.C': 'c++',
+        '.cc': 'c++',
+        '.CC': 'c++',
+        '.cp': 'c++',
+        '.cpp': 'c++',
+        '.cxx': 'c++',
+        '.c++': 'c++',
+        '.C++': 'c++',
+        '.txx': 'c++'
     }
-    __, ext = os.path.splitext(filename)
-    return ext.lower() in accepted
+
+    __, extension = os.path.splitext(os.path.basename(filename))
+    return mapping.get(extension)
 
 
 def cplusplus_compiler(name):

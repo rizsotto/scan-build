@@ -12,7 +12,7 @@ import os.path
 import shlex
 import tempfile
 import functools
-from libscanbuild.command import classify_parameters, Action
+from libscanbuild.command import classify_parameters, Action, classify_source
 from libscanbuild.clang import get_arguments, get_version
 
 __all__ = ['run']
@@ -185,27 +185,6 @@ def language_check(opts, continuation=create_commands):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
 
-    def from_filename(name, cplusplus_compiler):
-        """ Return the language from fille name extension. """
-
-        mapping = {
-            '.c': 'c++' if cplusplus_compiler else 'c',
-            '.cp': 'c++',
-            '.cpp': 'c++',
-            '.cxx': 'c++',
-            '.txx': 'c++',
-            '.cc': 'c++',
-            '.C': 'c++',
-            '.ii': 'c++-cpp-output',
-            '.i': 'c++-cpp-output' if cplusplus_compiler else 'c-cpp-output',
-            '.m': 'objective-c',
-            '.mi': 'objective-c-cpp-output',
-            '.mm': 'objective-c++',
-            '.mii': 'objective-c++-cpp-output'
-        }
-        (_, extension) = os.path.splitext(os.path.basename(name))
-        return mapping.get(extension)
-
     accepteds = {
         'c', 'c++', 'objective-c', 'objective-c++', 'c-cpp-output',
         'c++-cpp-output', 'objective-c-cpp-output'
@@ -213,7 +192,7 @@ def language_check(opts, continuation=create_commands):
 
     key = 'language'
     language = opts[key] if key in opts else \
-        from_filename(opts['file'], opts['c++'])
+        classify_source(opts['file'], opts['c++'])
 
     if language is None:
         logging.debug('skip analysis, language not known')
