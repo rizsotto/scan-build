@@ -197,7 +197,8 @@ class Configure:
                 with open(os.path.join(work_dir, src_file), 'w') as handle:
                     handle.write(source)
 
-                execute([self.ctx.compiler, src_file], cwd=work_dir)
+                execute([self.ctx.compiler, src_file] + self.ctx.c_flags,
+                        cwd=work_dir)
                 return True
         except Exception:
             return False
