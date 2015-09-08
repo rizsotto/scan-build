@@ -26,12 +26,12 @@ import sys
 import os
 import os.path
 import re
-import shlex
 import glob
 import itertools
 from libear import ear_library
 from libscanbuild import duplicate_check, tempdir
 from libscanbuild.command import Action, classify_parameters
+from libscanbuild.shell import encode, decode
 
 __all__ = ['capture', 'wrapper']
 
@@ -175,9 +175,6 @@ def parse_exec_trace(filename):
 def format_entry(entry):
     """ Generate the desired fields for compilation database entries. """
 
-    def join_command(args):
-        return ' '.join([shell_escape(arg) for arg in args])
-
     def abspath(cwd, name):
         """ Create normalized absolute path from input filename. """
         fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
@@ -192,22 +189,9 @@ def format_entry(entry):
             logging.debug('formated as: %s', command)
             yield {
                 'directory': entry['directory'],
-                'command': join_command(command),
+                'command': encode(command),
                 'file': abspath(entry['directory'], source)
             }
-
-
-def shell_escape(arg):
-    """ Create a single string from list.
-
-    The major challenge, to deal with white spaces. Which are used by
-    the shell as separator. (Eg.: -D_KEY="Value with spaces") """
-
-    def quote(arg):
-        table = {'\\': '\\\\', '"': '\\"', "'": "\\'"}
-        return '"' + ''.join([table.get(c, c) for c in arg]) + '"'
-
-    return quote(arg) if len(shlex.split(arg)) > 1 else arg
 
 
 def compiler_call(entry):
@@ -235,7 +219,7 @@ def entry_hash(entry):
     # 'clang' therefore both call would be logged. To avoid
     # this the hash does not contain the first word of the
     # command.
-    command = ' '.join(shlex.split(entry['command'])[1:])
+    command = ' '.join(decode(entry['command'])[1:])
 
     return '<>'.join([filename, directory, command])
 

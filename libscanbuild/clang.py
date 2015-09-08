@@ -11,7 +11,7 @@ a subset of that, it makes sense to create a function specific wrapper. """
 import subprocess
 import logging
 import re
-import shlex
+from libscanbuild.shell import decode
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
 
@@ -41,10 +41,6 @@ def get_arguments(cwd, command):
             raise Exception("output not found")
         return last
 
-    def strip_quotes(quoted):
-        match = re.match(r'^\"([^\"]*)\"$', quoted)
-        return match.group(1) if match else quoted
-
     cmd = command[:]
     cmd.insert(1, '-###')
     logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
@@ -59,7 +55,7 @@ def get_arguments(cwd, command):
     if 0 == child.returncode:
         if re.match(r'^clang: error:', line):
             raise Exception(line)
-        return [strip_quotes(x) for x in shlex.split(line)]
+        return decode(line)
     else:
         raise Exception(line)
 

@@ -9,11 +9,11 @@ import subprocess
 import logging
 import os
 import os.path
-import shlex
 import tempfile
 import functools
 from libscanbuild.command import classify_parameters, Action, classify_source
 from libscanbuild.clang import get_arguments, get_version
+from libscanbuild.shell import decode
 
 __all__ = ['run']
 
@@ -29,7 +29,7 @@ def run(opts):
     try:
         command = opts.pop('command')
         logging.debug("Run analyzer against '%s'", command)
-        opts.update(classify_parameters(shlex.split(command)))
+        opts.update(classify_parameters(decode(command)))
 
         return action_check(opts)
     except Exception:

@@ -10,6 +10,7 @@ from . import test_runner
 from . import test_report
 from . import test_driver
 from . import test_intercept
+from . import test_shell
 
 
 def load_tests(loader, suite, pattern):
@@ -19,4 +20,5 @@ def load_tests(loader, suite, pattern):
     suite.addTests(loader.loadTestsFromModule(test_report))
     suite.addTests(loader.loadTestsFromModule(test_driver))
     suite.addTests(loader.loadTestsFromModule(test_intercept))
+    suite.addTests(loader.loadTestsFromModule(test_shell))
     return suite
