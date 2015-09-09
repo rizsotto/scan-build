@@ -208,6 +208,11 @@ def analyze_parameters(parser):
         default='c++',
         help="""This is the same as "--use-cc" but for C++ code.""")
     advanced.add_argument(
+        '--override-compiler',
+        action='store_true',
+        help="""Always resort to the compiler wrapper even when better
+                interposition methods are available.""")
+    advanced.add_argument(
         '--analyzer-config', '-analyzer-config',
         metavar='<options>',
         help="""Provide options to pass through to the analyzer's
