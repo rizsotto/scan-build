@@ -241,11 +241,11 @@ def analyze_parameters(parser):
         help="""Loading external checkers using the clang plugin interface.""")
     plugins.add_argument('--enable-checker', '-enable-checker',
                          metavar='<checker name>',
-                         action='append',
+                         action=AppendCommaSeparated,
                          help="""Enable specific checker.""")
     plugins.add_argument('--disable-checker', '-disable-checker',
                          metavar='<checker name>',
-                         action='append',
+                         action=AppendCommaSeparated,
                          help="""Disable specific checker.""")
     plugins.add_argument(
         '--help-checkers',
@@ -258,3 +258,16 @@ def analyze_parameters(parser):
         '--help-checkers-verbose',
         action='store_true',
         help="""Print all available checkers and mark the enabled ones.""")
+
+
+class AppendCommaSeparated(argparse.Action):
+    """ argparse Action class to support multiple comma separated lists. """
+
+    def __call__(self, __parser, namespace, values, __option_string):
+        # getattr(obj, attr, default) does not really returns default but none
+        if getattr(namespace, self.dest, None) is None:
+            setattr(namespace, self.dest, [])
+        # once it's fixed we can use as expected
+        actual = getattr(namespace, self.dest)
+        actual.extend(values.split(','))
+        setattr(namespace, self.dest, actual)
