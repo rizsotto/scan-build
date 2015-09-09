@@ -20,7 +20,6 @@ import time
 import json
 import tempfile
 import multiprocessing
-from libscanbuild import tempdir
 from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.options import create_parser
@@ -235,12 +234,5 @@ class ReportDirectory(object):
 
     @staticmethod
     def _create(hint):
-        if tempdir() != hint:
-            try:
-                os.mkdir(hint)
-                return hint
-            except OSError:
-                raise
-        else:
-            stamp = time.strftime('%Y-%m-%d-%H%M%S', time.localtime())
-            return tempfile.mkdtemp(prefix='scan-build-{0}-'.format(stamp))
+        stamp = time.strftime('scan-build-%Y-%m-%d-%H%M%S-', time.localtime())
+        return tempfile.mkdtemp(prefix=stamp, dir=hint)
