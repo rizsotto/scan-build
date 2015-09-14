@@ -5,6 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 from ...unit import fixtures
+from . import call_and_report
 import unittest
 
 import os.path
@@ -31,82 +32,66 @@ def prepare_cdb(name, target_dir):
 def run_driver(directory, cdb, args):
     cmd = ['intercept-build', 'analyze', '--cdb', cdb, '--output', directory] \
         + args
-    child = subprocess.Popen(cmd,
-                             universal_newlines=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-    output = child.stdout.readlines()
-    child.stdout.close()
-    child.wait()
-    return (child.returncode, output)
+    return call_and_report(cmd, [])
 
 
 class OutputDirectoryTest(unittest.TestCase):
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
-            self.assertTrue(os.path.isdir(outdir))
+            exit_code, reportdir = run_driver(tmpdir, cdb, [])
+            self.assertTrue(os.path.isdir(reportdir))
 
     def test_clear_deletes_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
-            self.assertFalse(os.path.isdir(outdir))
+            exit_code, reportdir = run_driver(tmpdir, cdb, [])
+            self.assertFalse(os.path.isdir(reportdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, ['--keep-empty'])
-            self.assertTrue(os.path.isdir(outdir))
+            exit_code, reportdir = run_driver(tmpdir, cdb, ['--keep-empty'])
+            self.assertTrue(os.path.isdir(reportdir))
 
 
 class ExitCodeTest(unittest.TestCase):
     def test_regular_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
+            exit_code, __ = run_driver(tmpdir, cdb, [])
             self.assertFalse(exit_code)
 
     def test_clear_does_not_set_exit_code(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
+            exit_code, __ = run_driver(tmpdir, cdb, [])
             self.assertFalse(exit_code)
 
     def test_regular_sets_exit_code_if_asked(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, ['--status-bugs'])
+            exit_code, __ = run_driver(tmpdir, cdb, ['--status-bugs'])
             self.assertTrue(exit_code)
 
     def test_clear_does_not_set_exit_code_if_asked(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, ['--status-bugs'])
+            exit_code, __ = run_driver(tmpdir, cdb, ['--status-bugs'])
             self.assertFalse(exit_code)
 
     def test_regular_sets_exit_code_if_asked_from_plist(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(
-                outdir, cdb, ['--status-bugs', '--plist'])
+            exit_code, __ = run_driver(
+                tmpdir, cdb, ['--status-bugs', '--plist'])
             self.assertTrue(exit_code)
 
     def test_clear_does_not_set_exit_code_if_asked_from_plist(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(
-                outdir, cdb, ['--status-bugs', '--plist'])
+            exit_code, __ = run_driver(
+                tmpdir, cdb, ['--status-bugs', '--plist'])
             self.assertFalse(exit_code)
 
 
@@ -122,47 +107,46 @@ class OutputFormatTest(unittest.TestCase):
     def test_default_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
-            self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
-            self.assertEqual(self.get_html_count(outdir), 2)
-            self.assertEqual(self.get_plist_count(outdir), 0)
+            exit_code, reportdir = run_driver(tmpdir, cdb, [])
+            self.assertTrue(
+                os.path.exists(os.path.join(reportdir, 'index.html')))
+            self.assertEqual(self.get_html_count(reportdir), 2)
+            self.assertEqual(self.get_plist_count(reportdir), 0)
 
     def test_plist_and_html_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, ['--plist-html'])
-            self.assertTrue(os.path.exists(os.path.join(outdir, 'index.html')))
-            self.assertEqual(self.get_html_count(outdir), 2)
-            self.assertEqual(self.get_plist_count(outdir), 5)
+            exit_code, reportdir = run_driver(tmpdir, cdb, ['--plist-html'])
+            self.assertTrue(
+                os.path.exists(os.path.join(reportdir, 'index.html')))
+            self.assertEqual(self.get_html_count(reportdir), 2)
+            self.assertEqual(self.get_plist_count(reportdir), 5)
 
     def test_plist_does_not_creates_html_report(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, ['--plist'])
+            exit_code, reportdir = run_driver(tmpdir, cdb, ['--plist'])
             self.assertFalse(
-                os.path.exists(os.path.join(outdir, 'index.html')))
-            self.assertEqual(self.get_html_count(outdir), 0)
-            self.assertEqual(self.get_plist_count(outdir), 5)
+                os.path.exists(os.path.join(reportdir, 'index.html')))
+            self.assertEqual(self.get_html_count(reportdir), 0)
+            self.assertEqual(self.get_plist_count(reportdir), 5)
 
 
 class FailureReportTest(unittest.TestCase):
     def test_broken_creates_failure_reports(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
-            self.assertTrue(os.path.isdir(os.path.join(outdir, 'failures')))
+            exit_code, reportdir = run_driver(tmpdir, cdb, [])
+            self.assertTrue(
+                os.path.isdir(os.path.join(reportdir, 'failures')))
 
     def test_broken_does_not_creates_failure_reports(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(
-                outdir, cdb, ['--no-failure-reports'])
-            self.assertFalse(os.path.isdir(os.path.join(outdir, 'failures')))
+            exit_code, reportdir = run_driver(
+                tmpdir, cdb, ['--no-failure-reports'])
+            self.assertFalse(
+                os.path.isdir(os.path.join(reportdir, 'failures')))
 
 
 class TitleTest(unittest.TestCase):
@@ -174,7 +158,7 @@ class TitleTest(unittest.TestCase):
         ]
         result = dict()
 
-        index = os.path.join(directory, 'result', 'index.html')
+        index = os.path.join(directory, 'index.html')
         with open(index, 'r') as handler:
             for line in handler.readlines():
                 for regex in patterns:
@@ -188,14 +172,12 @@ class TitleTest(unittest.TestCase):
     def test_default_title_in_report(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(outdir, cdb, [])
-            self.assertTitleEqual(tmpdir, 'src - analyzer results')
+            exit_code, reportdir = run_driver(tmpdir, cdb, [])
+            self.assertTitleEqual(reportdir, 'src - analyzer results')
 
     def test_given_title_in_report(self):
         with fixtures.TempDir() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
-            outdir = os.path.join(tmpdir, 'result')
-            exit_code, output = run_driver(
-                outdir, cdb, ['--html-title', 'this is the title'])
-            self.assertTitleEqual(tmpdir, 'this is the title')
+            exit_code, reportdir = run_driver(
+                tmpdir, cdb, ['--html-title', 'this is the title'])
+            self.assertTitleEqual(reportdir, 'this is the title')

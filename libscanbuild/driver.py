@@ -214,6 +214,7 @@ class ReportDirectory(object):
     def __init__(self, hint, keep):
         self.name = ReportDirectory._create(hint)
         self.keep = keep
+        logging.info('Report directory created: %s', self.name)
 
     def __enter__(self):
         return self

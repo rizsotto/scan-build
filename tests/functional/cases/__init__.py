@@ -4,6 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import re
 import os.path
 import subprocess
 
@@ -37,3 +38,32 @@ def silent_check_call(cmd):
     return subprocess.check_call(cmd,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT)
+
+
+def call_and_report(analyzer_cmd, build_cmd):
+    child = subprocess.Popen(analyzer_cmd + ['-v'] + build_cmd,
+                             universal_newlines=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+
+    pattern = re.compile('Report directory created: (.+)')
+    directory = None
+    for line in child.stdout.readlines():
+        match = pattern.search(line)
+        if match and match.lastindex == 1:
+            directory = match.group(1)
+            break
+    child.stdout.close()
+    child.wait()
+
+    return (child.returncode, directory)
+
+
+def check_call_and_report(analyzer_cmd, build_cmd):
+    exit_code, result = call_and_report(analyzer_cmd, build_cmd)
+    if exit_code != 0:
+        raise subprocess.CalledProcessError(
+            "Command '{0}' returned non-zero exit status {1}".format(
+                cmd, exit_code))
+    else:
+        return result

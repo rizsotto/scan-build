@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 from ...unit import fixtures
-from . import make_args, silent_check_call
+from . import make_args, check_call_and_report
 import unittest
 
 import os.path
@@ -13,27 +13,25 @@ import os.path
 
 class OutputDirectoryTest(unittest.TestCase):
     @staticmethod
-    def run_sb(outdir, args):
-        return silent_check_call(
-            ['intercept-build', 'all', '-o', outdir] + args)
+    def run_sb(outdir, args, cmd):
+        return check_call_and_report(
+            ['intercept-build', 'all', '-o', outdir] + args,
+            cmd)
 
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
-            outdir = os.path.join(tmpdir, 'result')
             make = make_args(tmpdir) + ['build_regular']
-            self.run_sb(outdir, make)
+            outdir = self.run_sb(tmpdir, [], make)
             self.assertTrue(os.path.isdir(outdir))
 
     def test_clear_deletes_report_dir(self):
         with fixtures.TempDir() as tmpdir:
-            outdir = os.path.join(tmpdir, 'result')
             make = make_args(tmpdir) + ['build_clean']
-            self.run_sb(outdir, make)
+            outdir = self.run_sb(tmpdir, [], make)
             self.assertFalse(os.path.isdir(outdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
         with fixtures.TempDir() as tmpdir:
-            outdir = os.path.join(tmpdir, 'result')
             make = make_args(tmpdir) + ['build_clean']
-            self.run_sb(outdir, ['--keep-empty'] + make)
+            outdir = self.run_sb(tmpdir, ['--keep-empty'], make)
             self.assertTrue(os.path.isdir(outdir))
