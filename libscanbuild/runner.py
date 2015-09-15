@@ -170,7 +170,7 @@ def create_commands(opts, continuation=set_analyzer_output):
         common.extend(['-arch', opts.pop('arch')])
     common.extend(opts.pop('compile_options', []))
     common.extend(['-x', opts['language']])
-    common.append(opts['file'])
+    common.append(os.path.relpath(opts['file'], opts['directory']))
 
     opts.update({
         'analyze': ['--analyze'] + opts['direct_args'] + common,
