@@ -36,7 +36,7 @@ def classify_parameters(command):
         # compiler action parameters are the most important ones...
         if arg == '-c':
             action(state, Action.Compile)
-        elif arg in {'-E', '-S', '-cc1', '-M', '-MM'}:
+        elif arg in {'-E', '-S', '-cc1', '-M', '-MM', '-###'}:
             action(state, Action.Ignored)
         # take arch flags
         elif arg == '-arch':
