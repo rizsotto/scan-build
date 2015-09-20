@@ -49,6 +49,15 @@ class ParseTest(unittest.TestCase):
         self.assertEqual('c', test(['clang', '-c', 'source.c', '-x', 'c']))
         self.assertEqual('cpp', test(['clang', '-c', 'source.c', '-x', 'cpp']))
 
+    def test_output(self):
+        def test(cmd):
+            opts = sut.classify_parameters(cmd)
+            return opts.get('output')
+
+        self.assertEqual(None, test(['clang', '-c', 'source.c']))
+        self.assertEqual('source.o',
+                         test(['clang', '-c', '-o', 'source.o', 'source.c']))
+
     def test_arch(self):
         def test(cmd):
             opts = sut.classify_parameters(cmd)

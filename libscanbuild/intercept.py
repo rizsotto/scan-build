@@ -70,9 +70,9 @@ def capture(args, wrappers_dir):
         exit_code = subprocess.call(args.build, env=environment)
         logging.info('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
-        commands = (parse_exec_trace(os.path.join(tmpdir, filename))
-                    for filename
-                    in sorted(glob.iglob(os.path.join(tmpdir, '*.cmd'))))
+        commands = (
+            parse_exec_trace(os.path.join(tmpdir, filename))
+            for filename in sorted(glob.iglob(os.path.join(tmpdir, '*.cmd'))))
         # do post processing
         entries = post_processing(itertools.chain.from_iterable(commands))
         # dump the compilation database
@@ -185,7 +185,9 @@ def format_entry(entry):
     if atoms['action'] <= Action.Compile:
         for source in atoms['files']:
             compiler = 'c++' if atoms['c++'] else 'cc'
-            command = [compiler, '-c'] + atoms['compile_options'] + [source]
+            output = ['-o', atoms['output']] if atoms.get('output') else []
+            command = [compiler, '-c'
+                       ] + atoms['compile_options'] + output + [source]
             logging.debug('formated as: %s', command)
             yield {
                 'directory': entry['directory'],

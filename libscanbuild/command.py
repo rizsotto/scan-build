@@ -27,6 +27,7 @@ def classify_parameters(command):
     state = {
         'action': Action.Link,
         'files': [],
+        'output': None,
         'compile_options': [],
         'c++': cplusplus_compiler(command[0])
     }
@@ -45,6 +46,9 @@ def classify_parameters(command):
         # explicit language option saved
         elif arg == '-x':
             state.update({'language': next(args)})
+        # output saved
+        elif arg == '-o':
+            state.update({'output': next(args)})
         # some preprocessor parameters are ignored...
         elif arg in {'-MD', '-MMD', '-MG', '-MP'}:
             pass
