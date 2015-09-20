@@ -103,6 +103,10 @@ def wrapper(cplusplus):
     compilation = [compiler] + sys.argv[1:]
     logging.info('execute compiler: %s', compilation)
     result = subprocess.call(compilation)
+    # exit when it fails, ...
+    if result:
+        return result
+    # ... and run the analyzer if all went well.
     try:
         # collect the needed parameters from environment, crash when missing
         consts = {
@@ -127,5 +131,5 @@ def wrapper(cplusplus):
                     logging.info(line.rstrip())
     except Exception:
         logging.exception("run analyzer inside compiler wrapper failed.")
-    # return compiler exit code
-    return result
+    finally:
+        return 0
