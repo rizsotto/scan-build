@@ -23,7 +23,7 @@ def get_version(cmd):
     return lines.decode('ascii').splitlines()[0]
 
 
-def get_arguments(cwd, command):
+def get_arguments(command, cwd):
     """ Capture Clang invocation.
 
     Clang can be executed directly (when you just ask specific action to
@@ -73,7 +73,7 @@ def get_active_checkers(clang, plugins):
                                                         '-Xclang', plugin]]
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
-        return [pattern.match(arg).group(1) for arg in get_arguments('.', cmd)
+        return [pattern.match(arg).group(1) for arg in get_arguments(cmd, '.')
                 if pattern.match(arg)]
 
     result = set()

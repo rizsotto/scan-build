@@ -18,8 +18,8 @@ class GetClangArgumentsTest(fixtures.TestCase):
                 handle.write('')
 
             result = sut.get_arguments(
-                tmpdir,
-                ['clang', '-c', filename, '-DNDEBUG', '-Dvar="this is it"'])
+                ['clang', '-c', filename, '-DNDEBUG', '-Dvar="this is it"'],
+                tmpdir)
 
             self.assertIn('NDEBUG', result)
             self.assertIn('var="this is it"', result)
@@ -28,5 +28,5 @@ class GetClangArgumentsTest(fixtures.TestCase):
         self.assertRaises(
             Exception,
             sut.get_arguments,
-            '.',
-            ['clang', '-###', '-fsyntax-only', '-x', 'c', 'notexist.c'])
+            ['clang', '-###', '-fsyntax-only', '-x', 'c', 'notexist.c'],
+            '.')

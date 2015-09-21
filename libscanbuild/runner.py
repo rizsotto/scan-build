@@ -87,7 +87,7 @@ def report_failure(opts):
                                       dir=destination(opts))
     os.close(handle)
     cwd = opts['directory']
-    cmd = get_arguments(cwd, [opts['clang']] + opts['report'] + ['-o', name])
+    cmd = get_arguments([opts['clang']] + opts['report'] + ['-o', name], cwd)
     logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
     subprocess.call(cmd, cwd=cwd)
 
@@ -116,7 +116,8 @@ def run_analyzer(opts, continuation=report_failure):
     requested, it calls the continuation to generate it. """
 
     cwd = opts['directory']
-    cmd = [opts['clang']] + opts['analyze'] + opts['output']
+    cmd = get_arguments([opts['clang']] + opts['analyze'] + opts['output'],
+                        cwd)
     logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
     child = subprocess.Popen(cmd,
                              cwd=cwd,
