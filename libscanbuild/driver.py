@@ -49,14 +49,17 @@ def main(bin_dir):
 
         # next step to run the analyzer against the captured commands
         with ReportDirectory(args.output, args.keep_empty) as target_dir:
-            run_analyzer(args, target_dir.name)
-            # cover report generation and bug counting
-            number_of_bugs = document(args, target_dir.name, True)
-            # remove the compilation database when it was not requested
-            if args.action == 'all' and os.path.exists(args.cdb):
-                os.unlink(args.cdb)
-            # set exit status as it was requested
-            return number_of_bugs if args.status_bugs else exit_code
+            if args.action == 'analyze' or need_analyzer(args.build):
+                run_analyzer(args, target_dir.name)
+                # cover report generation and bug counting
+                number_of_bugs = document(args, target_dir.name, True)
+                # remove the compilation database when it was not requested
+                if args.action == 'all' and os.path.exists(args.cdb):
+                    os.unlink(args.cdb)
+                # set exit status as it was requested
+                return number_of_bugs if args.status_bugs else exit_code
+            else:
+                return exit_code
     except KeyboardInterrupt:
         return 1
     except Exception:
@@ -100,6 +103,12 @@ def validate(parser, args):
 
     if args.action in {'all', 'intercept'} and not args.build:
         parser.error('missing build command')
+
+
+def need_analyzer(args):
+    """ Check the internt of the build command. """
+
+    return len(args) and not re.search('configure|autogen', args[0])
 
 
 def run_analyzer(args, output_dir):

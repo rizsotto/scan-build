@@ -13,7 +13,7 @@ from libscanbuild.options import (common_parameters, analyze_parameters,
                                   build_command)
 from libscanbuild.driver import (initialize_logging, ReportDirectory,
                                  analyzer_params, print_checkers,
-                                 print_active_checkers)
+                                 print_active_checkers, need_analyzer)
 from libscanbuild.report import document
 from libscanbuild.clang import get_checkers
 from libscanbuild.runner import action_check
@@ -81,7 +81,7 @@ def setup_environment(args, destination, wrapper_dir):
         'CXX': os.path.join(wrapper_dir, 'analyze-cxx'),
         'BUILD_ANALYZE_CC': args.cc,
         'BUILD_ANALYZE_CXX': args.cxx,
-        'BUILD_ANALYZE_CLANG': args.clang,
+        'BUILD_ANALYZE_CLANG': args.clang if need_analyzer(args.build) else '',
         'BUILD_ANALYZE_VERBOSE': 'DEBUG' if args.verbose > 2 else 'WARNING',
         'BUILD_ANALYZE_REPORT_DIR': destination,
         'BUILD_ANALYZE_REPORT_FORMAT': args.output_format,
@@ -104,7 +104,7 @@ def wrapper(cplusplus):
     logging.info('execute compiler: %s', compilation)
     result = subprocess.call(compilation)
     # exit when it fails, ...
-    if result:
+    if result or not os.getenv('BUILD_ANALYZE_CLANG'):
         return result
     # ... and run the analyzer if all went well.
     try:
