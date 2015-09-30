@@ -172,7 +172,7 @@ def analyzer_params(args):
         result.append('-analyzer-output={0}'.format(args.output_format))
     if args.analyzer_config:
         result.append(args.analyzer_config)
-    if 2 <= args.verbose:
+    if 4 <= args.verbose:
         result.append('-analyzer-display-progress')
     if args.plugins:
         result.extend(prefix_with('-load', args.plugins))
