@@ -38,3 +38,5 @@ class ShellTest(unittest.TestCase):
                          'clang "redirect > it"')
         self.assertEqual(sut.encode(['clang', '-DKEY="VALUE"']),
                          'clang -DKEY=\\"VALUE\\"')
+        self.assertEqual(sut.encode(['clang', '-DKEY="value with spaces"']),
+                         'clang -DKEY=\\"value with spaces\\"')
