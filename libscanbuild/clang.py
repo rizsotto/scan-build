@@ -53,7 +53,7 @@ def get_arguments(command, cwd):
     child.stdout.close()
     child.wait()
     if 0 == child.returncode:
-        if re.match(r'^clang: error:', line):
+        if re.search(r'clang(.*): error:', line):
             raise Exception(line)
         return decode(line)
     else:
