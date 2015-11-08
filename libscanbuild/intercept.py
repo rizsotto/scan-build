@@ -59,7 +59,8 @@ def capture(args, wrappers_dir):
                 previous = iter([])
             # filter out duplicate entries from both
             duplicate = duplicate_check(entry_hash)
-            return (entry for entry in itertools.chain(previous, current)
+            return (entry
+                    for entry in itertools.chain(previous, current)
                     if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
@@ -94,7 +95,7 @@ def setup_environment(args, destination, wrappers_dir):
     environment = dict(os.environ)
     environment.update({'BUILD_INTERCEPT_TARGET_DIR': destination})
 
-    if sys.platform in {'win32', 'cygwin'} or not ear_library_path:
+    if args.override_compiler or not ear_library_path:
         environment.update({
             'CC': os.path.join(wrappers_dir, 'intercept-cc'),
             'CXX': os.path.join(wrappers_dir, 'intercept-cxx'),

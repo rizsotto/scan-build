@@ -61,6 +61,11 @@ def common_parameters(parser, add_cdb):
         default=0,
         help="""Enable verbose output from '%(prog)s'. A second and third
                 '-v' increases verbosity.""")
+    parser.add_argument(
+        '--override-compiler',
+        action='store_true',
+        help="""Always resort to the compiler wrapper even when better
+                interposition methods are available.""")
     if add_cdb:
         parser.add_argument('--cdb',
                             metavar='<file>',
@@ -153,14 +158,12 @@ def analyze_parameters(parser):
         '--maxloop', '-maxloop',
         metavar='<loop count>',
         type=int,
-        default=4,
         help="""Specifiy the number of times a block can be visited before
                 giving up. Increase for more comprehensive coverage at a cost
                 of speed.""")
     advanced.add_argument('--store', '-store',
                           metavar='<model>',
                           dest='store_model',
-                          default='region',
                           choices=['region', 'basic'],
                           help="""Specify the store model used by the analyzer.
                 'region' specifies a field- sensitive store model.
@@ -171,7 +174,6 @@ def analyze_parameters(parser):
         '--constraints', '-constraints',
         metavar='<model>',
         dest='constraints_model',
-        default='range',
         choices=['range', 'basic'],
         help="""Specify the contraint engine used by the analyzer. Specifying
                 'basic' uses a simpler, less powerful constraint model used by
@@ -207,11 +209,6 @@ def analyze_parameters(parser):
         dest='cxx',
         default='c++',
         help="""This is the same as "--use-cc" but for C++ code.""")
-    advanced.add_argument(
-        '--override-compiler',
-        action='store_true',
-        help="""Always resort to the compiler wrapper even when better
-                interposition methods are available.""")
     advanced.add_argument(
         '--analyzer-config', '-analyzer-config',
         metavar='<options>',

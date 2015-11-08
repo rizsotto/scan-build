@@ -20,9 +20,23 @@ class Action(object):
 def classify_parameters(command):
     """ Parses the command line arguments of the given invocation. """
 
-    def action(values, value):
-        current = values.get('action', value)
-        values.update({'action': max(current, value)})
+    ignored = {
+        '-g': 0,
+        '-fsyntax-only': 0,
+        '-save-temps': 0,
+        '-install_name': 1,
+        '-exported_symbols_list': 1,
+        '-current_version': 1,
+        '-compatibility_version': 1,
+        '-init': 1,
+        '-e': 1,
+        '-seg1addr': 1,
+        '-bundle_loader': 1,
+        '-multiply_defined': 1,
+        '-sectorder': 3,
+        '--param': 1,
+        '--serialize-diagnostics': 1
+    }
 
     state = {
         'action': Action.Link,
@@ -35,35 +49,41 @@ def classify_parameters(command):
     args = iter(command[1:])
     for arg in args:
         # compiler action parameters are the most important ones...
-        if arg == '-c':
-            action(state, Action.Compile)
-        elif arg in {'-E', '-S', '-cc1', '-M', '-MM', '-###'}:
-            action(state, Action.Ignored)
-        # take arch flags
+        if arg in {'-E', '-S', '-cc1', '-M', '-MM', '-###'}:
+            state.update({'action': Action.Ignored})
+        elif arg == '-c':
+            state.update({'action': max(state['action'], Action.Compile)})
+        # arch flags are taken...
         elif arg == '-arch':
             archs = state.get('archs_seen', [])
             state.update({'archs_seen': archs + [next(args)]})
-        # explicit language option saved
+        # explicit language option taken...
         elif arg == '-x':
             state.update({'language': next(args)})
-        # output saved
+        # output flag taken...
         elif arg == '-o':
             state.update({'output': next(args)})
+        # warning disable options are taken...
+        elif re.match(r'^-Wno-', arg):
+            state['compile_options'].append(arg)
+        # warning options are ignored...
+        elif re.match(r'^-[mW].+', arg):
+            pass
         # some preprocessor parameters are ignored...
         elif arg in {'-MD', '-MMD', '-MG', '-MP'}:
             pass
         elif arg in {'-MF', '-MT', '-MQ'}:
             next(args)
         # linker options are ignored...
-        elif arg in {'-static', '-shared', '-s', '-rdynamic'}:
-            pass
-        elif re.match(r'^-[lL].+', arg):
+        elif arg in {'-static', '-shared', '-s', '-rdynamic'} or \
+                re.match(r'^-[lL].+', arg):
             pass
         elif arg in {'-l', '-L', '-u', '-z', '-T', '-Xlinker'}:
             next(args)
-        # optimalization and waring options are ignored...
-        elif re.match(r'^-([mW].+|O.*)', arg):
-            pass
+        # some other options are ignored...
+        elif arg in ignored.keys():
+            for _ in range(ignored[arg]):
+                next(args)
         # parameters which looks source file are taken...
         elif re.match(r'^[^-].+', arg) and classify_source(arg):
             state['files'].append(arg)

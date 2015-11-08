@@ -34,11 +34,11 @@ class ParseTest(unittest.TestCase):
             opts = sut.classify_parameters(cmd)
             return opts.get('compile_options', [])
 
-        self.assertEqual([], test(['clang', '-c', 'source.c', '-O']))
-        self.assertEqual([], test(['clang', '-c', 'source.c', '-O1']))
-        self.assertEqual([], test(['clang', '-c', 'source.c', '-Os']))
-        self.assertEqual([], test(['clang', '-c', 'source.c', '-O2']))
-        self.assertEqual([], test(['clang', '-c', 'source.c', '-O3']))
+        self.assertEqual(['-O'],  test(['clang', '-c', 'source.c', '-O']))
+        self.assertEqual(['-O1'], test(['clang', '-c', 'source.c', '-O1']))
+        self.assertEqual(['-Os'], test(['clang', '-c', 'source.c', '-Os']))
+        self.assertEqual(['-O2'], test(['clang', '-c', 'source.c', '-O2']))
+        self.assertEqual(['-O3'], test(['clang', '-c', 'source.c', '-O3']))
 
     def test_language(self):
         def test(cmd):
@@ -133,7 +133,7 @@ class ParseTest(unittest.TestCase):
         test([])
         test(['-lrt', '-L/opt/company/lib'])
         test(['-static'])
-        test(['-Wnoexcept', '-Wall', '-Wno-cpp'])
+        test(['-Wnoexcept', '-Wall'])
         test(['-mtune=i386', '-mcpu=i386'])
 
     def test_compile_only_flags(self):
@@ -163,8 +163,6 @@ class ParseTest(unittest.TestCase):
 
         eq = self.assertEqual
 
-        eq(['-fsyntax-only'],
-           test(['clang', '-c', 'src.c', '-fsyntax-only']))
         eq(['-fsinged-char'],
            test(['clang', '-c', 'src.c', '-fsinged-char']))
         eq(['-fPIC'],
@@ -175,7 +173,9 @@ class ParseTest(unittest.TestCase):
            test(['clang', '-c', 'src.c', '--sysroot', '/']))
         eq(['-isysroot', '/'],
            test(['clang', '-c', 'src.c', '-isysroot', '/']))
-        eq(['-sectorder', 'a', 'b', 'c'],
+        eq([],
+           test(['clang', '-c', 'src.c', '-fsyntax-only']))
+        eq([],
            test(['clang', '-c', 'src.c', '-sectorder', 'a', 'b', 'c']))
 
     def test_detect_cxx_from_compiler_name(self):
