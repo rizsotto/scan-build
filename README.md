@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/rizsotto/Beye.svg?branch=master)](https://travis-ci.org/rizsotto/Beye)
-[![Coverage Status](https://coveralls.io/repos/rizsotto/Beye/badge.svg?branch=master)](https://coveralls.io/r/rizsotto/Beye?branch=master)
 
 Build EYE
 =========
