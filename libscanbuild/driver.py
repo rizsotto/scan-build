@@ -70,16 +70,11 @@ def main(bin_dir):
 def initialize_logging(args):
     """ Logging format controlled by the 'verbose' command line argument. """
 
-    fmt_string = '{0}: %(levelname)s: %(message)s'
+    level = logging.WARNING - min(logging.WARNING, (10 * args.verbose))
 
-    if 0 == args.verbose:
-        level = logging.WARNING
-    elif 1 == args.verbose:
-        level = logging.INFO
-    elif 2 == args.verbose:
-        level = logging.DEBUG
+    if 3 <= args.verbose:
+        fmt_string = '{0}: %(levelname)s: %(message)s'
     else:
-        level = logging.DEBUG
         fmt_string = '{0}: %(levelname)s: %(funcName)s: %(message)s'
 
     program = os.path.basename(sys.argv[0])
