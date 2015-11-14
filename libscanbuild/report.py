@@ -101,8 +101,7 @@ def assemble_cover(output_dir, prefix, args, fragments):
         for fragment in fragments:
             # copy the content of fragments
             with open(fragment, 'r') as input_handle:
-                for line in input_handle:
-                    handle.write(line)
+                shutil.copyfileobj(input_handle, handle)
         handle.write(reindent("""
         |  </body>
         |</html>""", indent))
