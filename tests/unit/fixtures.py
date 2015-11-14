@@ -4,6 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import contextlib
 import tempfile
 import shutil
 import unittest
@@ -20,20 +21,11 @@ class Spy(object):
         return self.success
 
 
-class TempDir(object):
-
-    def __init__(self):
-        self.name = tempfile.mkdtemp(prefix='scan-build-test-')
-
-    def __enter__(self):
-        return self.name
-
-    def __exit__(self, _type, _value, _traceback):
-        self.cleanup()
-
-    def cleanup(self):
-        if self.name is not None:
-            shutil.rmtree(self.name)
+@contextlib.contextmanager
+def TempDir():
+    name = tempfile.mkdtemp(prefix='scan-build-test-')
+    yield name
+    shutil.rmtree(name)
 
 
 class TestCase(unittest.TestCase):

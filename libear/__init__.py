@@ -11,6 +11,10 @@ import os
 import os.path
 import re
 import logging
+import contextlib
+import tempfile
+import shutil
+
 
 __all__ = ['ear_library']
 
@@ -25,7 +29,7 @@ def ear_library(compiler, dst_dir):
             context.set_language_standard('c99')
             context.add_definitions(['-D_GNU_SOURCE'])
 
-            with Configure(context) as configure:
+            with do_configure(context) as configure:
                 configure.check_function_exists('execve', 'HAVE_EXECVE')
                 configure.check_function_exists('execv', 'HAVE_EXECV')
                 configure.check_function_exists('execvpe', 'HAVE_EXECVPE')
@@ -43,7 +47,7 @@ def ear_library(compiler, dst_dir):
                 configure.write_by_template(
                     os.path.join(src_dir, 'config.h.in'),
                     os.path.join(dst_dir, 'config.h'))
-            with SharedLibrary('ear', context) as target:
+            with create_shared_library('ear', context) as target:
                 target.add_include(dst_dir)
                 target.add_sources('ear.c')
                 target.link_against(context.dl_libraries())
@@ -64,45 +68,20 @@ def execute(cmd, *args, **kwargs):
     return subprocess.check_call(cmd, *args, **kwargs)
 
 
-class TemporaryDirectory(object):
-    """ This function creates a temporary directory using mkdtemp() (the
-    supplied arguments are passed directly to the underlying function).
-    The resulting object can be used as a context manager. On completion
-    of the context or destruction of the temporary directory object the
-    newly created temporary directory and all its contents are removed
-    from the filesystem. """
-
-    def __init__(self, **kwargs):
-        from tempfile import mkdtemp
-        self.name = mkdtemp(**kwargs)
-
-    def __enter__(self):
-        return self.name
-
-    def __exit__(self, _type, _value, _traceback):
-        self.cleanup()
-
-    def cleanup(self):
-        from shutil import rmtree
-        if self.name is not None:
-            rmtree(self.name)
+@contextlib.contextmanager
+def TemporaryDirectory(**kwargs):
+    name = tempfile.mkdtemp(**kwargs)
+    yield name
+    shutil.rmtree(name)
 
 
-class Context:
+class Context(object):
     """ Abstract class to represent different toolset. """
 
     def __init__(self, src_dir):
         self.src_dir = src_dir
         self.compiler = None
         self.c_flags = []
-
-    def __enter__(self):
-        """ declared to work 'with'. """
-        return self
-
-    def __exit__(self, _type, _value, _traceback):
-        """ declared to work 'with'. """
-        pass
 
     def set_compiler(self, compiler):
         """ part of public interface """
@@ -168,28 +147,23 @@ class LinuxContext(UnixContext):
         return ['dl']
 
 
+@contextlib.contextmanager
 def make_context(src_dir):
     platform = sys.platform
     if platform in {'win32', 'cygwin'}:
         raise RuntimeError('not implemented on this platform')
     elif platform == 'darwin':
-        return DarwinContext(src_dir)
+        yield DarwinContext(src_dir)
     elif platform in {'linux', 'linux2'}:
-        return LinuxContext(src_dir)
+        yield LinuxContext(src_dir)
     else:
-        return UnixContext(src_dir)
+        yield UnixContext(src_dir)
 
 
-class Configure:
+class Configure(object):
     def __init__(self, context):
         self.ctx = context
         self.results = {'APPLE': sys.platform == 'darwin'}
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, _type, _value, _traceback):
-        pass
 
     def _try_to_compile_and_link(self, source):
         try:
@@ -245,19 +219,18 @@ class Configure:
                     dst_handle.write(transform(line, self.results))
 
 
-class SharedLibrary:
+@contextlib.contextmanager
+def do_configure(context):
+    yield Configure(context)
+
+
+class SharedLibrary(object):
     def __init__(self, name, context):
         self.name = context.shared_library_name(name)
         self.ctx = context
         self.inc = []
         self.src = []
         self.lib = []
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, _type, _value, _traceback):
-        pass
 
     def add_include(self, directory):
         self.inc.extend(['-I', directory])
@@ -282,3 +255,8 @@ class SharedLibrary:
             ['-o', self.name] + self.lib +
             self.ctx.shared_library_ld_flags(True, self.name),
             cwd=directory)
+
+
+@contextlib.contextmanager
+def create_shared_library(name, context):
+    yield SharedLibrary(name, context)

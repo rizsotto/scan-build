@@ -11,7 +11,7 @@ import subprocess
 import logging
 from libscanbuild.options import (common_parameters, analyze_parameters,
                                   build_command)
-from libscanbuild.driver import (initialize_logging, ReportDirectory,
+from libscanbuild.driver import (initialize_logging, report_directory,
                                  analyzer_params, print_checkers,
                                  print_active_checkers, need_analyzer)
 from libscanbuild.report import document
@@ -31,7 +31,7 @@ def main(bin_dir):
         initialize_logging(args)
         logging.debug('Parsed arguments: %s', args)
         # run the build
-        with ReportDirectory(args.output, args.keep_empty) as target_dir:
+        with report_directory(args.output, args.keep_empty) as target_dir:
             # run the build command
             environment = setup_environment(args, target_dir.name, bin_dir)
             logging.debug('run build in environment: %s', environment)

@@ -19,6 +19,7 @@ import os.path
 import time
 import json
 import tempfile
+import contextlib
 import multiprocessing
 from libscanbuild.runner import run
 from libscanbuild.intercept import capture
@@ -47,12 +48,12 @@ def main(bin_dir):
         if args.action == 'intercept':
             return exit_code
 
-        # next step to run the analyzer against the captured commands
-        with ReportDirectory(args.output, args.keep_empty) as target_dir:
+        with report_directory(args.output, args.keep_empty) as target_dir:
+            # next step to run the analyzer against the captured commands
             if args.action == 'analyze' or need_analyzer(args.build):
-                run_analyzer(args, target_dir.name)
+                run_analyzer(args, target_dir)
                 # cover report generation and bug counting
-                number_of_bugs = document(args, target_dir.name, True)
+                number_of_bugs = document(args, target_dir, True)
                 # remove the compilation database when it was not requested
                 if args.action == 'all' and os.path.exists(args.cdb):
                     os.unlink(args.cdb)
@@ -210,35 +211,29 @@ def print_checkers(checkers):
     print('')
 
 
-class ReportDirectory(object):
+@contextlib.contextmanager
+def report_directory(hint, keep):
     """ Responsible for the report directory.
 
     hint -- could specify the parent directory of the output directory.
     keep -- a boolean value to keep or delete the empty report directory. """
 
-    def __init__(self, hint, keep):
-        self.name = ReportDirectory._create(hint)
-        self.keep = keep
-        logging.info('Report directory created: %s', self.name)
+    stamp = time.strftime('scan-build-%Y-%m-%d-%H%M%S-', time.localtime())
+    name = tempfile.mkdtemp(prefix=stamp, dir=hint)
 
-    def __enter__(self):
-        return self
+    logging.info('Report directory created: %s', name)
 
-    def __exit__(self, _type, _value, _traceback):
-        if os.listdir(self.name):
-            msg = "Run 'scan-view %s' to examine bug reports."
-            self.keep = True
+    yield name
+
+    if os.listdir(name):
+        msg = "Run 'scan-view %s' to examine bug reports."
+        keep = True
+    else:
+        if keep:
+            msg = "Report directory '%s' contans no report, but kept."
         else:
-            if self.keep:
-                msg = "Report directory '%s' contans no report, but kept."
-            else:
-                msg = "Removing directory '%s' because it contains no report."
-        logging.warning(msg, self.name)
+            msg = "Removing directory '%s' because it contains no report."
+    logging.warning(msg, name)
 
-        if not self.keep:
-            os.rmdir(self.name)
-
-    @staticmethod
-    def _create(hint):
-        stamp = time.strftime('scan-build-%Y-%m-%d-%H%M%S-', time.localtime())
-        return tempfile.mkdtemp(prefix=stamp, dir=hint)
+    if not keep:
+        os.rmdir(name)
