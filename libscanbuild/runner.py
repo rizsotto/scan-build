@@ -18,25 +18,6 @@ from libscanbuild.shell import decode
 __all__ = ['run']
 
 
-def run(opts):
-    """ Entry point to run (or not) static analyzer against a single entry
-    of the compilation database.
-
-    This complex task is decomposed into smaller methods which are calling
-    each other in chain. If the analyzis is not possibe the given method
-    just return and break the chain. """
-
-    try:
-        command = opts.pop('command')
-        logging.debug("Run analyzer against '%s'", command)
-        opts.update(classify_parameters(decode(command)))
-
-        return action_check(opts)
-    except Exception:
-        logging.error("Problem occured during analyzis.", exc_info=1)
-        return None
-
-
 def require(required):
     """ Decorator for checking the required values in state.
 
@@ -56,6 +37,26 @@ def require(required):
         return wrapper
 
     return decorator
+
+
+@require(['command', 'directory', 'file'])
+def run(opts):
+    """ Entry point to run (or not) static analyzer against a single entry
+    of the compilation database.
+
+    This complex task is decomposed into smaller methods which are calling
+    each other in chain. If the analyzis is not possibe the given method
+    just return and break the chain. """
+
+    try:
+        command = opts.pop('command')
+        logging.debug("Run analyzer against '%s'", command)
+        opts.update(classify_parameters(decode(command)))
+
+        return action_check(opts)
+    except Exception:
+        logging.error("Problem occured during analyzis.", exc_info=1)
+        return None
 
 
 @require(['report', 'directory', 'clang', 'output_dir', 'language', 'file',

@@ -26,12 +26,8 @@ def get_version(cmd):
 def get_arguments(command, cwd):
     """ Capture Clang invocation.
 
-    Clang can be executed directly (when you just ask specific action to
-    execute) or indirect way (whey you first ask Clang to print the command
-    to run for that compilation, and then execute the given command).
-
-    This method receives the full command line for direct compilation. And
-    it generates the command for indirect compilation. """
+    This method returns the front-end invocation that would be executed as
+    a result of the given driver invocation. """
 
     def lastline(stream):
         last = None

@@ -30,7 +30,7 @@ def prepare_cdb(name, target_dir):
 
 
 def run_driver(directory, cdb, args):
-    cmd = ['intercept-build', 'analyze', '--cdb', cdb, '--output', directory] \
+    cmd = ['analyze-build', '--cdb', cdb, '--output', directory] \
         + args
     return call_and_report(cmd, [])
 

@@ -51,7 +51,7 @@ To run the Clang static analyzer against a project goes like this:
 To generate a compilation database file (compilation database is a JSON
 file described [here][JCDB]) goes like this: 
 
-    $ intercept-build intercept <your build command>
+    $ intercept-build <your build command>
 
 Use `--help` to know more about the commands.
 
@@ -68,9 +68,9 @@ please let me know if you do.)
 Problem reports
 ---------------
 If you find a bug in this documentation or elsewhere in the program or would
-like to propose an improvement, please use the project's [github issue
+like to propose an improvement, please use the project's [issue
 tracker][ISSUES]. Please describing the bug and where you found it. If you
 have a suggestion how to fix it, include that as well. Patches are also
 welcome.
 
-  [ISSUES]: https://github.com/rizsotto/Beye/issues
+  [ISSUES]: https://llvm.org/bugs/enter_bug.cgi?product=clang

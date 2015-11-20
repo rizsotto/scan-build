@@ -15,7 +15,7 @@ class OutputDirectoryTest(unittest.TestCase):
     @staticmethod
     def run_sb(outdir, args, cmd):
         return check_call_and_report(
-            ['intercept-build', 'all', '-o', outdir] + args,
+            ['scan-build', '--intercept-first', '-o', outdir] + args,
             cmd)
 
     def test_regular_keeps_report_dir(self):

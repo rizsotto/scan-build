@@ -24,7 +24,7 @@ def run(source_dir, target_dir):
 
     result_file = os.path.join(target_dir, 'result.json')
     expected_file = os.path.join(target_dir, 'expected.json')
-    execute(['intercept-build', 'intercept', '--cdb', result_file, './exec',
+    execute(['intercept-build', '--cdb', result_file, './exec',
              expected_file])
     return (expected_file, result_file)
 

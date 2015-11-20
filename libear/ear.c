@@ -41,7 +41,7 @@ static char **environ;
 extern char **environ;
 #endif
 
-#define ENV_OUTPUT "BUILD_INTERCEPT_TARGET_DIR"
+#define ENV_OUTPUT "INTERCEPT_BUILD_TARGET_DIR"
 #ifdef APPLE
 # define ENV_FLAT    "DYLD_FORCE_FLAT_NAMESPACE"
 # define ENV_PRELOAD "DYLD_INSERT_LIBRARIES"

@@ -20,6 +20,20 @@ class Action(object):
 def classify_parameters(command):
     """ Parses the command line arguments of the given invocation. """
 
+    # result value of this method.
+    # some value are preset, some will be set only when found.
+    result = {
+        'action': Action.Link,
+        'files': [],
+        'output': None,
+        'compile_options': [],
+        'c++': is_cplusplus_compiler(command[0])
+        # archs_seen
+        # language
+    }
+
+    # data structure to ignore compiler parameters.
+    # key: parameter name, value: number of parameters to ignore afterwards.
     ignored = {
         '-g': 0,
         '-fsyntax-only': 0,
@@ -38,34 +52,26 @@ def classify_parameters(command):
         '--serialize-diagnostics': 1
     }
 
-    state = {
-        'action': Action.Link,
-        'files': [],
-        'output': None,
-        'compile_options': [],
-        'c++': cplusplus_compiler(command[0])
-    }
-
     args = iter(command[1:])
     for arg in args:
         # compiler action parameters are the most important ones...
         if arg in {'-E', '-S', '-cc1', '-M', '-MM', '-###'}:
-            state.update({'action': Action.Ignored})
+            result.update({'action': Action.Ignored})
         elif arg == '-c':
-            state.update({'action': max(state['action'], Action.Compile)})
+            result.update({'action': max(result['action'], Action.Compile)})
         # arch flags are taken...
         elif arg == '-arch':
-            archs = state.get('archs_seen', [])
-            state.update({'archs_seen': archs + [next(args)]})
+            archs = result.get('archs_seen', [])
+            result.update({'archs_seen': archs + [next(args)]})
         # explicit language option taken...
         elif arg == '-x':
-            state.update({'language': next(args)})
+            result.update({'language': next(args)})
         # output flag taken...
         elif arg == '-o':
-            state.update({'output': next(args)})
+            result.update({'output': next(args)})
         # warning disable options are taken...
         elif re.match(r'^-Wno-', arg):
-            state['compile_options'].append(arg)
+            result['compile_options'].append(arg)
         # warning options are ignored...
         elif re.match(r'^-[mW].+', arg):
             pass
@@ -86,16 +92,16 @@ def classify_parameters(command):
                 next(args)
         # parameters which looks source file are taken...
         elif re.match(r'^[^-].+', arg) and classify_source(arg):
-            state['files'].append(arg)
+            result['files'].append(arg)
         # and consider everything else as compile option.
         else:
-            state['compile_options'].append(arg)
+            result['compile_options'].append(arg)
 
-    return state
+    return result
 
 
 def classify_source(filename, cplusplus=False):
-    """ Return the language from fille name extension. """
+    """ Return the language from file name extension. """
 
     mapping = {
         '.c': 'c++' if cplusplus else 'c',
@@ -120,7 +126,7 @@ def classify_source(filename, cplusplus=False):
     return mapping.get(extension)
 
 
-def cplusplus_compiler(name):
+def is_cplusplus_compiler(name):
     """ Returns true when the compiler name refer to a C++ compiler. """
 
     match = re.match(r'^([^/]*/)*(\w*-)*(\w+\+\+)(-(\d+(\.\d+){0,3}))?$', name)

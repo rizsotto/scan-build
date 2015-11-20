@@ -15,10 +15,12 @@ relevant information about it into separate files in a specified directory.
 The parameter of this process is the output directory name, where the report
 files shall be placed. This parameter is passed as an environment variable.
 
-The module implements the build command execution with the 'libear' library
-and the post-processing of the output files, which will condensates into a
-(might be empty) compilation database. """
+The module also implements compiler wrappers to intercept the compiler calls.
 
+The module implements the build command execution and the post-processing of
+the output files, which will condensates into a compilation database. """
+
+import argparse
 import logging
 import subprocess
 import json
@@ -29,15 +31,37 @@ import re
 import glob
 import itertools
 from libear import ear_library, TemporaryDirectory
-from libscanbuild import duplicate_check, tempdir
+from libscanbuild import duplicate_check, tempdir, initialize_logging
 from libscanbuild.command import Action, classify_parameters
 from libscanbuild.shell import encode, decode
 
-__all__ = ['capture', 'wrapper']
+__all__ = ['capture', 'main', 'wrapper']
 
 GS = chr(0x1d)
 RS = chr(0x1e)
 US = chr(0x1f)
+
+
+def main(wrappers_dir):
+    """ Entry point for 'intercept-build' command. """
+
+    try:
+        parser = create_parser()
+        args = parser.parse_args()
+
+        initialize_logging(args.verbose)
+        logging.debug('Parsed arguments: %s', args)
+
+        if not args.build:
+            parser.print_help()
+            return 0
+
+        return capture(args, wrappers_dir)
+    except KeyboardInterrupt:
+        return 1
+    except Exception:
+        logging.exception("Something unexpected had happened.")
+        return 127
 
 
 def capture(args, wrappers_dir):
@@ -50,7 +74,7 @@ def capture(args, wrappers_dir):
             current = itertools.chain.from_iterable(
                 # creates a sequence of entry generators from an exec,
                 # but filter out non compiler calls before.
-                (format_entry(x) for x in commands if compiler_call(x)))
+                (format_entry(x) for x in commands if is_compiler_call(x)))
             # read entries from previous run
             if 'append' in args and args.append and os.path.exists(args.cdb):
                 with open(args.cdb) as handle:
@@ -64,7 +88,7 @@ def capture(args, wrappers_dir):
                     if os.path.exists(entry['file']) and not duplicate(entry))
         return commands
 
-    with TemporaryDirectory(prefix='build-intercept', dir=tempdir()) as tmpdir:
+    with TemporaryDirectory(prefix='intercept-build', dir=tempdir()) as tmpdir:
         # run the build command
         environment = setup_environment(args, tmpdir, wrappers_dir)
         logging.debug('run build in environment: %s', environment)
@@ -89,33 +113,39 @@ def setup_environment(args, destination, wrappers_dir):
     The exec calls will be logged by the 'libear' preloaded library or by the
     'wrapper' programs. """
 
-    compiler = args.cc if 'cc' in args.__dict__ else 'cc'
-    ear_library_path = ear_library(compiler, destination)
+    c_compiler = args.cc if 'cc' in args else 'cc'
+    cxx_compiler = args.cxx if 'cxx' in args else 'c++'
+
+    ear_library_path = None if args.override_compiler else \
+        ear_library(c_compiler, destination)
 
     environment = dict(os.environ)
-    environment.update({'BUILD_INTERCEPT_TARGET_DIR': destination})
+    environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
-    if args.override_compiler or not ear_library_path:
+    if not ear_library_path:
+        # it's gonna use compiler wrappers from above
         environment.update({
             'CC': os.path.join(wrappers_dir, 'intercept-cc'),
             'CXX': os.path.join(wrappers_dir, 'intercept-cxx'),
-            'BUILD_INTERCEPT_CC': args.cc,
-            'BUILD_INTERCEPT_CXX': args.cxx,
-            'BUILD_INTERCEPT_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
+            'INTERCEPT_BUILD_CC': c_compiler,
+            'INTERCEPT_BUILD_CXX': cxx_compiler,
+            'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
         })
     elif 'darwin' == sys.platform:
+        # it's gonna use preload on OSX
         environment.update({
             'DYLD_INSERT_LIBRARIES': ear_library_path,
             'DYLD_FORCE_FLAT_NAMESPACE': '1'
         })
     else:
+        # it's gonna use preload on UNIX
         environment.update({'LD_PRELOAD': ear_library_path})
 
     return environment
 
 
 def wrapper(cplusplus):
-    """ This method implements basic compiler wrapper functionality.
+    """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 
     It does generate execution report into target directory. And execute
     the wrapped compilation with the real compiler. The parameters for
@@ -126,10 +156,10 @@ def wrapper(cplusplus):
 
     # initialize wrapper logging
     logging.basicConfig(format='intercept: %(levelname)s: %(message)s',
-                        level=os.getenv('BUILD_INTERCEPT_VERBOSE', 'INFO'))
+                        level=os.getenv('INTERCEPT_BUILD_VERBOSE', 'INFO'))
     # write report
     try:
-        target_dir = os.getenv('BUILD_INTERCEPT_TARGET_DIR')
+        target_dir = os.getenv('INTERCEPT_BUILD_TARGET_DIR')
         if not target_dir:
             raise UserWarning('exec report target directory not found')
         pid = str(os.getpid())
@@ -145,8 +175,8 @@ def wrapper(cplusplus):
     except UserWarning as warning:
         logging.warning(warning)
     # execute with real compiler
-    compiler = os.getenv('BUILD_INTERCEPT_CXX', 'c++') if cplusplus \
-        else os.getenv('BUILD_INTERCEPT_CC', 'cc')
+    compiler = os.getenv('INTERCEPT_BUILD_CXX', 'c++') if cplusplus \
+        else os.getenv('INTERCEPT_BUILD_CC', 'cc')
     compilation = [compiler] + sys.argv[1:]
     logging.debug('execute compiler: %s', compilation)
     return subprocess.call(compilation)
@@ -197,7 +227,7 @@ def format_entry(entry):
             }
 
 
-def compiler_call(entry):
+def is_compiler_call(entry):
     """ A predicate to decide the entry is a compiler call or not. """
 
     patterns = [
@@ -225,3 +255,43 @@ def entry_hash(entry):
     command = ' '.join(decode(entry['command'])[1:])
 
     return '<>'.join([filename, directory, command])
+
+
+def create_parser():
+    """ Command line argument parser factory method. """
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument(
+        '--verbose', '-v',
+        action='count',
+        default=0,
+        help="""Enable verbose output from '%(prog)s'. A second and third
+                flag increases verbosity.""")
+    parser.add_argument(
+        '--override-compiler',
+        action='store_true',
+        help="""Always resort to the compiler wrapper even when better
+                interposition methods are available.""")
+    parser.add_argument(
+        '--cdb',
+        metavar='<file>',
+        default="compile_commands.json",
+        help="""The JSON compilation database.""")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        '--append',
+        action='store_true',
+        help="""Append new entries to existing compilation database.""")
+    group.add_argument(
+        '--disable-filter', '-n',
+        dest='raw_entries',
+        action='store_true',
+        help="""Disable filter, unformated output.""")
+    parser.add_argument(
+        dest='build',
+        nargs=argparse.REMAINDER,
+        help="""Command to run.""")
+
+    return parser

@@ -18,7 +18,7 @@ class CompilationDatabaseTest(unittest.TestCase):
         result = os.path.join(tmpdir, 'cdb.json')
         make = make_args(tmpdir) + args
         silent_check_call(
-            ['intercept-build', 'intercept', '--cdb', result] + make)
+            ['intercept-build', '--cdb', result] + make)
         return result
 
     def test_successful_build(self):
@@ -43,7 +43,7 @@ class CompilationDatabaseTest(unittest.TestCase):
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
             make = make_args(tmpdir) + ['build_regular']
-            silent_check_call(['intercept-build', 'intercept', '--cdb', result,
+            silent_check_call(['intercept-build', '--cdb', result,
                                'env', '-'] + make)
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
@@ -63,7 +63,7 @@ class CompilationDatabaseTest(unittest.TestCase):
             result = os.path.join(tmpdir, 'cdb.json')
             make = make_args(tmpdir) + ['build_broken']
             silent_call(
-                ['intercept-build', 'intercept', '--cdb', result] + make)
+                ['intercept-build', '--cdb', result] + make)
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
@@ -76,7 +76,7 @@ class ExitCodeTest(unittest.TestCase):
         result = os.path.join(tmpdir, 'cdb.json')
         make = make_args(tmpdir) + [target]
         return silent_call(
-            ['intercept-build', 'intercept', '--cdb', result] + make)
+            ['intercept-build', '--cdb', result] + make)
 
     def test_successful_build(self):
         with fixtures.TempDir() as tmpdir:
@@ -95,7 +95,7 @@ class ResumeFeatureTest(unittest.TestCase):
         result = os.path.join(tmpdir, 'cdb.json')
         make = make_args(tmpdir) + [target]
         silent_check_call(
-            ['intercept-build', 'intercept', '--cdb', result] + args + make)
+            ['intercept-build', '--cdb', result] + args + make)
         return result
 
     def test_overwrite_existing_cdb(self):

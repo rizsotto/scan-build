@@ -3,8 +3,7 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-"""
-. """
+""" This module compiles the intercept library. """
 
 import sys
 import os
@@ -24,36 +23,38 @@ def ear_library(compiler, dst_dir):
 
     try:
         src_dir = os.path.dirname(os.path.realpath(__file__))
-        with make_context(src_dir) as context:
-            context.set_compiler(compiler)
-            context.set_language_standard('c99')
-            context.add_definitions(['-D_GNU_SOURCE'])
+        toolset = make_toolset(src_dir)
+        toolset.set_compiler(compiler)
+        toolset.set_language_standard('c99')
+        toolset.add_definitions(['-D_GNU_SOURCE'])
 
-            with do_configure(context) as configure:
-                configure.check_function_exists('execve', 'HAVE_EXECVE')
-                configure.check_function_exists('execv', 'HAVE_EXECV')
-                configure.check_function_exists('execvpe', 'HAVE_EXECVPE')
-                configure.check_function_exists('execvp', 'HAVE_EXECVP')
-                configure.check_function_exists('execvP', 'HAVE_EXECVP2')
-                configure.check_function_exists('execl', 'HAVE_EXECL')
-                configure.check_function_exists('execlp', 'HAVE_EXECLP')
-                configure.check_function_exists('execle', 'HAVE_EXECLE')
-                configure.check_function_exists('posix_spawn',
-                                                'HAVE_POSIX_SPAWN')
-                configure.check_function_exists('posix_spawnp',
-                                                'HAVE_POSIX_SPAWNP')
-                configure.check_symbol_exists('_NSGetEnviron', 'crt_externs.h',
-                                              'HAVE_NSGETENVIRON')
-                configure.write_by_template(
-                    os.path.join(src_dir, 'config.h.in'),
-                    os.path.join(dst_dir, 'config.h'))
-            with create_shared_library('ear', context) as target:
-                target.add_include(dst_dir)
-                target.add_sources('ear.c')
-                target.link_against(context.dl_libraries())
-                target.link_against(['pthread'])
-                target.build_release(dst_dir)
-                return os.path.join(dst_dir, target.name)
+        configure = do_configure(toolset)
+        configure.check_function_exists('execve', 'HAVE_EXECVE')
+        configure.check_function_exists('execv', 'HAVE_EXECV')
+        configure.check_function_exists('execvpe', 'HAVE_EXECVPE')
+        configure.check_function_exists('execvp', 'HAVE_EXECVP')
+        configure.check_function_exists('execvP', 'HAVE_EXECVP2')
+        configure.check_function_exists('execl', 'HAVE_EXECL')
+        configure.check_function_exists('execlp', 'HAVE_EXECLP')
+        configure.check_function_exists('execle', 'HAVE_EXECLE')
+        configure.check_function_exists('posix_spawn',
+                                        'HAVE_POSIX_SPAWN')
+        configure.check_function_exists('posix_spawnp',
+                                        'HAVE_POSIX_SPAWNP')
+        configure.check_symbol_exists('_NSGetEnviron', 'crt_externs.h',
+                                      'HAVE_NSGETENVIRON')
+        configure.write_by_template(
+            os.path.join(src_dir, 'config.h.in'),
+            os.path.join(dst_dir, 'config.h'))
+
+        target = create_shared_library('ear', toolset)
+        target.add_include(dst_dir)
+        target.add_sources('ear.c')
+        target.link_against(toolset.dl_libraries())
+        target.link_against(['pthread'])
+        target.build_release(dst_dir)
+
+        return os.path.join(dst_dir, target.name)
 
     except Exception:
         logging.info("Could not build interception library.", exc_info=True)
@@ -71,11 +72,13 @@ def execute(cmd, *args, **kwargs):
 @contextlib.contextmanager
 def TemporaryDirectory(**kwargs):
     name = tempfile.mkdtemp(**kwargs)
-    yield name
-    shutil.rmtree(name)
+    try:
+        yield name
+    finally:
+        shutil.rmtree(name)
 
 
-class Context(object):
+class Toolset(object):
     """ Abstract class to represent different toolset. """
 
     def __init__(self, src_dir):
@@ -96,22 +99,22 @@ class Context(object):
         self.c_flags.extend(defines)
 
     def dl_libraries(self):
-        pass
+        raise NotImplementedError()
 
     def shared_library_name(self, name):
-        pass
+        raise NotImplementedError()
 
     def shared_library_c_flags(self, release):
         extra = ['-DNDEBUG', '-O3'] if release else []
         return extra + ['-fPIC'] + self.c_flags
 
     def shared_library_ld_flags(self, release, name):
-        pass
+        raise NotImplementedError()
 
 
-class DarwinContext(Context):
+class DarwinToolset(Toolset):
     def __init__(self, src_dir):
-        Context.__init__(self, src_dir)
+        Toolset.__init__(self, src_dir)
 
     def dl_libraries(self):
         return []
@@ -124,9 +127,9 @@ class DarwinContext(Context):
         return extra + ['-dynamiclib', '-install_name', '@rpath/' + name]
 
 
-class UnixContext(Context):
+class UnixToolset(Toolset):
     def __init__(self, src_dir):
-        Context.__init__(self, src_dir)
+        Toolset.__init__(self, src_dir)
 
     def dl_libraries(self):
         return []
@@ -139,30 +142,29 @@ class UnixContext(Context):
         return extra + ['-shared', '-Wl,-soname,' + name]
 
 
-class LinuxContext(UnixContext):
+class LinuxToolset(UnixToolset):
     def __init__(self, src_dir):
-        UnixContext.__init__(self, src_dir)
+        UnixToolset.__init__(self, src_dir)
 
     def dl_libraries(self):
         return ['dl']
 
 
-@contextlib.contextmanager
-def make_context(src_dir):
+def make_toolset(src_dir):
     platform = sys.platform
     if platform in {'win32', 'cygwin'}:
         raise RuntimeError('not implemented on this platform')
     elif platform == 'darwin':
-        yield DarwinContext(src_dir)
+        return DarwinToolset(src_dir)
     elif platform in {'linux', 'linux2'}:
-        yield LinuxContext(src_dir)
+        return LinuxToolset(src_dir)
     else:
-        yield UnixContext(src_dir)
+        return UnixToolset(src_dir)
 
 
 class Configure(object):
-    def __init__(self, context):
-        self.ctx = context
+    def __init__(self, toolset):
+        self.ctx = toolset
         self.results = {'APPLE': sys.platform == 'darwin'}
 
     def _try_to_compile_and_link(self, source):
@@ -219,15 +221,14 @@ class Configure(object):
                     dst_handle.write(transform(line, self.results))
 
 
-@contextlib.contextmanager
-def do_configure(context):
-    yield Configure(context)
+def do_configure(toolset):
+    return Configure(toolset)
 
 
 class SharedLibrary(object):
-    def __init__(self, name, context):
-        self.name = context.shared_library_name(name)
-        self.ctx = context
+    def __init__(self, name, toolset):
+        self.name = toolset.shared_library_name(name)
+        self.ctx = toolset
         self.inc = []
         self.src = []
         self.lib = []
@@ -257,6 +258,5 @@ class SharedLibrary(object):
             cwd=directory)
 
 
-@contextlib.contextmanager
-def create_shared_library(name, context):
-    yield SharedLibrary(name, context)
+def create_shared_library(name, toolset):
+    return SharedLibrary(name, toolset)

@@ -11,9 +11,9 @@ import os.path
 
 class InterceptUtilTest(fixtures.TestCase):
 
-    def test_compiler_call_filter(self):
+    def test_is_compiler_call_filter(self):
         def test(command):
-            return sut.compiler_call({'command': [command]})
+            return sut.is_compiler_call({'command': [command]})
 
         self.assertTrue(test('clang'))
         self.assertTrue(test('clang-3.6'))
