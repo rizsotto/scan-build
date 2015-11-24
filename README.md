@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/rizsotto/Beye.svg?branch=master)](https://travis-ci.org/rizsotto/Beye)
+[![Build Status](https://travis-ci.org/rizsotto/scan-build.svg?branch=master)](https://travis-ci.org/rizsotto/scan-build)
 
-Build EYE
-=========
+scan-build
+==========
 
 It's a static analyzer wrapper for [Clang][CLANG]. The original `scan-build`
 is written in Perl. This package contains reimplementation of that scripts
@@ -53,6 +53,11 @@ file described [here][JCDB]) goes like this:
 
     $ intercept-build <your build command>
 
+To run the Clang static analyzer against a project with compilation database
+goes like this:
+
+    $ analyze-build --cdb <compilation database json file>
+
 Use `--help` to know more about the commands.
 
   [JCDB]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
@@ -73,4 +78,4 @@ tracker][ISSUES]. Please describing the bug and where you found it. If you
 have a suggestion how to fix it, include that as well. Patches are also
 welcome.
 
-  [ISSUES]: https://llvm.org/bugs/enter_bug.cgi?product=clang
+  [ISSUES]: https://github.com/rizsotto/scan-build/issues

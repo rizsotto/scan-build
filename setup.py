@@ -4,12 +4,12 @@
 from setuptools import setup
 
 setup(
-    name='beye',
+    name='scan-build',
     version='0.1',
     author='László Nagy',
     author_email='rizsotto@gmail.com',
     keywords=['Clang', 'scan-build', 'static analyzer'],
-    url='https://github.com/rizsotto/Beye',
+    url='https://github.com/rizsotto/scan-build',
     license='LICENSE.txt',
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.md').read(),
