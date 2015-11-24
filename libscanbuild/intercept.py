@@ -270,11 +270,6 @@ def create_parser():
         help="""Enable verbose output from '%(prog)s'. A second and third
                 flag increases verbosity.""")
     parser.add_argument(
-        '--override-compiler',
-        action='store_true',
-        help="""Always resort to the compiler wrapper even when better
-                interposition methods are available.""")
-    parser.add_argument(
         '--cdb',
         metavar='<file>',
         default="compile_commands.json",
@@ -289,6 +284,35 @@ def create_parser():
         dest='raw_entries',
         action='store_true',
         help="""Disable filter, unformated output.""")
+
+    advanced = parser.add_argument_group('advanced options')
+    advanced.add_argument(
+        '--override-compiler',
+        action='store_true',
+        help="""Always resort to the compiler wrapper even when better
+                intercept methods are available.""")
+    advanced.add_argument(
+        '--use-cc',
+        metavar='<path>',
+        dest='cc',
+        default='cc',
+        help="""When '%(prog)s' analyzes a project by interposing a compiler
+                wrapper, which executes a real compiler for compilation and
+                do other tasks (record the compiler invocation). Because of
+                this interposing, '%(prog)s' does not know what compiler your
+                project normally uses. Instead, it simply overrides the CC
+                environment variable, and guesses your default compiler.
+
+                If you need '%(prog)s' to use a specific compiler for
+                *compilation* then you can use this option to specify a path
+                to that compiler.""")
+    advanced.add_argument(
+        '--use-c++',
+        metavar='<path>',
+        dest='cxx',
+        default='c++',
+        help="""This is the same as "--use-cc" but for C++ code.""")
+
     parser.add_argument(
         dest='build',
         nargs=argparse.REMAINDER,
