@@ -9,11 +9,13 @@ from . import make_args, check_call_and_report
 import unittest
 
 import os.path
+import glob
 
 
 class OutputDirectoryTest(unittest.TestCase):
+
     @staticmethod
-    def run_sb(outdir, args, cmd):
+    def run_analyzer(outdir, args, cmd):
         return check_call_and_report(
             ['scan-build', '--intercept-first', '-o', outdir] + args,
             cmd)
@@ -21,17 +23,55 @@ class OutputDirectoryTest(unittest.TestCase):
     def test_regular_keeps_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             make = make_args(tmpdir) + ['build_regular']
-            outdir = self.run_sb(tmpdir, [], make)
+            outdir = self.run_analyzer(tmpdir, [], make)
             self.assertTrue(os.path.isdir(outdir))
 
     def test_clear_deletes_report_dir(self):
         with fixtures.TempDir() as tmpdir:
             make = make_args(tmpdir) + ['build_clean']
-            outdir = self.run_sb(tmpdir, [], make)
+            outdir = self.run_analyzer(tmpdir, [], make)
             self.assertFalse(os.path.isdir(outdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
         with fixtures.TempDir() as tmpdir:
             make = make_args(tmpdir) + ['build_clean']
-            outdir = self.run_sb(tmpdir, ['--keep-empty'], make)
+            outdir = self.run_analyzer(tmpdir, ['--keep-empty'], make)
             self.assertTrue(os.path.isdir(outdir))
+
+
+class OutputFormatTest(unittest.TestCase):
+
+    @staticmethod
+    def get_plist_count(directory):
+        return len(glob.glob(os.path.join(directory, 'report-*.plist')))
+
+    def test_interposition_works(self):
+        with fixtures.TempDir() as tmpdir:
+            make = make_args(tmpdir) + ['build_regular']
+            outdir = check_call_and_report(
+                ['scan-build', '--plist', '-o', tmpdir, '--override-compiler'],
+                make)
+
+            self.assertTrue(os.path.isdir(outdir))
+            self.assertEqual(self.get_plist_count(outdir), 5)
+
+    def test_intercept_wrapper_works(self):
+        with fixtures.TempDir() as tmpdir:
+            make = make_args(tmpdir) + ['build_regular']
+            outdir = check_call_and_report(
+                ['scan-build', '--plist', '-o', tmpdir, '--intercept-first',
+                 '--override-compiler'],
+                make)
+
+            self.assertTrue(os.path.isdir(outdir))
+            self.assertEqual(self.get_plist_count(outdir), 5)
+
+    def test_intercept_library_works(self):
+        with fixtures.TempDir() as tmpdir:
+            make = make_args(tmpdir) + ['build_regular']
+            outdir = check_call_and_report(
+                ['scan-build', '--plist', '-o', tmpdir, '--intercept-first'],
+                make)
+
+            self.assertTrue(os.path.isdir(outdir))
+            self.assertEqual(self.get_plist_count(outdir), 5)

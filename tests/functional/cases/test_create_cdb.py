@@ -29,6 +29,17 @@ class CompilationDatabaseTest(unittest.TestCase):
                 content = json.load(handler)
                 self.assertEqual(5, len(content))
 
+    def test_successful_build_with_wrapper(self):
+        with fixtures.TempDir() as tmpdir:
+            result = os.path.join(tmpdir, 'cdb.json')
+            make = make_args(tmpdir) + ['build_regular']
+            silent_check_call(['intercept-build', '--cdb', result,
+                               '--override-compiler'] + make)
+            self.assertTrue(os.path.isfile(result))
+            with open(result, 'r') as handler:
+                content = json.load(handler)
+                self.assertEqual(5, len(content))
+
     @unittest.skipIf(os.getenv('TRAVIS'), 'ubuntu make return -11')
     def test_successful_build_parallel(self):
         with fixtures.TempDir() as tmpdir:
@@ -42,7 +53,7 @@ class CompilationDatabaseTest(unittest.TestCase):
     def test_successful_build_on_empty_env(self):
         with fixtures.TempDir() as tmpdir:
             result = os.path.join(tmpdir, 'cdb.json')
-            make = make_args(tmpdir) + ['build_regular']
+            make = make_args(tmpdir) + ['CC=clang', 'build_regular']
             silent_check_call(['intercept-build', '--cdb', result,
                                'env', '-'] + make)
             self.assertTrue(os.path.isfile(result))

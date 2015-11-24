@@ -12,7 +12,6 @@ BAD_OBJS = $(BAD_SRCS:%.c=$(OBJDIR)/%.o)
 
 PROGRAM = $(OBJDIR)/prg
 
-CC := clang
 CFLAGS = -Wall -DDEBUG -Dvariable="value with space" -I $(SRCDIR)/include
 LDFLAGS =
 

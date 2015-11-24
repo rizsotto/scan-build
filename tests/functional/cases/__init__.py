@@ -63,7 +63,6 @@ def check_call_and_report(analyzer_cmd, build_cmd):
     exit_code, result = call_and_report(analyzer_cmd, build_cmd)
     if exit_code != 0:
         raise subprocess.CalledProcessError(
-            "Command '{0}' returned non-zero exit status {1}".format(
-                cmd, exit_code))
+            exit_code, analyzer_cmd + build_cmd, None)
     else:
         return result
