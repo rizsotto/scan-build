@@ -30,3 +30,16 @@ class GetClangArgumentsTest(fixtures.TestCase):
             sut.get_arguments,
             ['clang', '-###', '-fsyntax-only', '-x', 'c', 'notexist.c'],
             '.')
+
+
+class GetCheckersTest(fixtures.TestCase):
+
+    def test_get_checkers(self):
+        # this test is only to see is not crashing
+        result = sut.get_checkers('clang', [])
+        self.assertTrue(len(result))
+
+    def test_get_active_checkers(self):
+        # this test is only to see is not crashing
+        result = sut.get_active_checkers('clang', [])
+        self.assertTrue(len(result))

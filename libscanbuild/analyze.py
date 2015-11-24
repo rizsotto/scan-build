@@ -127,7 +127,7 @@ def run_analyzer(args, output_dir):
 
 
 def setup_environment(args, destination, wrapper_dir):
-    """ Sets up the environment for the build command. """
+    """ Set up environment for build command to intrepose compiler wrapper. """
 
     environment = dict(os.environ)
     environment.update({
