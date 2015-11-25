@@ -7,14 +7,14 @@ is written in Perl. This package contains reimplementation of that scripts
 in Python. The reimplementation diverge from the original scripts in a few
 places.
 
-  [CLANG]: http://clang.llvm.org/
-
 
 ## How to get
 
-Will be available soon from [the Python Package Index][PyPI].
+It's available from [the Python Package Index][PyPI].
 
-  [PyPI]: https://pypi.python.org/pypi
+    $ pip install scan-build
+
+Or check out the sources and add the directory `bin` to your `PATH` environment.
 
 
 ## Portability
@@ -49,8 +49,6 @@ goes like this:
 
 Use `--help` to know more about the commands.
 
-  [JCDB]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-
 
 ## Known problems
 
@@ -67,4 +65,7 @@ like to propose an improvement, please use the project's [issue tracker][ISSUES]
 Please describing the bug and where you found it. If you have a suggestion
 how to fix it, include that as well. Patches are also welcome.
 
+  [CLANG]: http://clang.llvm.org/
+  [PyPI]: https://pypi.python.org/pypi
+  [JCDB]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
   [ISSUES]: https://github.com/rizsotto/scan-build/issues
