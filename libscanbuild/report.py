@@ -61,14 +61,16 @@ def document(args, output_dir, use_cdb):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html_reports_available = args.output_format in {'html', 'plist-html'}
-    # count crashes and bugs
+
+    logging.debug('count crashes and bugs')
     crash_count = sum(1 for _ in read_crashes(output_dir))
     bug_counter = create_counters()
     for bug in read_bugs(output_dir, html_reports_available):
         bug_counter(bug)
     result = crash_count + bug_counter.total
-    # generate cover file when it's needed
+
     if html_reports_available and result:
+        logging.debug('generate index.html file')
         # common prefix for source files to have sort filenames
         prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
         # assemble the cover from multiple fragments

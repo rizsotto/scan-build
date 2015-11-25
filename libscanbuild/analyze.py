@@ -112,6 +112,7 @@ def run_analyzer(args, output_dir):
         'direct_args': analyzer_params(args)
     }
 
+    logging.debug('run analyzer against compilation database')
     with open(args.cdb, 'r') as handle:
         generator = (dict(cmd, **consts) for cmd in json.load(handle)
                      if not exclude(cmd['file']))

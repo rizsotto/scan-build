@@ -123,7 +123,7 @@ def setup_environment(args, destination, wrappers_dir):
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
     if not ear_library_path:
-        # it's gonna use compiler wrappers from above
+        logging.debug('intercept gonna use compiler wrappers')
         environment.update({
             'CC': os.path.join(wrappers_dir, 'intercept-cc'),
             'CXX': os.path.join(wrappers_dir, 'intercept-cxx'),
@@ -132,13 +132,13 @@ def setup_environment(args, destination, wrappers_dir):
             'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
         })
     elif 'darwin' == sys.platform:
-        # it's gonna use preload on OSX
+        logging.debug('intercept gonna preload libear on OSX')
         environment.update({
             'DYLD_INSERT_LIBRARIES': ear_library_path,
             'DYLD_FORCE_FLAT_NAMESPACE': '1'
         })
     else:
-        # it's gonna use preload on UNIX
+        logging.debug('intercept gonna preload libear on UNIX')
         environment.update({'LD_PRELOAD': ear_library_path})
 
     return environment
