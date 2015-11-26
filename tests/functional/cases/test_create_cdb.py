@@ -43,7 +43,7 @@ class CompilationDatabaseTest(unittest.TestCase):
     @unittest.skipIf(os.getenv('TRAVIS'), 'ubuntu make return -11')
     def test_successful_build_parallel(self):
         with fixtures.TempDir() as tmpdir:
-            result = self.run_intercept(tmpdir, ['-j', 'build_regular'])
+            result = self.run_intercept(tmpdir, ['-j', '4', 'build_regular'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
@@ -63,11 +63,11 @@ class CompilationDatabaseTest(unittest.TestCase):
 
     def test_successful_build_all_in_one(self):
         with fixtures.TempDir() as tmpdir:
-            result = self.run_intercept(tmpdir, ['-j', 'build_all_in_one'])
+            result = self.run_intercept(tmpdir, ['build_all_in_one'])
             self.assertTrue(os.path.isfile(result))
             with open(result, 'r') as handler:
                 content = json.load(handler)
-                self.assertEqual(3, len(content))
+                self.assertEqual(5, len(content))
 
     def test_not_successful_build(self):
         with fixtures.TempDir() as tmpdir:

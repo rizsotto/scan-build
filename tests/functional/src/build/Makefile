@@ -1,35 +1,42 @@
 SRCDIR := ..
 OBJDIR := .
 
-GOOD_SRCS := main.c clean-one.c clean-two.c emit-one.c emit-two.c
-CLEAN_SRCS := main.c clean-one.c clean-two.c
-BAD_SRCS := main.c broken-one.c broken-two.c
-
-
-GOOD_OBJS = $(GOOD_SRCS:%.c=$(OBJDIR)/%.o)
-CLEAN_OBJS = $(CLEAN_SRCS:%.c=$(OBJDIR)/%.o)
-BAD_OBJS = $(BAD_SRCS:%.c=$(OBJDIR)/%.o)
-
-PROGRAM = $(OBJDIR)/prg
-
 CFLAGS = -Wall -DDEBUG -Dvariable="value with space" -I $(SRCDIR)/include
 LDFLAGS =
+PROGRAM = $(OBJDIR)/prg
 
+$(OBJDIR)/main.o: $(SRCDIR)/main.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/main.c
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) -c -o $@ $< $(CFLAGS)
+$(OBJDIR)/clean-one.o: $(SRCDIR)/clean-one.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/clean-one.c
 
-$(PROGRAM): $(GOOD_OBJS)
-	$(CC) -o $@ $^ $(LDFLAGS)
+$(OBJDIR)/clean-two.o: $(SRCDIR)/clean-two.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/clean-two.c
 
-build_regular: $(GOOD_OBJS) $(PROGRAM)
+$(OBJDIR)/emit-one.o: $(SRCDIR)/emit-one.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/emit-one.c
 
-build_clean: $(CLEAN_OBJS)
+$(OBJDIR)/emit-two.o: $(SRCDIR)/emit-two.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/emit-two.c
 
-build_broken: $(BAD_OBJS)
+$(OBJDIR)/broken-one.o: $(SRCDIR)/broken-one.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/broken-one.c
 
-build_all_in_one:
-	$(CC) -o $(PROGRAM) $(CFLAGS) $(LDFLAGS) $(CLEAN_SRCS:%.c=$(SRCDIR)/%.c)
+$(OBJDIR)/broken-two.o: $(SRCDIR)/broken-two.c
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/broken-two.c
+
+$(PROGRAM): $(OBJDIR)/main.o $(OBJDIR)/clean-one.o $(OBJDIR)/clean-two.o $(OBJDIR)/emit-one.o $(OBJDIR)/emit-two.o
+	$(CC) $(LDFLAGS) -o $@ $(OBJDIR)/main.o $(OBJDIR)/clean-one.o $(OBJDIR)/clean-two.o $(OBJDIR)/emit-one.o $(OBJDIR)/emit-two.o
+
+build_regular: $(PROGRAM)
+
+build_clean: $(OBJDIR)/main.o $(OBJDIR)/clean-one.o $(OBJDIR)/clean-two.o
+
+build_broken: $(OBJDIR)/main.o $(OBJDIR)/broken-one.o $(OBJDIR)/broken-two.o
+
+build_all_in_one: $(SRCDIR)/main.c $(SRCDIR)/clean-one.c $(SRCDIR)/clean-two.c $(SRCDIR)/emit-one.c $(SRCDIR)/emit-two.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $(PROGRAM) $(SRCDIR)/main.c $(SRCDIR)/clean-one.c $(SRCDIR)/clean-two.c $(SRCDIR)/emit-one.c $(SRCDIR)/emit-two.c
 
 clean:
 	rm -f $(PROGRAM) $(OBJDIR)/*.o
