@@ -3,7 +3,7 @@
 scan-build
 ==========
 
-It's a static analyzer wrapper for [Clang][CLANG]. The original `scan-build`
+It's a static analyzer wrapper for [Clang][1]. The original `scan-build`
 is written in Perl. This package contains reimplementation of that scripts
 in Python. The reimplementation diverge from the original scripts in a few
 places.
@@ -12,7 +12,7 @@ places.
 How to get
 ----------
 
-It's available from [the Python Package Index][PyPI].
+It's available from [the Python Package Index][2].
 
     $ pip install scan-build
 
@@ -43,7 +43,7 @@ To run the Clang static analyzer against a project goes like this:
     $ scan-build <your build command>
 
 To generate a compilation database file (compilation database is a JSON
-file described [here][JCDB]) goes like this: 
+file described [here][3]) goes like this:
 
     $ intercept-build <your build command>
 
@@ -108,11 +108,11 @@ Problem reports
 ---------------
 
 If you find a bug in this documentation or elsewhere in the program or would
-like to propose an improvement, please use the project's [issue tracker][ISSUES].
+like to propose an improvement, please use the project's [issue tracker][4].
 Please describing the bug and where you found it. If you have a suggestion
 how to fix it, include that as well. Patches are also welcome.
 
-  [CLANG]: http://clang.llvm.org/
-  [PyPI]: https://pypi.python.org/pypi/scan-build
-  [JCDB]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-  [ISSUES]: https://github.com/rizsotto/scan-build/issues
+  [1]: http://clang.llvm.org/
+  [2]: https://pypi.python.org/pypi/scan-build
+  [3]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
+  [4]: https://github.com/rizsotto/scan-build/issues
