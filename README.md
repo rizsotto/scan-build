@@ -112,6 +112,13 @@ like to propose an improvement, please use the project's [issue tracker][4].
 Please describing the bug and where you found it. If you have a suggestion
 how to fix it, include that as well. Patches are also welcome.
 
+
+License
+-------
+
+The project is licensed under University of Illinois/NCSA Open Source License.
+
+
   [1]: http://clang.llvm.org/
   [2]: https://pypi.python.org/pypi/scan-build
   [3]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
