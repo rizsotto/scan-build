@@ -77,7 +77,11 @@ tool has three distinct model to run the analyzer:
     The analyzer run against each modules after the build finished.
 
 The 1. and 3. are using compiler wrappers, which works only if the build
-process respects the `CC` and `CXX` environment variables.
+process respects the `CC` and `CXX` environment variables. (Some build
+process can override these variable as command line parameter only. This case
+you need to pass the compiler wrappers manually. eg.: `intercept-build
+--override-compiler make CC=intercept-cc CXX=intercept-c++ all` where the
+original build command would have been `make all` only.)
 
 The 1. runs the analyzer right after the real compilation. So, if the build
 process removes removes intermediate modules (generated sources) the analyzer
@@ -88,7 +92,9 @@ modules which are not exists. So, it's suitable for incremental analysis durring
 the development.
 
 The 2. mode is available only on FreeBSD, Linux and OSX. Where library preload
-is available from the dynamic loader.
+is available from the dynamic loader. On OSX System Integrity Protection security
+feature enabled prevents library preload, so this method will not work in such
+environment.
 
 `intercept-build` command uses only the 2. and 3. mode to generate the
 compilation database. `analyze-build` does only run the analyzer against the
