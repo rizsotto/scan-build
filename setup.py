@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='scan-build',
-    version='0.1',
+    version='0.2',
     author='László Nagy',
     author_email='rizsotto@gmail.com',
     keywords=['Clang', 'scan-build', 'static analyzer'],
