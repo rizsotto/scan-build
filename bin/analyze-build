@@ -5,6 +5,9 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import multiprocessing
+multiprocessing.freeze_support()
+
 import sys
 import os.path
 this_dir = os.path.dirname(os.path.realpath(__file__))
