@@ -46,7 +46,12 @@ def run(opts):
 
     This complex task is decomposed into smaller methods which are calling
     each other in chain. If the analyzis is not possibe the given method
-    just return and break the chain. """
+    just return and break the chain.
+
+    The passed parameter is a python dictionary. Each method first check
+    that the needed parameters received. (This is done by the 'require'
+    decorator. It's like an 'assert' to check the contract between the
+    caller and the called method.) """
 
     try:
         command = opts.pop('command')
