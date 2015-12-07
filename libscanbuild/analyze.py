@@ -20,7 +20,7 @@ import argparse
 import logging
 import subprocess
 import multiprocessing
-from libscanbuild import initialize_logging, tempdir
+from libscanbuild import initialize_logging, tempdir, logging_internal_error
 from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -78,7 +78,7 @@ def main(bin_dir, from_build_command):
     except KeyboardInterrupt:
         return 1
     except Exception:
-        logging.exception("Something unexpected had happened.")
+        logging_internal_error(args.verbose)
         return 127
 
 

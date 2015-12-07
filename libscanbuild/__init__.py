@@ -54,3 +54,14 @@ def initialize_logging(verbose_level):
 
     program = os.path.basename(sys.argv[0])
     logging.basicConfig(format=fmt_string.format(program), level=level)
+
+
+def logging_internal_error(verbose):
+    """ Tell the user what to do when this program has a bug. """
+
+    logging.exception('Internal error. Please report this bug!')
+    if verbose < 2:
+        logging.error("Please run this command again and turn on "
+                      "verbose mode (See '--help' for more.)")
+    else:
+        logging.error("Please attach the output to the bug report")

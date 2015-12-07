@@ -32,6 +32,7 @@ import logging
 import subprocess
 from libear import ear_library, TemporaryDirectory
 from libscanbuild import duplicate_check, tempdir, initialize_logging
+from libscanbuild import logging_internal_error
 from libscanbuild.command import Action, classify_parameters
 from libscanbuild.shell import encode, decode
 
@@ -60,7 +61,7 @@ def main(wrappers_dir):
     except KeyboardInterrupt:
         return 1
     except Exception:
-        logging.exception("Something unexpected had happened.")
+        logging_internal_error(args.verbose)
         return 127
 
 
