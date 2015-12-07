@@ -11,7 +11,6 @@ import unittest
 
 
 class Spy(object):
-
     def __init__(self):
         self.arg = None
         self.success = 0
@@ -29,7 +28,6 @@ def TempDir():
 
 
 class TestCase(unittest.TestCase):
-
     def assertIn(self, element, collection):
         found = False
         for it in collection:

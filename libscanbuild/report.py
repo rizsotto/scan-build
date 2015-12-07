@@ -9,18 +9,18 @@ The input for this step is the output directory, where individual reports
 could be found. It parses those reports and generates a final HTML "cover"
 report. """
 
-import logging
 import re
 import os
 import os.path
 import sys
-import json
 import shutil
 import time
-import glob
 import tempfile
-import plistlib
 import itertools
+import plistlib
+import glob
+import json
+import logging
 import contextlib
 from libscanbuild import duplicate_check
 from libscanbuild.clang import get_version
@@ -114,8 +114,7 @@ def assemble_cover(output_dir, prefix, args, fragments):
         |    <script type='text/javascript' src='selectable.js'></script>
         |  </head>""", indent).format(html_title=args.html_title))
         handle.write(comment('SUMMARYENDHEAD'))
-        handle.write(reindent(
-            """
+        handle.write(reindent("""
         |  <body>
         |    <h1>{html_title}</h1>
         |    <table>
@@ -124,14 +123,14 @@ def assemble_cover(output_dir, prefix, args, fragments):
         |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
         |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
         |      <tr><th>Date:</th><td>{date}</td></tr>
-        |    </table>""",
-            indent).format(html_title=args.html_title,
-                           user_name=getpass.getuser(),
-                           host_name=socket.gethostname(),
-                           current_dir=prefix,
-                           cmd_args=' '.join(sys.argv),
-                           clang_version=get_version(args.clang),
-                           date=datetime.datetime.today().strftime('%c')))
+        |    </table>""", indent).format(html_title=args.html_title,
+                                         user_name=getpass.getuser(),
+                                         host_name=socket.gethostname(),
+                                         current_dir=prefix,
+                                         cmd_args=' '.join(sys.argv),
+                                         clang_version=get_version(args.clang),
+                                         date=datetime.datetime.today(
+                                         ).strftime('%c')))
         for fragment in fragments:
             # copy the content of fragments
             with open(fragment, 'r') as input_handle:
@@ -281,8 +280,9 @@ def crash_report(output_dir, prefix):
 def read_crashes(output_dir):
     """ Generate a unique sequence of crashes from given output directory. """
 
-    return (parse_crash(filename) for filename in
-            glob.iglob(os.path.join(output_dir, 'failures', '*.info.txt')))
+    return (parse_crash(filename)
+            for filename in glob.iglob(os.path.join(output_dir, 'failures',
+                                                    '*.info.txt')))
 
 
 def read_bugs(output_dir, html):

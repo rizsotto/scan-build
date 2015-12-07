@@ -47,7 +47,7 @@ def initialize_logging(verbose_level):
     import logging
     level = logging.WARNING - min(logging.WARNING, (10 * verbose_level))
 
-    if 3 <= verbose_level:
+    if verbose_level >= 3:
         fmt_string = '{0}: %(levelname)s: %(message)s'
     else:
         fmt_string = '{0}: %(levelname)s: %(funcName)s: %(message)s'

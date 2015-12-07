@@ -14,7 +14,7 @@ __all__ = ['encode', 'decode']
 def encode(command):
     """ Takes a command as list and returns a string. """
 
-    def needs_quote(arg):
+    def needs_quote(word):
         """ Returns true if arguments needs to be protected by quotes.
 
         Previous implementation was shlex.split method, but that's not good
@@ -24,30 +24,30 @@ def encode(command):
         reserved = {' ', '$', '%', '&', '(', ')', '[', ']', '{', '}', '*', '|',
                     '<', '>', '@', '?', '!'}
         state = 0
-        for c in arg:
-            if state == 0 and c in reserved:
+        for current in word:
+            if state == 0 and current in reserved:
                 return True
-            elif state == 0 and c == '\\':
+            elif state == 0 and current == '\\':
                 state = 1
-            elif state == 1 and c in reserved | {'\\'}:
+            elif state == 1 and current in reserved | {'\\'}:
                 state = 0
-            elif state == 0 and c == '"':
+            elif state == 0 and current == '"':
                 state = 2
-            elif state == 2 and c == '"':
+            elif state == 2 and current == '"':
                 state = 0
-            elif state == 0 and c == "'":
+            elif state == 0 and current == "'":
                 state = 3
-            elif state == 3 and c == "'":
+            elif state == 3 and current == "'":
                 state = 0
         return state != 0
 
-    def escape(arg):
+    def escape(word):
         """ Do protect argument if that's needed. """
 
         table = {'\\': '\\\\', '"': '\\"'}
-        escaped = ''.join([table.get(c, c) for c in arg])
+        escaped = ''.join([table.get(c, c) for c in word])
 
-        return '"' + escaped + '"' if needs_quote(arg) else escaped
+        return '"' + escaped + '"' if needs_quote(word) else escaped
 
     return " ".join([escape(arg) for arg in command])
 

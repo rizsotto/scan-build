@@ -5,12 +5,12 @@
 # License. See LICENSE.TXT for details.
 """ This module is responsible to run the analyzer commands. """
 
-import subprocess
-import logging
 import os
 import os.path
 import tempfile
 import functools
+import subprocess
+import logging
 from libscanbuild.command import classify_parameters, Action, classify_source
 from libscanbuild.clang import get_arguments, get_version
 from libscanbuild.shell import decode

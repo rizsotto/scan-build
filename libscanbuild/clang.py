@@ -8,9 +8,9 @@
 Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper. """
 
+import re
 import subprocess
 import logging
-import re
 from libscanbuild.shell import decode
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
@@ -48,7 +48,7 @@ def get_arguments(command, cwd):
     line = lastline(child.stdout)
     child.stdout.close()
     child.wait()
-    if 0 == child.returncode:
+    if child.returncode == 0:
         if re.search(r'clang(.*): error:', line):
             raise Exception(line)
         return decode(line)
@@ -65,12 +65,13 @@ def get_active_checkers(clang, plugins):
     def checkers(language):
         """ Returns a list of active checkers for the given language. """
 
-        load = [elem for plugin in plugins for elem in ['-Xclang', '-load',
-                                                        '-Xclang', plugin]]
+        load = [elem
+                for plugin in plugins
+                for elem in ['-Xclang', '-load', '-Xclang', plugin]]
         cmd = [clang, '--analyze'] + load + ['-x', language, '-']
         pattern = re.compile(r'^-analyzer-checker=(.*)$')
-        return [pattern.match(arg).group(1) for arg in get_arguments(cmd, '.')
-                if pattern.match(arg)]
+        return [pattern.match(arg).group(1)
+                for arg in get_arguments(cmd, '.') if pattern.match(arg)]
 
     result = set()
     for language in ['c', 'c++', 'objective-c', 'objective-c++']:
@@ -149,7 +150,7 @@ def get_checkers(clang, plugins):
     }
     child.stdout.close()
     child.wait()
-    if 0 == child.returncode and len(checkers):
+    if child.returncode == 0 and len(checkers):
         return checkers
     else:
         raise Exception('Could not query Clang for available checkers.')

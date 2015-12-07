@@ -11,13 +11,13 @@ To run the static analyzer against a build is done in multiple steps:
  -- Analyze:   run the analyzer against the captured commands,
  -- Report:    create a cover report from the analyzer outputs.  """
 
-import argparse
-import logging
 import sys
 import re
 import os
 import os.path
 import json
+import argparse
+import logging
 import subprocess
 import multiprocessing
 from libscanbuild import initialize_logging, tempdir
@@ -25,7 +25,6 @@ from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
 from libscanbuild.clang import get_checkers
-
 from libscanbuild.runner import action_check
 from libscanbuild.command import classify_parameters, classify_source
 
@@ -114,10 +113,10 @@ def run_analyzer(args, output_dir):
 
     logging.debug('run analyzer against compilation database')
     with open(args.cdb, 'r') as handle:
-        generator = (dict(cmd, **consts) for cmd in json.load(handle)
-                     if not exclude(cmd['file']))
+        generator = (dict(cmd, **consts)
+                     for cmd in json.load(handle) if not exclude(cmd['file']))
         # when verbose output requested execute sequentially
-        pool = multiprocessing.Pool(1 if 2 < args.verbose else None)
+        pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
         for current in pool.imap_unordered(run, generator):
             if current is not None:
                 # display error message from the static analyzer
@@ -186,8 +185,7 @@ def wrapper(cplusplus):
                     logging.info(line.rstrip())
     except Exception:
         logging.exception("run analyzer inside compiler wrapper failed.")
-    finally:
-        return 0
+    return 0
 
 
 def analyzer_params(args):
@@ -221,7 +219,7 @@ def analyzer_params(args):
         result.append('-analyzer-output={0}'.format(args.output_format))
     if args.analyzer_config:
         result.append(args.analyzer_config)
-    if 4 <= args.verbose:
+    if args.verbose >= 4:
         result.append('-analyzer-display-progress')
     if args.plugins:
         result.extend(prefix_with('-load', args.plugins))

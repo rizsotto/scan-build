@@ -9,11 +9,10 @@ import sys
 import os
 import os.path
 import re
-import logging
-import contextlib
 import tempfile
 import shutil
-
+import contextlib
+import logging
 
 __all__ = ['ear_library']
 
@@ -37,10 +36,8 @@ def ear_library(compiler, dst_dir):
         configure.check_function_exists('execl', 'HAVE_EXECL')
         configure.check_function_exists('execlp', 'HAVE_EXECLP')
         configure.check_function_exists('execle', 'HAVE_EXECLE')
-        configure.check_function_exists('posix_spawn',
-                                        'HAVE_POSIX_SPAWN')
-        configure.check_function_exists('posix_spawnp',
-                                        'HAVE_POSIX_SPAWNP')
+        configure.check_function_exists('posix_spawn', 'HAVE_POSIX_SPAWN')
+        configure.check_function_exists('posix_spawnp', 'HAVE_POSIX_SPAWNP')
         configure.check_symbol_exists('_NSGetEnviron', 'crt_externs.h',
                                       'HAVE_NSGETENVIRON')
         configure.write_by_template(

@@ -10,7 +10,6 @@ import os.path
 
 
 class GetClangArgumentsTest(fixtures.TestCase):
-
     def test_get_clang_arguments(self):
         with fixtures.TempDir() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')
@@ -26,14 +25,11 @@ class GetClangArgumentsTest(fixtures.TestCase):
 
     def test_get_clang_arguments_fails(self):
         self.assertRaises(
-            Exception,
-            sut.get_arguments,
-            ['clang', '-###', '-fsyntax-only', '-x', 'c', 'notexist.c'],
-            '.')
+            Exception, sut.get_arguments,
+            ['clang', '-###', '-fsyntax-only', '-x', 'c', 'notexist.c'], '.')
 
 
 class GetCheckersTest(fixtures.TestCase):
-
     def test_get_checkers(self):
         # this test is only to see is not crashing
         result = sut.get_checkers('clang', [])

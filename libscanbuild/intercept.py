@@ -20,16 +20,16 @@ The module also implements compiler wrappers to intercept the compiler calls.
 The module implements the build command execution and the post-processing of
 the output files, which will condensates into a compilation database. """
 
-import argparse
-import logging
-import subprocess
-import json
 import sys
 import os
 import os.path
 import re
-import glob
 import itertools
+import json
+import glob
+import argparse
+import logging
+import subprocess
 from libear import ear_library, TemporaryDirectory
 from libscanbuild import duplicate_check, tempdir, initialize_logging
 from libscanbuild.command import Action, classify_parameters
@@ -131,7 +131,7 @@ def setup_environment(args, destination, wrappers_dir):
             'INTERCEPT_BUILD_CXX': cxx_compiler,
             'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
         })
-    elif 'darwin' == sys.platform:
+    elif sys.platform == 'darwin':
         logging.debug('intercept gonna preload libear on OSX')
         environment.update({
             'DYLD_INSERT_LIBRARIES': ear_library_path,
@@ -217,8 +217,8 @@ def format_entry(entry):
         for source in atoms['files']:
             compiler = 'c++' if atoms['c++'] else 'cc'
             output = ['-o', atoms['output']] if atoms.get('output') else []
-            command = [compiler, '-c'
-                       ] + atoms['compile_options'] + output + [source]
+            command = [compiler, '-c'] + atoms['compile_options'] + output + \
+                      [source]
             logging.debug('formated as: %s', command)
             yield {
                 'directory': entry['directory'],
