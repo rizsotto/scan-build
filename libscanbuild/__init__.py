@@ -47,7 +47,7 @@ def initialize_logging(verbose_level):
     import logging
     level = logging.WARNING - min(logging.WARNING, (10 * verbose_level))
 
-    if verbose_level >= 3:
+    if verbose_level <= 3:
         fmt_string = '{0}: %(levelname)s: %(message)s'
     else:
         fmt_string = '{0}: %(levelname)s: %(funcName)s: %(message)s'
@@ -59,9 +59,11 @@ def initialize_logging(verbose_level):
 def logging_internal_error(verbose):
     """ Tell the user what to do when this program has a bug. """
 
-    logging.exception('Internal error. Please report this bug!')
+    import logging
+    logging.exception('Internal error.')
     if verbose < 2:
         logging.error("Please run this command again and turn on "
-                      "verbose mode (See '--help' for more.)")
+                      "verbose mode (add '-vvv' as argument).")
     else:
-        logging.error("Please attach the output to the bug report")
+        logging.error("Please report this bug and attach the output "
+                      "to the bug report")
