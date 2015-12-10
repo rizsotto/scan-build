@@ -132,7 +132,7 @@ def setup_environment(args, destination, wrapper_dir):
     environment = dict(os.environ)
     environment.update({
         'CC': os.path.join(wrapper_dir, 'analyze-cc'),
-        'CXX': os.path.join(wrapper_dir, 'analyze-cxx'),
+        'CXX': os.path.join(wrapper_dir, 'analyze-c++'),
         'ANALYZE_BUILD_CC': args.cc,
         'ANALYZE_BUILD_CXX': args.cxx,
         'ANALYZE_BUILD_CLANG': args.clang if need_analyzer(args.build) else '',

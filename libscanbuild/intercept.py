@@ -135,7 +135,7 @@ def setup_environment(args, destination, wrappers_dir):
         logging.debug('intercept gonna use compiler wrappers')
         environment.update({
             'CC': os.path.join(wrappers_dir, 'intercept-cc'),
-            'CXX': os.path.join(wrappers_dir, 'intercept-cxx'),
+            'CXX': os.path.join(wrappers_dir, 'intercept-c++'),
             'INTERCEPT_BUILD_CC': c_compiler,
             'INTERCEPT_BUILD_CXX': cxx_compiler,
             'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
