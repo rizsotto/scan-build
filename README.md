@@ -3,11 +3,11 @@
 scan-build
 ==========
 
-It's a static analyzer wrapper for [Clang][1]. The original `scan-build`
-is written in Perl. This package contains reimplementation of that scripts
-in Python. The reimplementation diverge from the original scripts in a few
-places.
-
+A package designed to wrap a build so that all calls to gcc/clang are
+intercepted and logged into a [compilation database][1] and/or piped to
+the clang static analyzer. Includes intercept-build tool, which logs
+the build, as well as scan-build tool, which logs the build and runs
+the clang static analyzer on it.
 
 How to get
 ----------
@@ -42,8 +42,7 @@ To run the Clang static analyzer against a project goes like this:
 
     $ scan-build <your build command>
 
-To generate a compilation database file (compilation database is a JSON
-file described [here][3]) goes like this:
+To generate a compilation database file goes like this:
 
     $ intercept-build <your build command>
 
@@ -69,12 +68,17 @@ tool has three distinct model to run the analyzer:
 
 1.  Use compiler wrappers to make actions.
     The compiler wrappers does run the real compiler and the analyzer.
+    This is the default behaviour, can be enforced with `--override-compiler`
+    flag.
 
 2.  Use special library to intercept compiler calls durring the build process.
     The analyzer run against each modules after the build finished.
+    Use `--intercept-first` flag to get this model.
 
 3.  Use compiler wrappers to intercept compiler calls durring the build process.
     The analyzer run against each modules after the build finished.
+    Use `--intercept-first` and `--override-compiler` flags together to get
+    this model.
 
 The 1. and 3. are using compiler wrappers, which works only if the build
 process respects the `CC` and `CXX` environment variables. (Some build
@@ -114,7 +118,7 @@ Problem reports
 ---------------
 
 If you find a bug in this documentation or elsewhere in the program or would
-like to propose an improvement, please use the project's [issue tracker][4].
+like to propose an improvement, please use the project's [issue tracker][3].
 Please describing the bug and where you found it. If you have a suggestion
 how to fix it, include that as well. Patches are also welcome.
 
@@ -123,9 +127,8 @@ License
 -------
 
 The project is licensed under University of Illinois/NCSA Open Source License.
+See LICENSE.TXT for details.
 
-
-  [1]: http://clang.llvm.org/
+  [1]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
   [2]: https://pypi.python.org/pypi/scan-build
-  [3]: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-  [4]: https://github.com/rizsotto/scan-build/issues
+  [3]: https://github.com/rizsotto/scan-build/issues

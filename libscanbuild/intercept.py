@@ -69,25 +69,30 @@ def capture(args, wrappers_dir):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
-        # run post processing only if that was requested
-        if 'raw_entries' not in args or not args.raw_entries:
-            # create entries from the current run
-            current = itertools.chain.from_iterable(
-                # creates a sequence of entry generators from an exec,
-                # but filter out non compiler calls before.
-                (format_entry(x) for x in commands if is_compiler_call(x)))
-            # read entries from previous run
-            if 'append' in args and args.append and os.path.exists(args.cdb):
-                with open(args.cdb) as handle:
-                    previous = iter(json.load(handle))
-            else:
-                previous = iter([])
-            # filter out duplicate entries from both
-            duplicate = duplicate_check(entry_hash)
-            return (entry
-                    for entry in itertools.chain(previous, current)
-                    if os.path.exists(entry['file']) and not duplicate(entry))
-        return commands
+        """ To make a compilation database, it needs to filter out commands
+        which are not compiler calls. Needs to find the source file name
+        from the arguments. And do shell escaping on the command.
+
+        To support incremental builds, it is desired to read elements from
+        an existing compilation database from a previous run. These elemets
+        shall be merged with the new elements. """
+
+        # create entries from the current run
+        current = itertools.chain.from_iterable(
+            # creates a sequence of entry generators from an exec,
+            # but filter out non compiler calls before.
+            (format_entry(x) for x in commands if is_compiler_call(x)))
+        # read entries from previous run
+        if 'append' in args and args.append and os.path.exists(args.cdb):
+            with open(args.cdb) as handle:
+                previous = iter(json.load(handle))
+        else:
+            previous = iter([])
+        # filter out duplicate entries from both
+        duplicate = duplicate_check(entry_hash)
+        return (entry
+                for entry in itertools.chain(previous, current)
+                if os.path.exists(entry['file']) and not duplicate(entry))
 
     with TemporaryDirectory(prefix='intercept-build', dir=tempdir()) as tmpdir:
         # run the build command
@@ -96,11 +101,14 @@ def capture(args, wrappers_dir):
         exit_code = subprocess.call(args.build, env=environment)
         logging.info('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
-        commands = (
+        commands = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmpdir, filename))
             for filename in sorted(glob.iglob(os.path.join(tmpdir, '*.cmd'))))
-        # do post processing
-        entries = post_processing(itertools.chain.from_iterable(commands))
+        # do post processing only if that was requested
+        if 'raw_entries' not in args or not args.raw_entries:
+            entries = post_processing(commands)
+        else:
+            entries = commands
         # dump the compilation database
         with open(args.cdb, 'w+') as handle:
             json.dump(list(entries), handle, sort_keys=True, indent=4)
@@ -284,7 +292,9 @@ def create_parser():
         '--disable-filter', '-n',
         dest='raw_entries',
         action='store_true',
-        help="""Disable filter, unformated output.""")
+        help="""Intercepted child process creation calls (exec calls) are all
+                logged to the output. The output is not a compilation database.
+                This flag is for debug purposes.""")
 
     advanced = parser.add_argument_group('advanced options')
     advanced.add_argument(

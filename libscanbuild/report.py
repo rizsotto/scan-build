@@ -3,11 +3,10 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-""" This module is responsible to generate the "cover" report.
+""" This module is responsible to generate 'index.html' for the report.
 
 The input for this step is the output directory, where individual reports
-could be found. It parses those reports and generates a final HTML "cover"
-report. """
+could be found. It parses those reports and generates 'index.html'. """
 
 import re
 import os

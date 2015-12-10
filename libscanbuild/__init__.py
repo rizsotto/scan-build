@@ -6,9 +6,7 @@
 """
 This module responsible to run the Clang static analyzer against any build
 and generate reports.
-
-This work is derived from the original 'scan-build' Perl implementation and
-from an independent project 'bear'. """
+"""
 
 
 def duplicate_check(method):
