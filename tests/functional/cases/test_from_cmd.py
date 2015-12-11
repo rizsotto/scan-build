@@ -77,40 +77,42 @@ class RunAnalyzerTest(unittest.TestCase):
             self.assertTrue(os.path.isdir(outdir))
             self.assertEqual(self.get_plist_count(outdir), 5)
 
+    @staticmethod
+    def compile_empty_source_file(target_dir, is_cxx):
+        compiler = '$CXX' if is_cxx else '$CC'
+        src_file_name = 'test.cxx' if is_cxx else 'test.c'
+        src_file = os.path.join(target_dir, src_file_name)
+        obj_file = os.path.join(target_dir, 'test.o')
+        os.mknod(src_file)
+        command = ' '.join([compiler, '-c', src_file, '-o', obj_file])
+        return ['sh', '-c', command]
+
     def test_interposition_cc_works(self):
         with fixtures.TempDir() as tmpdir:
-            filename = os.path.join(tmpdir, 'test.c')
-            os.mknod(filename)
             outdir = check_call_and_report(
                 ['scan-build', '--plist', '-o', tmpdir, '--override-compiler'],
-                ['sh', '-c', '$CC -c {0}'.format(filename)])
+                self.compile_empty_source_file(tmpdir, False))
             self.assertEqual(self.get_plist_count(outdir), 1)
 
     def test_interposition_cxx_works(self):
         with fixtures.TempDir() as tmpdir:
-            filename = os.path.join(tmpdir, 'test.c++')
-            os.mknod(filename)
             outdir = check_call_and_report(
                 ['scan-build', '--plist', '-o', tmpdir, '--override-compiler'],
-                ['sh', '-c', '$CXX -c {0}'.format(filename)])
+                self.compile_empty_source_file(tmpdir, True))
             self.assertEqual(self.get_plist_count(outdir), 1)
 
     def test_intercept_cc_works(self):
         with fixtures.TempDir() as tmpdir:
-            filename = os.path.join(tmpdir, 'test.c')
-            os.mknod(filename)
             outdir = check_call_and_report(
                 ['scan-build', '--plist', '-o', tmpdir, '--override-compiler',
                  '--intercept-first'],
-                ['sh', '-c', '$CC -c {0}'.format(filename)])
+                self.compile_empty_source_file(tmpdir, False))
             self.assertEqual(self.get_plist_count(outdir), 1)
 
     def test_intercept_cxx_works(self):
         with fixtures.TempDir() as tmpdir:
-            filename = os.path.join(tmpdir, 'test.c++')
-            os.mknod(filename)
             outdir = check_call_and_report(
                 ['scan-build', '--plist', '-o', tmpdir, '--override-compiler',
                  '--intercept-first'],
-                ['sh', '-c', '$CXX -c {0}'.format(filename)])
+                self.compile_empty_source_file(tmpdir, True))
             self.assertEqual(self.get_plist_count(outdir), 1)

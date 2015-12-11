@@ -28,16 +28,14 @@ def make_args(target):
             os.path.join(path, 'build', 'Makefile')]
 
 
-def silent_call(cmd):
-    return subprocess.call(cmd,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
+def silent_call(cmd, *args, **kwargs):
+    kwargs.update({'stdout': subprocess.PIPE, 'stderr': subprocess.STDOUT})
+    return subprocess.call(cmd, *args, **kwargs)
 
 
-def silent_check_call(cmd):
-    return subprocess.check_call(cmd,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+def silent_check_call(cmd, *args, **kwargs):
+    kwargs.update({'stdout': subprocess.PIPE, 'stderr': subprocess.STDOUT})
+    return subprocess.check_call(cmd, *args, **kwargs)
 
 
 def call_and_report(analyzer_cmd, build_cmd):
