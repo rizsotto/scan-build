@@ -36,7 +36,7 @@ from libscanbuild import logging_internal_error
 from libscanbuild.command import Action, classify_parameters
 from libscanbuild.shell import encode, decode
 
-__all__ = ['capture', 'main', 'wrapper']
+__all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
 
 GS = chr(0x1d)
 RS = chr(0x1e)
@@ -46,7 +46,7 @@ COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
 
 
-def main(bin_dir):
+def intercept_build_main(bin_dir):
     """ Entry point for 'intercept-build' command. """
 
     try:
@@ -156,7 +156,7 @@ def setup_environment(args, destination, bin_dir):
     return environment
 
 
-def wrapper(cplusplus):
+def intercept_build_wrapper(cplusplus):
     """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 
     It does generate execution report into target directory. And execute

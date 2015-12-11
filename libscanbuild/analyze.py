@@ -28,13 +28,13 @@ from libscanbuild.clang import get_checkers
 from libscanbuild.runner import action_check
 from libscanbuild.command import classify_parameters, classify_source
 
-__all__ = ['main', 'wrapper']
+__all__ = ['analyze_build_main', 'analyze_build_wrapper']
 
 COMPILER_WRAPPER_CC = 'analyze-cc'
 COMPILER_WRAPPER_CXX = 'analyze-c++'
 
 
-def main(bin_dir, from_build_command):
+def analyze_build_main(bin_dir, from_build_command):
     """ Entry point for 'analyze-build' and 'scan-build'. """
 
     try:
@@ -148,7 +148,7 @@ def setup_environment(args, destination, bin_dir):
     return environment
 
 
-def wrapper(cplusplus):
+def analyze_build_wrapper(cplusplus):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 
     # initialize wrapper logging
