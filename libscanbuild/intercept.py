@@ -42,8 +42,11 @@ GS = chr(0x1d)
 RS = chr(0x1e)
 US = chr(0x1f)
 
+COMPILER_WRAPPER_CC = 'intercept-cc'
+COMPILER_WRAPPER_CXX = 'intercept-c++'
 
-def main(wrappers_dir):
+
+def main(bin_dir):
     """ Entry point for 'intercept-build' command. """
 
     try:
@@ -57,7 +60,7 @@ def main(wrappers_dir):
             parser.print_help()
             return 0
 
-        return capture(args, wrappers_dir)
+        return capture(args, bin_dir)
     except KeyboardInterrupt:
         return 1
     except Exception:
@@ -65,7 +68,7 @@ def main(wrappers_dir):
         return 127
 
 
-def capture(args, wrappers_dir):
+def capture(args, bin_dir):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
@@ -94,16 +97,16 @@ def capture(args, wrappers_dir):
                 for entry in itertools.chain(previous, current)
                 if os.path.exists(entry['file']) and not duplicate(entry))
 
-    with TemporaryDirectory(prefix='intercept-build', dir=tempdir()) as tmpdir:
+    with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
-        environment = setup_environment(args, tmpdir, wrappers_dir)
+        environment = setup_environment(args, tmp_dir, bin_dir)
         logging.debug('run build in environment: %s', environment)
         exit_code = subprocess.call(args.build, env=environment)
         logging.info('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
         commands = itertools.chain.from_iterable(
-            parse_exec_trace(os.path.join(tmpdir, filename))
-            for filename in sorted(glob.iglob(os.path.join(tmpdir, '*.cmd'))))
+            parse_exec_trace(os.path.join(tmp_dir, filename))
+            for filename in sorted(glob.iglob(os.path.join(tmp_dir, '*.cmd'))))
         # do post processing only if that was requested
         if 'raw_entries' not in args or not args.raw_entries:
             entries = post_processing(commands)
@@ -115,7 +118,7 @@ def capture(args, wrappers_dir):
         return exit_code
 
 
-def setup_environment(args, destination, wrappers_dir):
+def setup_environment(args, destination, bin_dir):
     """ Sets up the environment for the build command.
 
     It sets the required environment variables and execute the given command.
@@ -134,8 +137,8 @@ def setup_environment(args, destination, wrappers_dir):
     if not ear_library_path:
         logging.debug('intercept gonna use compiler wrappers')
         environment.update({
-            'CC': os.path.join(wrappers_dir, 'intercept-cc'),
-            'CXX': os.path.join(wrappers_dir, 'intercept-c++'),
+            'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
+            'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
             'INTERCEPT_BUILD_CC': c_compiler,
             'INTERCEPT_BUILD_CXX': cxx_compiler,
             'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'

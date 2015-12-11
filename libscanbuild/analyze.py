@@ -30,9 +30,12 @@ from libscanbuild.command import classify_parameters, classify_source
 
 __all__ = ['main', 'wrapper']
 
+COMPILER_WRAPPER_CC = 'analyze-cc'
+COMPILER_WRAPPER_CXX = 'analyze-c++'
+
 
 def main(bin_dir, from_build_command):
-    """ Entry point for 'intercept-build'. """
+    """ Entry point for 'analyze-build' and 'scan-build'. """
 
     try:
         parser = create_parser(from_build_command)
@@ -126,13 +129,13 @@ def run_analyzer(args, output_dir):
         pool.join()
 
 
-def setup_environment(args, destination, wrapper_dir):
+def setup_environment(args, destination, bin_dir):
     """ Set up environment for build command to interpose compiler wrapper. """
 
     environment = dict(os.environ)
     environment.update({
-        'CC': os.path.join(wrapper_dir, 'analyze-cc'),
-        'CXX': os.path.join(wrapper_dir, 'analyze-c++'),
+        'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
+        'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
         'ANALYZE_BUILD_CC': args.cc,
         'ANALYZE_BUILD_CXX': args.cxx,
         'ANALYZE_BUILD_CLANG': args.clang if need_analyzer(args.build) else '',
