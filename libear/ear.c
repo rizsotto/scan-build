@@ -115,6 +115,10 @@ static int call_execvpe(const char *file, char *const argv[],
 static int call_execvP(const char *file, const char *search_path,
                        char *const argv[]);
 #endif
+#ifdef HAVE_EXECT
+static int call_exect(const char *path, char *const argv[],
+                      char *const envp[]);
+#endif
 #ifdef HAVE_POSIX_SPAWN
 static int call_posix_spawn(pid_t *restrict pid, const char *restrict path,
                             const posix_spawn_file_actions_t *file_actions,
@@ -190,6 +194,13 @@ int execvp(const char *file, char *const argv[]) {
 int execvP(const char *file, const char *search_path, char *const argv[]) {
     bear_report_call(__func__, (char const *const *)argv);
     return call_execvP(file, search_path, argv);
+}
+#endif
+
+#ifdef HAVE_EXECT
+int exect(const char *path, char *const argv[], char *const envp[]) {
+    bear_report_call(__func__, (char const *const *)argv);
+    return call_exect(path, argv, envp);
 }
 #endif
 
@@ -332,6 +343,20 @@ static int call_execvP(const char *file, const char *search_path,
     environ = original;
     bear_strings_release(modified);
 
+    return result;
+}
+#endif
+
+#ifdef HAVE_EXECT
+static int call_exect(const char *path, char *const argv[],
+                      char *const envp[]) {
+    typedef int (*func)(const char *, char *const *, char *const *);
+
+    DLSYM(func, fp, "exect");
+
+    char const **const menvp = bear_update_environment(envp, &initial_env);
+    int const result = (*fp)(path, argv, (char *const *)menvp);
+    bear_strings_release(menvp);
     return result;
 }
 #endif

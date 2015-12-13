@@ -33,6 +33,7 @@ def ear_library(compiler, dst_dir):
         configure.check_function_exists('execvpe', 'HAVE_EXECVPE')
         configure.check_function_exists('execvp', 'HAVE_EXECVP')
         configure.check_function_exists('execvP', 'HAVE_EXECVP2')
+        configure.check_function_exists('exect', 'HAVE_EXECT')
         configure.check_function_exists('execl', 'HAVE_EXECL')
         configure.check_function_exists('execlp', 'HAVE_EXECLP')
         configure.check_function_exists('execle', 'HAVE_EXECLE')

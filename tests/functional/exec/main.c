@@ -177,6 +177,20 @@ void call_execvpe() {
 }
 #endif
 
+#ifdef HAVE_EXECT
+void call_exect() {
+    char *const file = "exect.c";
+    char *const compiler = "/usr/bin/cc";
+    char *const argv[] = {compiler, "-c", file, 0};
+    char *const envp[] = {"THIS=THAT", 0};
+
+    expected_out(file);
+    create_source(file);
+
+    FORK(exect(compiler, argv, envp);)
+}
+#endif
+
 #ifdef HAVE_EXECL
 void call_execl() {
     char *const file = "execl.c";
@@ -269,6 +283,9 @@ int main(int argc, char *const argv[]) {
 #endif
 #ifdef HAVE_EXECVPE
     call_execvpe();
+#endif
+#ifdef HAVE_EXECT
+    call_exect();
 #endif
 #ifdef HAVE_EXECL
     call_execl();
