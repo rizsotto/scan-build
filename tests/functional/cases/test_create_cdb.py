@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 from ...unit import fixtures
-from . import make_args, silent_check_call, silent_call
+from . import make_args, silent_check_call, silent_call, create_empty_file
 import unittest
 
 import os.path
@@ -140,7 +140,7 @@ class ResultFormatingTest(unittest.TestCase):
     def assert_creates_number_of_entries(self, command, count):
         with fixtures.TempDir() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')
-            os.mknod(filename)
+            create_empty_file(filename)
             command.append(filename)
             cmd = ['sh', '-c', ' '.join(command)]
             cdb = self.run_intercept(tmpdir, cmd)
@@ -155,7 +155,7 @@ class ResultFormatingTest(unittest.TestCase):
     def assert_command_creates_entry(self, command, expected):
         with fixtures.TempDir() as tmpdir:
             filename = os.path.join(tmpdir, command[-1])
-            os.mknod(filename)
+            create_empty_file(filename)
             cmd = ['sh', '-c', ' '.join(command)]
             cdb = self.run_intercept(tmpdir, cmd)
             self.assertEqual(' '.join(expected), cdb[0]['command'])

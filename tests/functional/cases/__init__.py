@@ -64,3 +64,8 @@ def check_call_and_report(analyzer_cmd, build_cmd):
             exit_code, analyzer_cmd + build_cmd, None)
     else:
         return result
+
+
+def create_empty_file(filename):
+    with open(filename, 'a') as handle:
+        pass

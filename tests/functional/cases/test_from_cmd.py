@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 from ...unit import fixtures
-from . import make_args, check_call_and_report
+from . import make_args, check_call_and_report, create_empty_file
 import unittest
 
 import os
@@ -83,7 +83,7 @@ class RunAnalyzerTest(unittest.TestCase):
         src_file_name = 'test.cxx' if is_cxx else 'test.c'
         src_file = os.path.join(target_dir, src_file_name)
         obj_file = os.path.join(target_dir, 'test.o')
-        os.mknod(src_file)
+        create_empty_file(src_file)
         command = ' '.join([compiler, '-c', src_file, '-o', obj_file])
         return ['sh', '-c', command]
 
