@@ -35,8 +35,7 @@
 #endif
 
 #if defined HAVE_NSGETENVIRON
-#include <crt_externs.h>
-static char **environ;
+# include <crt_externs.h>
 #else
 extern char **environ;
 #endif
@@ -66,9 +65,11 @@ extern char **environ;
 typedef char const * bear_env_t[ENV_SIZE];
 
 static int bear_capture_env_t(bear_env_t *env);
+static int bear_reset_env_t(bear_env_t *env);
 static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
+static char **bear_get_environment();
 static void bear_report_call(char const *fun, char const *const argv[]);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
@@ -140,9 +141,6 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 
 static void on_load(void) {
     pthread_mutex_lock(&mutex);
-#ifdef HAVE_NSGETENVIRON
-    environ = *_NSGetEnviron();
-#endif
     if (!initialized)
         initialized = bear_capture_env_t(&initial_env);
     pthread_mutex_unlock(&mutex);
@@ -172,7 +170,8 @@ int execve(const char *path, char *const argv[], char *const envp[]) {
 #endif
 int execv(const char *path, char *const argv[]) {
     bear_report_call(__func__, (char const *const *)argv);
-    return call_execve(path, argv, environ);
+    char * const * envp = bear_get_environment();
+    return call_execve(path, argv, envp);
 }
 #endif
 
@@ -205,9 +204,9 @@ int exect(const char *path, char *const argv[], char *const envp[]) {
 #endif
 
 #ifdef HAVE_EXECL
-#ifndef HAVE_EXECVE
-#error can not implement execl without execve
-#endif
+# ifndef HAVE_EXECVE
+#  error can not implement execl without execve
+# endif
 int execl(const char *path, const char *arg, ...) {
     va_list args;
     va_start(args, arg);
@@ -215,7 +214,8 @@ int execl(const char *path, const char *arg, ...) {
     va_end(args);
 
     bear_report_call(__func__, (char const *const *)argv);
-    int const result = call_execve(path, (char *const *)argv, environ);
+    char * const * envp = bear_get_environment();
+    int const result = call_execve(path, (char *const *)argv, envp);
 
     bear_strings_release(argv);
     return result;
@@ -223,9 +223,9 @@ int execl(const char *path, const char *arg, ...) {
 #endif
 
 #ifdef HAVE_EXECLP
-#ifndef HAVE_EXECVP
-#error can not implement execlp without execvp
-#endif
+# ifndef HAVE_EXECVP
+#  error can not implement execlp without execvp
+# endif
 int execlp(const char *file, const char *arg, ...) {
     va_list args;
     va_start(args, arg);
@@ -241,9 +241,9 @@ int execlp(const char *file, const char *arg, ...) {
 #endif
 
 #ifdef HAVE_EXECLE
-#ifndef HAVE_EXECVE
-#error can not implement execle without execve
-#endif
+# ifndef HAVE_EXECVE
+#  error can not implement execle without execve
+# endif
 // int execle(const char *path, const char *arg, ..., char * const envp[]);
 int execle(const char *path, const char *arg, ...) {
     va_list args;
@@ -318,12 +318,12 @@ static int call_execvp(const char *file, char *const argv[]) {
 
     DLSYM(func, fp, "execvp");
 
-    char **const original = environ;
-    char const **const modified = bear_update_environment(original, &initial_env);
-    environ = (char **)modified;
+    bear_env_t current_env;
+    bear_capture_env_t(&current_env);
+    bear_reset_env_t(&initial_env);
     int const result = (*fp)(file, argv);
-    environ = original;
-    bear_strings_release(modified);
+    bear_reset_env_t(&current_env);
+    bear_release_env_t(&current_env);
 
     return result;
 }
@@ -336,12 +336,12 @@ static int call_execvP(const char *file, const char *search_path,
 
     DLSYM(func, fp, "execvP");
 
-    char **const original = environ;
-    char const **const modified = bear_update_environment(original, &initial_env);
-    environ = (char **)modified;
+    bear_env_t current_env;
+    bear_capture_env_t(&current_env);
+    bear_reset_env_t(&initial_env);
     int const result = (*fp)(file, search_path, argv);
-    environ = original;
-    bear_strings_release(modified);
+    bear_reset_env_t(&current_env);
+    bear_release_env_t(&current_env);
 
     return result;
 }
@@ -462,6 +462,18 @@ static int bear_capture_env_t(bear_env_t *env) {
     return status;
 }
 
+static int bear_reset_env_t(bear_env_t *env) {
+    int status = 1;
+    for (size_t it = 0; it < ENV_SIZE; ++it) {
+        if ((*env)[it]) {
+            setenv(env_names[it], (*env)[it], 1);
+        } else {
+            unsetenv(env_names[it]);
+        }
+    }
+    return status;
+}
+
 static void bear_release_env_t(bear_env_t *env) {
     for (size_t it = 0; it < ENV_SIZE; ++it) {
         free((void *)(*env)[it]);
@@ -504,6 +516,14 @@ static char const **bear_update_environ(char const *envs[], char const *key, cha
 	return envs;
     }
     return bear_strings_append(envs, env);
+}
+
+static char **bear_get_environment() {
+#if defined HAVE_NSGETENVIRON
+    return *_NSGetEnviron();
+#else
+    return environ;
+#endif
 }
 
 /* util methods to deal with string arrays. environment and process arguments
