@@ -14,10 +14,10 @@ import shutil
 import contextlib
 import logging
 
-__all__ = ['ear_library']
+__all__ = ['build_libear']
 
 
-def ear_library(compiler, dst_dir):
+def build_libear(compiler, dst_dir):
     """ Returns the full path to the 'libear' library. """
 
     try:

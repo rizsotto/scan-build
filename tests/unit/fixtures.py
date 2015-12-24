@@ -23,8 +23,10 @@ class Spy(object):
 @contextlib.contextmanager
 def TempDir():
     name = tempfile.mkdtemp(prefix='scan-build-test-')
-    yield name
-    shutil.rmtree(name)
+    try:
+        yield name
+    finally:
+        shutil.rmtree(name)
 
 
 class TestCase(unittest.TestCase):

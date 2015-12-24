@@ -30,7 +30,7 @@ import glob
 import argparse
 import logging
 import subprocess
-from libear import ear_library, TemporaryDirectory
+from libear import build_libear, TemporaryDirectory
 from libscanbuild import duplicate_check, tempdir, initialize_logging
 from libscanbuild import logging_internal_error
 from libscanbuild.command import Action, classify_parameters
@@ -128,13 +128,13 @@ def setup_environment(args, destination, bin_dir):
     c_compiler = args.cc if 'cc' in args else 'cc'
     cxx_compiler = args.cxx if 'cxx' in args else 'c++'
 
-    ear_library_path = None if args.override_compiler else \
-        ear_library(c_compiler, destination)
+    libear_path = None if args.override_compiler or is_sip_enabled() else \
+        build_libear(c_compiler, destination)
 
     environment = dict(os.environ)
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
-    if not ear_library_path:
+    if not libear_path:
         logging.debug('intercept gonna use compiler wrappers')
         environment.update({
             'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
@@ -146,12 +146,12 @@ def setup_environment(args, destination, bin_dir):
     elif sys.platform == 'darwin':
         logging.debug('intercept gonna preload libear on OSX')
         environment.update({
-            'DYLD_INSERT_LIBRARIES': ear_library_path,
+            'DYLD_INSERT_LIBRARIES': libear_path,
             'DYLD_FORCE_FLAT_NAMESPACE': '1'
         })
     else:
         logging.debug('intercept gonna preload libear on UNIX')
-        environment.update({'LD_PRELOAD': ear_library_path})
+        environment.update({'LD_PRELOAD': libear_path})
 
     return environment
 
@@ -251,6 +251,21 @@ def is_compiler_call(entry):
     ]
     executable = entry['command'][0]
     return any((pattern.match(executable) for pattern in patterns))
+
+
+def is_sip_enabled():
+    """ Library-based interposition will fail silently if SIP is enabled,
+    so this should be detected. You can detect whether SIP is enabled on
+    Darwin by checking whether (1) there is a binary called 'csrutil' in
+    the path and, if so, (2) whether the output of executing 'csrutil status'
+    contains 'System Integrity Protection status: enabled'. """
+
+    pattern = re.compile(r'System Integrity Protection status: enabled')
+    try:
+        lines = subprocess.check_output(['csrutil', 'status']).decode('utf-8')
+        return any((pattern.match(line) for line in lines.splitlines()))
+    except:
+        return False
 
 
 def entry_hash(entry):

@@ -60,3 +60,38 @@ class InterceptUtilTest(fixtures.TestCase):
                          os.path.join(os.path.dirname(directory), 'file.c'))
         self.assertEqual(test(['cc', '-c', '/opt/file.c']),
                          '/opt/file.c')
+
+    def test_sip(self):
+        def create_csrutil(dest_dir, enabled):
+            filename = os.path.join(dest_dir, 'csrutil')
+            content = """#!/usr/bin/env sh
+                         echo 'bla-bla-bla'
+                         echo 'System Integrity Protection status: {0}'
+                         echo 'sa-la-la-la'
+                      """.format('enabled' if enabled else 'disabled')
+            lines = [line.strip() for line in content.split('\n')]
+            with open(filename, 'w') as handle:
+                handle.write('\n'.join(lines))
+                handle.close()
+            os.chmod(filename, 0x1ff)
+
+        with fixtures.TempDir() as tmpdir:
+            try:
+                saved = os.environ['PATH']
+                os.environ['PATH'] = tmpdir + ':' + saved
+                # shall be true when enabled
+                create_csrutil(tmpdir, True)
+                self.assertTrue(sut.is_sip_enabled())
+                # shall be false when disabled
+                create_csrutil(tmpdir, False)
+                self.assertFalse(sut.is_sip_enabled())
+            finally:
+                os.environ['PATH'] = saved
+
+        try:
+            saved = os.environ['PATH']
+            os.environ['PATH'] = ''
+            # shall be false when it's not in the path
+            self.assertFalse(sut.is_sip_enabled())
+        finally:
+            os.environ['PATH'] = saved
