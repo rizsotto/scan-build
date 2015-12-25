@@ -39,7 +39,9 @@ def require(required):
     return decorator
 
 
-@require(['command', 'directory', 'file'])
+@require(['command', 'directory', 'file',  # an entry from compilation database
+          'clang', 'direct_args',  # compiler name, and arguments from command
+          'output_dir', 'output_format', 'output_failures'])
 def run(opts):
     """ Entry point to run (or not) static analyzer against a single entry
     of the compilation database.
@@ -134,7 +136,7 @@ def run_analyzer(opts, continuation=report_failure):
     child.stdout.close()
     # do report details if it were asked
     child.wait()
-    if opts.get('report_failures', False) and child.returncode:
+    if opts.get('output_failures', False) and child.returncode:
         error_type = 'crash' if child.returncode & 127 else 'other_error'
         opts.update({
             'error_type': error_type,
@@ -163,8 +165,8 @@ def set_analyzer_output(opts, continuation=run_analyzer):
         return continuation(opts)
 
 
-@require(['file', 'directory', 'clang', 'language', 'direct_args',
-          'report_failures', 'output_dir', 'output_format'])
+@require(['file', 'directory', 'clang', 'direct_args', 'language',
+          'output_dir', 'output_format', 'output_failures'])
 def create_commands(opts, continuation=set_analyzer_output):
     """ Create command to run analyzer or failure report generation.
 

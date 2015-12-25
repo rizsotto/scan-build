@@ -105,7 +105,7 @@ def run_analyzer(args, output_dir):
         'clang': args.clang,
         'output_dir': output_dir,
         'output_format': args.output_format,
-        'report_failures': args.report_failures,
+        'output_failures': args.output_failures,
         'direct_args': analyzer_params(args)
     }
 
@@ -137,7 +137,7 @@ def setup_environment(args, destination, bin_dir):
         'ANALYZE_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'WARNING',
         'ANALYZE_BUILD_REPORT_DIR': destination,
         'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
-        'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.report_failures else '',
+        'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
         'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args))
     })
     return environment
@@ -165,7 +165,7 @@ def analyze_build_wrapper(cplusplus):
             'clang': os.getenv('ANALYZE_BUILD_CLANG'),
             'output_dir': os.getenv('ANALYZE_BUILD_REPORT_DIR'),
             'output_format': os.getenv('ANALYZE_BUILD_REPORT_FORMAT'),
-            'report_failures': os.getenv('ANALYZE_BUILD_REPORT_FAILURES'),
+            'output_failures': os.getenv('ANALYZE_BUILD_REPORT_FAILURES'),
             'direct_args': os.getenv('ANALYZE_BUILD_PARAMETERS',
                                      '').split(' '),
             'directory': os.getcwd(),
@@ -357,7 +357,7 @@ def create_parser(from_build_command):
                 were reported.""")
     advanced.add_argument(
         '--no-failure-reports', '-no-failure-reports',
-        dest='report_failures',
+        dest='output_failures',
         action='store_false',
         help="""Do not create a 'failures' subdirectory that includes analyzer
                 crash reports and preprocessed source files.""")
