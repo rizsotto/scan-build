@@ -32,7 +32,7 @@ import logging
 import subprocess
 from libear import build_libear, TemporaryDirectory
 from libscanbuild import duplicate_check, tempdir, initialize_logging
-from libscanbuild import logging_internal_error
+from libscanbuild import command_entry_point
 from libscanbuild.command import Action, classify_parameters
 from libscanbuild.shell import encode, decode
 
@@ -46,26 +46,21 @@ COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
 
 
+@command_entry_point
 def intercept_build_main(bin_dir):
     """ Entry point for 'intercept-build' command. """
 
-    try:
-        parser = create_parser()
-        args = parser.parse_args()
+    parser = create_parser()
+    args = parser.parse_args()
 
-        initialize_logging(args.verbose)
-        logging.debug('Parsed arguments: %s', args)
+    initialize_logging(args.verbose)
+    logging.debug('Parsed arguments: %s', args)
 
-        if not args.build:
-            parser.print_help()
-            return 0
+    if not args.build:
+        parser.print_help()
+        return 0
 
-        return capture(args, bin_dir)
-    except KeyboardInterrupt:
-        return 1
-    except Exception:
-        logging_internal_error(args.verbose)
-        return 127
+    return capture(args, bin_dir)
 
 
 def capture(args, bin_dir):

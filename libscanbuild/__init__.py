@@ -54,14 +54,29 @@ def initialize_logging(verbose_level):
     logging.basicConfig(format=fmt_string.format(program), level=level)
 
 
-def logging_internal_error(verbose):
-    """ Tell the user what to do when this program has a bug. """
+def command_entry_point(function):
+    """ Decorator for command entry points. """
 
+    import functools
     import logging
-    logging.exception('Internal error.')
-    if verbose < 2:
-        logging.error("Please run this command again and turn on "
-                      "verbose mode (add '-vvv' as argument).")
-    else:
-        logging.error("Please report this bug and attach the output "
-                      "to the bug report")
+
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+
+        exit_code = 127
+        try:
+            exit_code = function(*args, **kwargs)
+        except KeyboardInterrupt:
+            logging.warning('Keyboard interupt')
+        except Exception:
+            logging.exception('Internal error.')
+            if logging.getLogger().isEnabledFor(logging.DEBUG):
+                logging.error("Please report this bug and attach the output "
+                              "to the bug report")
+            else:
+                logging.error("Please run this command again and turn on "
+                              "verbose mode (add '-vvv' as argument).")
+        finally:
+            return exit_code
+
+    return wrapper

@@ -20,7 +20,7 @@ import argparse
 import logging
 import subprocess
 import multiprocessing
-from libscanbuild import initialize_logging, tempdir, logging_internal_error
+from libscanbuild import initialize_logging, tempdir, command_entry_point
 from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -34,55 +34,50 @@ COMPILER_WRAPPER_CC = 'analyze-cc'
 COMPILER_WRAPPER_CXX = 'analyze-c++'
 
 
+@command_entry_point
 def analyze_build_main(bin_dir, from_build_command):
     """ Entry point for 'analyze-build' and 'scan-build'. """
 
-    try:
-        parser = create_parser(from_build_command)
-        args = parser.parse_args()
-        validate(parser, args, from_build_command)
+    parser = create_parser(from_build_command)
+    args = parser.parse_args()
+    validate(parser, args, from_build_command)
 
-        # setup logging
-        initialize_logging(args.verbose)
-        logging.debug('Parsed arguments: %s', args)
+    # setup logging
+    initialize_logging(args.verbose)
+    logging.debug('Parsed arguments: %s', args)
 
-        with report_directory(args.output, args.keep_empty) as target_dir:
-            if not from_build_command:
-                # run analyzer only and generate cover report
+    with report_directory(args.output, args.keep_empty) as target_dir:
+        if not from_build_command:
+            # run analyzer only and generate cover report
+            run_analyzer(args, target_dir)
+            number_of_bugs = document(args, target_dir, True)
+            return number_of_bugs if args.status_bugs else 0
+        elif args.intercept_first:
+            # run build command and capture compiler executions
+            exit_code = capture(args, bin_dir)
+            # next step to run the analyzer against the captured commands
+            if need_analyzer(args.build):
                 run_analyzer(args, target_dir)
-                number_of_bugs = document(args, target_dir, True)
-                return number_of_bugs if args.status_bugs else 0
-            elif args.intercept_first:
-                # run build command and capture compiler executions
-                exit_code = capture(args, bin_dir)
-                # next step to run the analyzer against the captured commands
-                if need_analyzer(args.build):
-                    run_analyzer(args, target_dir)
-                    # cover report generation and bug counting
-                    number_of_bugs = document(args, target_dir, True)
-                    # remove the compilation database when it was not requested
-                    if os.path.exists(args.cdb):
-                        os.unlink(args.cdb)
-                    # set exit status as it was requested
-                    return number_of_bugs if args.status_bugs else exit_code
-                else:
-                    return exit_code
-            else:
-                # run the build command with compiler wrappers which
-                # execute the analyzer too. (interposition)
-                environment = setup_environment(args, target_dir, bin_dir)
-                logging.debug('run build in environment: %s', environment)
-                exit_code = subprocess.call(args.build, env=environment)
-                logging.debug('build finished with exit code: %d', exit_code)
                 # cover report generation and bug counting
-                number_of_bugs = document(args, target_dir, False)
+                number_of_bugs = document(args, target_dir, True)
+                # remove the compilation database when it was not requested
+                if os.path.exists(args.cdb):
+                    os.unlink(args.cdb)
                 # set exit status as it was requested
                 return number_of_bugs if args.status_bugs else exit_code
-    except KeyboardInterrupt:
-        return 1
-    except Exception:
-        logging_internal_error(args.verbose)
-        return 127
+            else:
+                return exit_code
+        else:
+            # run the build command with compiler wrappers which
+            # execute the analyzer too. (interposition)
+            environment = setup_environment(args, target_dir, bin_dir)
+            logging.debug('run build in environment: %s', environment)
+            exit_code = subprocess.call(args.build, env=environment)
+            logging.debug('build finished with exit code: %d', exit_code)
+            # cover report generation and bug counting
+            number_of_bugs = document(args, target_dir, False)
+            # set exit status as it was requested
+            return number_of_bugs if args.status_bugs else exit_code
 
 
 def need_analyzer(args):
