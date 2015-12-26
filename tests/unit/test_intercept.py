@@ -62,29 +62,52 @@ class InterceptUtilTest(fixtures.TestCase):
                          '/opt/file.c')
 
     def test_sip(self):
-        def create_csrutil(dest_dir, enabled):
-            filename = os.path.join(dest_dir, 'csrutil')
+        def create_status_report(filename, message):
             content = """#!/usr/bin/env sh
-                         echo 'bla-bla-bla'
-                         echo 'System Integrity Protection status: {0}'
                          echo 'sa-la-la-la'
-                      """.format('enabled' if enabled else 'disabled')
+                         echo 'la-la-la'
+                         echo '{0}'
+                         echo 'sa-la-la-la'
+                         echo 'la-la-la'
+                      """.format(message)
             lines = [line.strip() for line in content.split('\n')]
             with open(filename, 'w') as handle:
                 handle.write('\n'.join(lines))
                 handle.close()
             os.chmod(filename, 0x1ff)
 
+        def create_csrutil(dest_dir, status):
+            filename = os.path.join(dest_dir, 'csrutil')
+            message = 'System Integrity Protection status: {0}'.format(status)
+            return create_status_report(filename, message)
+
+        def create_sestatus(dest_dir, status):
+            filename = os.path.join(dest_dir, 'sestatus')
+            message = 'SELinux status:\t{0}'.format(status)
+            return create_status_report(filename, message)
+
+        ENABLED = 'enabled'
+        DISABLED = 'disabled'
+
+        OSX = 'darwin'
+        LINUX = 'linux'
+
         with fixtures.TempDir() as tmpdir:
             try:
                 saved = os.environ['PATH']
                 os.environ['PATH'] = tmpdir + ':' + saved
-                # shall be true when enabled
-                create_csrutil(tmpdir, True)
-                self.assertTrue(sut.is_sip_enabled())
-                # shall be false when disabled
-                create_csrutil(tmpdir, False)
-                self.assertFalse(sut.is_sip_enabled())
+
+                create_csrutil(tmpdir, ENABLED)
+                self.assertTrue(sut.is_preload_disabled(OSX))
+
+                create_csrutil(tmpdir, DISABLED)
+                self.assertFalse(sut.is_preload_disabled(OSX))
+
+                create_sestatus(tmpdir, ENABLED)
+                self.assertTrue(sut.is_preload_disabled(LINUX))
+
+                create_sestatus(tmpdir, DISABLED)
+                self.assertFalse(sut.is_preload_disabled(LINUX))
             finally:
                 os.environ['PATH'] = saved
 
@@ -92,6 +115,9 @@ class InterceptUtilTest(fixtures.TestCase):
             saved = os.environ['PATH']
             os.environ['PATH'] = ''
             # shall be false when it's not in the path
-            self.assertFalse(sut.is_sip_enabled())
+            self.assertFalse(sut.is_preload_disabled(OSX))
+            self.assertFalse(sut.is_preload_disabled(LINUX))
+
+            self.assertFalse(sut.is_preload_disabled('unix'))
         finally:
             os.environ['PATH'] = saved

@@ -88,8 +88,7 @@ def capture(args, bin_dir):
             previous = iter([])
         # filter out duplicate entries from both
         duplicate = duplicate_check(entry_hash)
-        return (entry
-                for entry in itertools.chain(previous, current)
+        return (entry for entry in itertools.chain(previous, current)
                 if os.path.exists(entry['file']) and not duplicate(entry))
 
     with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
@@ -123,8 +122,8 @@ def setup_environment(args, destination, bin_dir):
     c_compiler = args.cc if 'cc' in args else 'cc'
     cxx_compiler = args.cxx if 'cxx' in args else 'c++'
 
-    libear_path = None if args.override_compiler or is_sip_enabled() else \
-        build_libear(c_compiler, destination)
+    libear_path = None if args.override_compiler or is_preload_disabled(
+        sys.platform) else build_libear(c_compiler, destination)
 
     environment = dict(os.environ)
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
@@ -252,16 +251,27 @@ def is_compiler_call(entry):
     return any((pattern.match(executable) for pattern in patterns))
 
 
-def is_sip_enabled():
+def is_preload_disabled(platform):
     """ Library-based interposition will fail silently if SIP is enabled,
     so this should be detected. You can detect whether SIP is enabled on
     Darwin by checking whether (1) there is a binary called 'csrutil' in
     the path and, if so, (2) whether the output of executing 'csrutil status'
-    contains 'System Integrity Protection status: enabled'. """
+    contains 'System Integrity Protection status: enabled'.
 
-    pattern = re.compile(r'System Integrity Protection status: enabled')
+    Same problem on linux when SELinux is enabled. The status query program
+    'sestatus' and the output when it's enabled 'SELinux status: enabled'. """
+
+    if platform == 'darwin':
+        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+        command = ['csrutil', 'status']
+    elif platform in {'linux', 'linux2'}:
+        pattern = re.compile(r'SELinux status:\s+enabled')
+        command = ['sestatus']
+    else:
+        return False
+
     try:
-        lines = subprocess.check_output(['csrutil', 'status']).decode('utf-8')
+        lines = subprocess.check_output(command).decode('utf-8')
         return any((pattern.match(line) for line in lines.splitlines()))
     except:
         return False
