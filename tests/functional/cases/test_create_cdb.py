@@ -170,3 +170,22 @@ class ResultFormatingTest(unittest.TestCase):
         self.assert_command_creates_entry(
             ['cc', '-c', '-MD', '-MF', 'test.d', 'test.c'],
             ['cc', '-c', 'test.c'])
+
+    def test_pass_language_flag(self):
+        self.assert_command_creates_entry(
+            ['cc', '-c', '-x', 'c', 'test.c'],
+            ['cc', '-c', '-x', 'c', 'test.c'])
+        self.assert_command_creates_entry(
+            ['cc', '-c', 'test.c'],
+            ['cc', '-c', 'test.c'])
+
+    def test_pass_arch_flags(self):
+        self.assert_command_creates_entry(
+            ['clang', '-c', 'test.c'],
+            ['cc', '-c', 'test.c'])
+        self.assert_command_creates_entry(
+            ['clang', '-c', '-arch', 'i386', 'test.c'],
+            ['cc', '-c', '-arch', 'i386', 'test.c'])
+        self.assert_command_creates_entry(
+            ['clang', '-c', '-arch', 'i386', '-arch', 'armv7l', 'test.c'],
+            ['cc', '-c', '-arch', 'i386', '-arch', 'armv7l', 'test.c'])

@@ -223,9 +223,13 @@ def format_entry(entry):
     if atoms['action'] <= Action.Compile:
         for source in atoms['files']:
             compiler = 'c++' if atoms['c++'] else 'cc'
-            output = ['-o', atoms['output']] if atoms.get('output') else []
-            command = [compiler, '-c'] + atoms['compile_options'] + output + \
-                      [source]
+            flags = atoms['compile_options']
+            flags += ['-o', atoms['output']] if atoms['output'] else []
+            flags += ['-x', atoms['language']] if 'language' in atoms else []
+            flags += [elem
+                      for arch in atoms.get('archs_seen', [])
+                      for elem in ['-arch', arch]]
+            command = [compiler, '-c'] + flags + [source]
             logging.debug('formated as: %s', command)
             yield {
                 'directory': entry['directory'],
