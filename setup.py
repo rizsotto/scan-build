@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='scan-build',
-    version='0.2',
+    version='1.0',
     author='László Nagy',
     author_email='rizsotto@gmail.com',
     keywords=['Clang', 'scan-build', 'static analyzer'],
@@ -20,7 +20,7 @@ setup(
     packages=['libscanbuild', 'libear'],
     package_data={'libscanbuild': ['resources/*'], 'libear': ['config.h.in', 'ear.c']},
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
         "Environment :: Console",
         "Operating System :: POSIX",
