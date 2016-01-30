@@ -106,7 +106,8 @@ def run_analyzer(args, output_dir):
         'output_dir': output_dir,
         'output_format': args.output_format,
         'output_failures': args.output_failures,
-        'direct_args': analyzer_params(args)
+        'direct_args': analyzer_params(args),
+        'force_debug': args.force_debug
     }
 
     logging.debug('run analyzer against compilation database')
@@ -138,7 +139,8 @@ def setup_environment(args, destination, bin_dir):
         'ANALYZE_BUILD_REPORT_DIR': destination,
         'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
         'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
-        'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args))
+        'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args)),
+        'ANALYZE_BUILD_FORCE_DEBUG': 'yes' if args.force_debug else ''
     })
     return environment
 
@@ -168,6 +170,7 @@ def analyze_build_wrapper(cplusplus):
             'output_failures': os.getenv('ANALYZE_BUILD_REPORT_FAILURES'),
             'direct_args': os.getenv('ANALYZE_BUILD_PARAMETERS',
                                      '').split(' '),
+            'force_debug': os.getenv('ANALYZE_BUILD_FORCE_DEBUG'),
             'directory': os.getcwd(),
         }
         # get relevant parameters from command line arguments
@@ -450,6 +453,13 @@ def create_parser(from_build_command):
                 Could be usefull when project contains 3rd party libraries.
                 The directory path shall be absolute path as file names in
                 the compilation database.""")
+    advanced.add_argument(
+        '--force-debug',
+        dest='force_debug',
+        action='store_true',
+        help="""Tells analyzer to enable assertions in code even if they were
+                disabled during compilation (to enable more precise
+                results).""")
 
     plugins = parser.add_argument_group('checker options')
     plugins.add_argument(

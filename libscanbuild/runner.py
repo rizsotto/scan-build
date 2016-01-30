@@ -41,6 +41,7 @@ def require(required):
 
 @require(['command', 'directory', 'file',  # an entry from compilation database
           'clang', 'direct_args',  # compiler name, and arguments from command
+          'force_debug',  # preprocessing options
           'output_dir', 'output_format', 'output_failures'])
 def run(opts):
     """ Entry point to run (or not) static analyzer against a single entry
@@ -165,8 +166,9 @@ def set_analyzer_output(opts, continuation=run_analyzer):
         return continuation(opts)
 
 
-@require(['file', 'directory', 'clang', 'direct_args', 'language',
-          'output_dir', 'output_format', 'output_failures'])
+@require(['file', 'directory', 'clang', 'direct_args',
+          'force_debug', 'language', 'output_dir',
+          'output_format', 'output_failures'])
 def create_commands(opts, continuation=set_analyzer_output):
     """ Create command to run analyzer or failure report generation.
 
@@ -177,7 +179,10 @@ def create_commands(opts, continuation=set_analyzer_output):
     common = []
     if 'arch' in opts:
         common.extend(['-arch', opts.pop('arch')])
-    common.extend(opts.pop('compile_options', []))
+    compile_options = opts.pop('compile_options', [])
+    if opts['force_debug']:
+        compile_options.append('-UNDEBUG')
+    common.extend(compile_options)
     common.extend(['-x', opts['language']])
     common.append(os.path.relpath(opts['file'], opts['directory']))
 
