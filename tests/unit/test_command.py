@@ -133,8 +133,8 @@ class ParseTest(unittest.TestCase):
         test([])
         test(['-lrt', '-L/opt/company/lib'])
         test(['-static'])
-        test(['-Wnoexcept', '-Wall'])
-        test(['-mtune=i386', '-mcpu=i386'])
+        test(['-MD', '-MT', 'something'])
+        test(['-MMD', '-MF', 'something'])
 
     def test_compile_only_flags(self):
         def test(cmd):
