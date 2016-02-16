@@ -72,9 +72,6 @@ def classify_parameters(command):
         # warning disable options are taken...
         elif re.match(r'^-Wno-', arg):
             result['compile_options'].append(arg)
-        # warning options are ignored...
-        elif re.match(r'^-[mW].+', arg):
-            pass
         # some preprocessor parameters are ignored...
         elif arg in {'-MD', '-MMD', '-MG', '-MP'}:
             pass
