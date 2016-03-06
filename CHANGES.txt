@@ -1,3 +1,7 @@
 v0.1, 2015-11-25 -- Initial release.
 
 v0.2, 2015-12-01 -- Extend documentation.
+
+v1.0, 2016-01-13 -- Merged version to Clang repo
+
+v1.1, 2016-03-08 -- Windows support and cleanup on parameter handling
