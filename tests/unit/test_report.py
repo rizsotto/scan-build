@@ -82,15 +82,17 @@ class ParseFileTest(unittest.TestCase):
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
             # produce failure report
-            opts = {'directory': os.getcwd(),
-                    'clang': 'clang',
-                    'file': filename,
-                    'report': ['-fsyntax-only', '-E', filename],
-                    'language': 'c',
-                    'output_dir': tmpdir,
-                    'error_type': 'other_error',
-                    'error_output': 'some output',
-                    'exit_code': 13}
+            opts = {
+                'clang': 'clang',
+                'directory': os.getcwd(),
+                'flags': [],
+                'file': filename,
+                'output_dir': tmpdir,
+                'language': 'c',
+                'error_type': 'other_error',
+                'error_output': 'some output',
+                'exit_code': 13
+            }
             sut2.report_failure(opts)
             # find the info file
             pp_file = None
