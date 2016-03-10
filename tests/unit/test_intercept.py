@@ -4,12 +4,13 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import libear
 import libscanbuild.intercept as sut
-from . import fixtures
+import unittest
 import os.path
 
 
-class InterceptUtilTest(fixtures.TestCase):
+class InterceptUtilTest(unittest.TestCase):
 
     def test_format_entry_filters_action(self):
         def test(command):
@@ -66,7 +67,7 @@ class InterceptUtilTest(fixtures.TestCase):
         OSX = 'darwin'
         LINUX = 'linux'
 
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             try:
                 saved = os.environ['PATH']
                 os.environ['PATH'] = tmpdir + ':' + saved

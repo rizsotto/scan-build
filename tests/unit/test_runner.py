@@ -4,8 +4,8 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import libear
 import libscanbuild.runner as sut
-from . import fixtures
 import unittest
 import re
 import os
@@ -102,11 +102,21 @@ class FilteringFlagsTest(unittest.TestCase):
         self.assertFlagsFiltered(['-sectorder', 'a', 'b', 'c'])
 
 
+class Spy(object):
+    def __init__(self):
+        self.arg = None
+        self.success = 0
+
+    def call(self, params):
+        self.arg = params
+        return self.success
+
+
 class RunAnalyzerTest(unittest.TestCase):
 
     @staticmethod
     def run_analyzer(content, failures_report):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             filename = os.path.join(tmpdir, 'test.cpp')
             with open(filename, 'w') as handle:
                 handle.write(content)
@@ -121,7 +131,7 @@ class RunAnalyzerTest(unittest.TestCase):
                 'output_format': 'plist',
                 'output_failures': failures_report
             }
-            spy = fixtures.Spy()
+            spy = Spy()
             result = sut.run_analyzer(opts, spy.call)
             return (result, spy.arg)
 
@@ -145,13 +155,13 @@ class RunAnalyzerTest(unittest.TestCase):
         self.assertTrue(len(fwds['error_output']) > 0)
 
 
-class ReportFailureTest(fixtures.TestCase):
+class ReportFailureTest(unittest.TestCase):
 
     def assertUnderFailures(self, path):
         self.assertEqual('failures', os.path.basename(os.path.dirname(path)))
 
     def test_report_failure_create_files(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             # create input file
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:
@@ -186,12 +196,12 @@ class ReportFailureTest(fixtures.TestCase):
             self.assertUnderFailures(pp_file)
             # info file generated and content dumped
             info_file = pp_file + '.info.txt'
-            self.assertIn(info_file, result)
+            self.assertTrue(info_file in result)
             self.assertEqual('Other Error\n', result[info_file][1])
             self.assertEqual(uname_msg, result[info_file][3])
             # error file generated and content dumped
             error_file = pp_file + '.stderr.txt'
-            self.assertIn(error_file, result)
+            self.assertTrue(error_file in result)
             self.assertEqual([error_msg], result[error_file])
 
 
@@ -199,7 +209,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_nodebug_macros_appended(self):
         def test(flags):
-            spy = fixtures.Spy()
+            spy = Spy()
             opts = {'flags': flags, 'force_debug': True}
             self.assertEqual(spy.success,
                              sut.filter_debug_flags(opts, spy.call))
@@ -211,7 +221,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_set_file_relative_path(self):
         def test(expected, input):
-            spy = fixtures.Spy()
+            spy = Spy()
             self.assertEqual(spy.success,
                              sut.set_file_path_relative(input, spy.call))
             self.assertEqual(expected, spy.arg['file'])
@@ -225,7 +235,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_set_language_fall_through(self):
         def language(expected, input):
-            spy = fixtures.Spy()
+            spy = Spy()
             input.update({'compiler': 'c', 'file': 'test.c'})
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
             self.assertEqual(expected, spy.arg['language'])
@@ -234,7 +244,7 @@ class AnalyzerTest(unittest.TestCase):
         language('c++', {'language': 'c++', 'flags': []})
 
     def test_set_language_stops_on_not_supported(self):
-        spy = fixtures.Spy()
+        spy = Spy()
         input = {
             'compiler': 'c',
             'flags': [],
@@ -246,7 +256,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_set_language_sets_flags(self):
         def flags(expected, input):
-            spy = fixtures.Spy()
+            spy = Spy()
             input.update({'compiler': 'c', 'file': 'test.c'})
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
             self.assertEqual(expected, spy.arg['flags'])
@@ -256,7 +266,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_set_language_from_filename(self):
         def language(expected, input):
-            spy = fixtures.Spy()
+            spy = Spy()
             input.update({'language': None, 'flags': []})
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
             self.assertEqual(expected, spy.arg['language'])
@@ -271,7 +281,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_arch_loop_sets_flags(self):
         def flags(archs):
-            spy = fixtures.Spy()
+            spy = Spy()
             input = {'flags': [], 'arch_list': archs}
             sut.arch_check(input, spy.call)
             return spy.arg['flags']
@@ -283,7 +293,7 @@ class AnalyzerTest(unittest.TestCase):
 
     def test_arch_loop_stops_on_not_supported(self):
         def stop(archs):
-            spy = fixtures.Spy()
+            spy = Spy()
             input = {'flags': [], 'arch_list': archs}
             self.assertIsNone(sut.arch_check(input, spy.call))
             self.assertIsNone(spy.arg)
