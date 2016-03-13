@@ -456,12 +456,11 @@ def create_parser(from_build_command):
                 The directory path shall be absolute path as file names in
                 the compilation database.""")
     advanced.add_argument(
-        '--force-debug',
+        '--force-analyze-debug-code',
         dest='force_debug',
         action='store_true',
         help="""Tells analyzer to enable assertions in code even if they were
-                disabled during compilation (to enable more precise
-                results).""")
+                disabled during compilation, enabling more precise results.""")
 
     plugins = parser.add_argument_group('checker options')
     plugins.add_argument(
