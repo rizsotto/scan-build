@@ -11,7 +11,6 @@ To run the static analyzer against a build is done in multiple steps:
  -- Analyze:   run the analyzer against the captured commands,
  -- Report:    create a cover report from the analyzer outputs.  """
 
-import sys
 import re
 import os
 import os.path
@@ -20,7 +19,8 @@ import argparse
 import logging
 import subprocess
 import multiprocessing
-from libscanbuild import initialize_logging, tempdir, command_entry_point
+from libscanbuild import initialize_logging, tempdir
+from libscanbuild import command_entry_point, wrapper_entry_point
 from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -131,10 +131,10 @@ def setup_environment(args, destination, bin_dir):
     environment.update({
         'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
         'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-        'ANALYZE_BUILD_CC': args.cc,
-        'ANALYZE_BUILD_CXX': args.cxx,
+        'INTERCEPT_BUILD_CC': args.cc,
+        'INTERCEPT_BUILD_CXX': args.cxx,
+        'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'WARNING',
         'ANALYZE_BUILD_CLANG': args.clang if need_analyzer(args.build) else '',
-        'ANALYZE_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'WARNING',
         'ANALYZE_BUILD_REPORT_DIR': destination,
         'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
         'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
@@ -144,51 +144,39 @@ def setup_environment(args, destination, bin_dir):
     return environment
 
 
-def analyze_build_wrapper(cplusplus):
+@wrapper_entry_point
+def analyze_build_wrapper(**kwargs):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 
-    # initialize wrapper logging
-    logging.basicConfig(format='analyze: %(levelname)s: %(message)s',
-                        level=os.getenv('ANALYZE_BUILD_VERBOSE', 'INFO'))
-    # execute with real compiler
-    compiler = os.getenv('ANALYZE_BUILD_CXX', 'c++') if cplusplus \
-        else os.getenv('ANALYZE_BUILD_CC', 'cc')
-    compilation = [compiler] + sys.argv[1:]
-    logging.info('execute compiler: %s', compilation)
-    result = subprocess.call(compilation)
-    # exit when it fails, ...
-    if result or not os.getenv('ANALYZE_BUILD_CLANG'):
-        return result
-    # ... and run the analyzer if all went well.
-    try:
-        # check is it a compilation
-        compilation = split_command(sys.argv)
-        if compilation is None:
-            return result
-        # collect the needed parameters from environment, crash when missing
-        parameters = {
-            'clang': os.getenv('ANALYZE_BUILD_CLANG'),
-            'output_dir': os.getenv('ANALYZE_BUILD_REPORT_DIR'),
-            'output_format': os.getenv('ANALYZE_BUILD_REPORT_FORMAT'),
-            'output_failures': os.getenv('ANALYZE_BUILD_REPORT_FAILURES'),
-            'direct_args': os.getenv('ANALYZE_BUILD_PARAMETERS',
-                                     '').split(' '),
-            'force_debug': os.getenv('ANALYZE_BUILD_FORCE_DEBUG'),
-            'directory': os.getcwd(),
-            'command': [sys.argv[0], '-c'] + compilation.flags
-        }
-        # call static analyzer against the compilation
-        for source in compilation.files:
-            parameters.update({'file': source})
-            logging.debug('analyzer parameters %s', parameters)
-            current = run(parameters)
-            # display error message from the static analyzer
-            if current is not None:
-                for line in current['error_output']:
-                    logging.info(line.rstrip())
-    except Exception:
-        logging.exception("run analyzer inside compiler wrapper failed.")
-    return result
+    # don't run analyzer when compilation fails.
+    if kwargs['result'] or not os.getenv('ANALYZE_BUILD_CLANG'):
+        return
+    # don't run analyzer when the command is not a compilation
+    # (can be preprocessing or a linking only execution of the compiler)
+    compilation = split_command(kwargs['command'])
+    if compilation is None:
+        return
+    # collect the needed parameters from environment, crash when missing
+    env = os.environ.copy()
+    parameters = {
+        'clang': env['ANALYZE_BUILD_CLANG'],
+        'output_dir': env['ANALYZE_BUILD_REPORT_DIR'],
+        'output_format': env['ANALYZE_BUILD_REPORT_FORMAT'],
+        'output_failures': env.get('ANALYZE_BUILD_REPORT_FAILURES', False),
+        'direct_args': env.get('ANALYZE_BUILD_PARAMETERS', '').split(' '),
+        'force_debug': env.get('ANALYZE_BUILD_FORCE_DEBUG', False),
+        'directory': os.getcwd(),
+        'command': [kwargs['compiler'], '-c'] + compilation.flags
+    }
+    # call static analyzer against the compilation
+    for source in compilation.files:
+        parameters.update({'file': source})
+        logging.debug('analyzer parameters %s', parameters)
+        current = run(parameters)
+        # display error message from the static analyzer
+        if current is not None:
+            for line in current['error_output']:
+                logging.info(line.rstrip())
 
 
 def analyzer_params(args):

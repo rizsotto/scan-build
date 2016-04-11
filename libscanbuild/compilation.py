@@ -50,7 +50,7 @@ IGNORED_FLAGS = {
 
 # Known C/C++ compiler executable name patterns
 COMPILER_PATTERNS = frozenset([
-    re.compile(r'^(intercept-|analyze-|)c(c|\+\+)$'),
+    re.compile(r'^c(c|\+\+)$'),
     re.compile(r'^([^-]*-)*[mg](cc|\+\+)(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^([^-]*-)*clang(\+\+)?(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^llvm-g(cc|\+\+)$'),
