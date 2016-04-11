@@ -21,7 +21,7 @@ import subprocess
 import multiprocessing
 from libscanbuild import initialize_logging, tempdir
 from libscanbuild import command_entry_point, wrapper_entry_point
-from libscanbuild.runner import run
+from libscanbuild.runner import run, logging_analyzer_output
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
 from libscanbuild.clang import get_checkers
@@ -116,10 +116,7 @@ def run_analyzer(args, output_dir):
         # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
         for current in pool.imap_unordered(run, generator):
-            if current is not None:
-                # display error message from the static analyzer
-                for line in current['error_output']:
-                    logging.info(line.rstrip())
+            logging_analyzer_output(current)
         pool.close()
         pool.join()
 
@@ -174,9 +171,7 @@ def analyze_build_wrapper(**kwargs):
         logging.debug('analyzer parameters %s', parameters)
         current = run(parameters)
         # display error message from the static analyzer
-        if current is not None:
-            for line in current['error_output']:
-                logging.info(line.rstrip())
+        logging_analyzer_output(current)
 
 
 def analyzer_params(args):

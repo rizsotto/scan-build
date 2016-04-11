@@ -16,7 +16,7 @@ from libscanbuild.compilation import classify_source, compiler_language
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
 
-__all__ = ['run']
+__all__ = ['run', 'logging_analyzer_output']
 
 # To have good results from static analyzer certain compiler options shall be
 # omitted. The compiler flag filtering only affects the static analyzer run.
@@ -311,3 +311,14 @@ def classify_parameters(command):
             result['flags'].append(arg)
 
     return result
+
+
+def logging_analyzer_output(entry):
+    """ Write analyzer output to log.
+
+    :param entry:   contains the analyzer execution result or None if the
+                    analyzer was not executed. """
+
+    if entry and 'error_output' in entry:
+        for line in entry['error_output']:
+            logging.info(line.rstrip())
