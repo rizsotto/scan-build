@@ -32,7 +32,7 @@ import logging
 import subprocess
 from libear import build_libear, TemporaryDirectory
 from libscanbuild import command_entry_point, wrapper_entry_point
-from libscanbuild import duplicate_check, tempdir, initialize_logging
+from libscanbuild import duplicate_check, tempdir, reconfigure_logging
 from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
 
@@ -53,7 +53,7 @@ def intercept_build_main(bin_dir):
     parser = create_parser()
     args = parser.parse_args()
 
-    initialize_logging(args.verbose)
+    reconfigure_logging(args.verbose)
     logging.debug('Parsed arguments: %s', args)
 
     if not args.build:

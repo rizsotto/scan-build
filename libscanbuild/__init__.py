@@ -40,28 +40,45 @@ def tempdir():
     return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
 
 
-def initialize_logging(verbose_level):
-    """ Output content controlled by the verbosity level. """
+def reconfigure_logging(verbose_level):
+    """ Logging level and format reconfigured based on the verbose flag. """
 
+    # exit when nothing to do
+    if verbose_level == 0:
+        return
+
+    root = logging.getLogger()
+    # tune level
     level = logging.WARNING - min(logging.WARNING, (10 * verbose_level))
-
+    root.setLevel(level)
+    # be verbose with messages
     if verbose_level <= 3:
-        fmt_string = '{0}: %(levelname)s: %(message)s'
+        fmt_string = '%(name)s: %(levelname)s: %(message)s'
     else:
-        fmt_string = '{0}: %(levelname)s: %(funcName)s: %(message)s'
-
-    program = os.path.basename(sys.argv[0])
-    logging.basicConfig(format=fmt_string.format(program), level=level)
+        fmt_string = '%(name)s: %(levelname)s: %(funcName)s: %(message)s'
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(fmt=fmt_string))
+    root.handlers = [handler]
 
 
 def command_entry_point(function):
-    """ Decorator for command entry methods. """
+    """ Decorator for command entry methods.
+
+    The decorator initialize/shutdown logging and guard on programming
+    errors (catch exceptions).
+
+    The decorated method can have arbitrary parameters, the return value will
+    be the exit code of the process. """
 
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
+        """ Do housekeeping tasks and execute the wrapped method. """
 
         exit_code = 127
         try:
+            logging.basicConfig(format='%(name)s: %(message)s',
+                                level=logging.WARNING)
+            logging.getLogger().name = os.path.basename(sys.argv[0])
             exit_code = function(*args, **kwargs)
         except KeyboardInterrupt:
             logging.warning('Keyboard interupt')
@@ -72,8 +89,9 @@ def command_entry_point(function):
                               "to the bug report")
             else:
                 logging.error("Please run this command again and turn on "
-                              "verbose mode (add '-vvv' as argument).")
+                              "verbose mode (add '-vvvv' as argument).")
         finally:
+            logging.shutdown()
             return exit_code
 
     return wrapper
@@ -98,12 +116,13 @@ def wrapper_entry_point(function):
     def wrapper():
         """ It executes the compilation and calls the wrapped method. """
 
+        compiler_wrapper_name = os.path.basename(sys.argv[0])
         # initialize wrapper logging
-        wrapper_name = os.path.basename(sys.argv[0])
-        logging.basicConfig(format='{0}: %(message)s'.format(wrapper_name),
+        logging.basicConfig(format='%(name)s: %(message)s',
                             level=os.getenv('INTERCEPT_BUILD_VERBOSE', 'INFO'))
+        logging.getLogger().name = compiler_wrapper_name
         # execute with real compiler
-        language = 'c++' if wrapper_name[-2:] == '++' else 'c'
+        language = 'c++' if compiler_wrapper_name[-2:] == '++' else 'c'
         compiler = os.getenv('INTERCEPT_BUILD_CC', 'cc') if language == 'c' \
             else os.getenv('INTERCEPT_BUILD_CXX', 'c++')
         compilation = [compiler] + sys.argv[1:]

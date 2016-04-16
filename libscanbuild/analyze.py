@@ -19,7 +19,7 @@ import argparse
 import logging
 import subprocess
 import multiprocessing
-from libscanbuild import initialize_logging, tempdir
+from libscanbuild import reconfigure_logging, tempdir
 from libscanbuild import command_entry_point, wrapper_entry_point
 from libscanbuild.runner import run, logging_analyzer_output
 from libscanbuild.intercept import capture
@@ -39,11 +39,11 @@ def analyze_build_main(bin_dir, from_build_command):
 
     parser = create_parser(from_build_command)
     args = parser.parse_args()
-    validate(parser, args, from_build_command)
 
-    # setup logging
-    initialize_logging(args.verbose)
+    reconfigure_logging(args.verbose)
     logging.debug('Parsed arguments: %s', args)
+
+    validate(parser, args, from_build_command)
 
     with report_directory(args.output, args.keep_empty) as target_dir:
         if not from_build_command:
