@@ -25,7 +25,7 @@ from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
 from libscanbuild.clang import get_checkers
-from libscanbuild.compilation import split
+from libscanbuild.compilation import split_command
 
 __all__ = ['analyze_build_main', 'analyze_build_wrapper']
 
@@ -162,7 +162,7 @@ def analyze_build_wrapper(cplusplus):
     # ... and run the analyzer if all went well.
     try:
         # check is it a compilation
-        compilation = split(sys.argv)
+        compilation = split_command(sys.argv)
         if compilation is None:
             return result
         # collect the needed parameters from environment, crash when missing

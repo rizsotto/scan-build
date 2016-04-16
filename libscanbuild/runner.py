@@ -18,13 +18,16 @@ from libscanbuild.shell import decode
 
 __all__ = ['run']
 
-# Ignored compiler options map.
+# To have good results from static analyzer certain compiler options shall be
+# omitted. The compiler flag filtering only affects the static analyzer run.
+#
 # Keys are the option name, value number of options to skip
 IGNORED_FLAGS = {
     '-c': 0,  # compile option will be overwritten
+    '-fsyntax-only': 0,  # static analyzer option will be overwritten
     '-o': 1,  # will set up own output file
-    '-g': 0,  # would generate SATestBuild.py failures
-    '-fsyntax-only': 0,
+    # flags below are inherited from the perl implementation.
+    '-g': 0,
     '-save-temps': 0,
     '-install_name': 1,
     '-exported_symbols_list': 1,

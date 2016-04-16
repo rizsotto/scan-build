@@ -36,7 +36,7 @@ class SplitTest(unittest.TestCase):
 
     def test_detect_cxx_from_compiler_name(self):
         def test(cmd):
-            result = sut.split([cmd, '-c', 'src.c'])
+            result = sut.split_command([cmd, '-c', 'src.c'])
             self.assertIsNotNone(result, "wrong input for test")
             return result.compiler == 'c++'
 
@@ -52,34 +52,40 @@ class SplitTest(unittest.TestCase):
         self.assertTrue(test('armv7_neno-linux-gnueabi-g++'))
 
     def test_action(self):
-        self.assertIsNotNone(sut.split(['clang', 'source.c']))
-        self.assertIsNotNone(sut.split(['clang', '-c', 'source.c']))
-        self.assertIsNotNone(sut.split(['clang', '-c', 'a.c', '-MF', 'a.d']))
+        self.assertIsNotNone(sut.split_command(['clang', 'source.c']))
+        self.assertIsNotNone(sut.split_command(['clang', '-c', 'source.c']))
+        self.assertIsNotNone(sut.split_command(['clang', '-c', 'source.c',
+                                                '-MF', 'a.d']))
 
-        self.assertIsNone(sut.split(['clang', '-E', 'source.c']))
-        self.assertIsNone(sut.split(['clang', '-c', '-E', 'source.c']))
-        self.assertIsNone(sut.split(['clang', '-c', '-M', 'source.c']))
-        self.assertIsNone(sut.split(['clang', '-c', '-MM', 'source.c']))
+        self.assertIsNone(sut.split_command(['clang', '-E', 'source.c']))
+        self.assertIsNone(sut.split_command(['clang', '-c', '-E', 'source.c']))
+        self.assertIsNone(sut.split_command(['clang', '-c', '-M', 'source.c']))
+        self.assertIsNone(
+            sut.split_command(['clang', '-c', '-MM', 'source.c']))
 
     def test_source_file(self):
         def test(expected, cmd):
-            self.assertEqual(expected, sut.split(cmd).files)
+            self.assertEqual(expected, sut.split_command(cmd).files)
 
         test(['src.c'], ['clang', 'src.c'])
         test(['src.c'], ['clang', '-c', 'src.c'])
         test(['src.C'], ['clang', '-x', 'c', 'src.C'])
         test(['src.cpp'], ['clang++', '-c', 'src.cpp'])
         test(['s1.c', 's2.c'], ['clang', '-c', 's1.c', 's2.c'])
+        test(['s1.c', 's2.c'], ['cc', 's1.c', 's2.c', '-ldep', '-o', 'a.out'])
         test(['src.c'], ['clang', '-c', '-I', './include', 'src.c'])
         test(['src.c'], ['clang', '-c', '-I', '/opt/me/include', 'src.c'])
         test(['src.c'], ['clang', '-c', '-D', 'config=file.c', 'src.c'])
 
-        self.assertIsNone(sut.split(['cc', 'this.o', 'that.o', '-o', 'a.out']))
+        self.assertIsNone(
+            sut.split_command(['cc', 'this.o', 'that.o', '-o', 'a.out']))
+        self.assertIsNone(
+            sut.split_command(['cc', 'this.o', '-lthat', '-o', 'a.out']))
 
     def test_filter_flags(self):
         def test(expected, flags):
             command = ['clang', '-c', 'src.c'] + flags
-            self.assertEqual(expected, sut.split(command).flags)
+            self.assertEqual(expected, sut.split_command(command).flags)
 
         def same(expected):
             test(expected, expected)

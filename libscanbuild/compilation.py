@@ -9,14 +9,22 @@ import re
 import os
 import collections
 
-__all__ = ['split', 'classify_source', 'compiler_language']
+__all__ = ['split_command', 'classify_source', 'compiler_language']
 
-# Ignored compiler options map.
+# Ignored compiler options map for compilation database creation.
+# The map is used in `split_command` method. (Which does ignore and classify
+# parameters.) Please note, that these are not the only parameters which
+# might be ignored.
+#
 # Keys are the option name, value number of options to skip
 IGNORED_FLAGS = {
-    # compiling only flag
+    # compiling only flag, ignored because the creator of compilation
+    # database will explicitly set it.
     '-c': 0,
-    # preprocessor macros
+    # preprocessor macros, ignored because would cause duplicate entries in
+    # the output (the only difference would be these flags). this is actual
+    # finding from users, who suffered longer execution time caused by the
+    # duplicates.
     '-MD': 0,
     '-MMD': 0,
     '-MG': 0,
@@ -24,7 +32,10 @@ IGNORED_FLAGS = {
     '-MF': 1,
     '-MT': 1,
     '-MQ': 1,
-    # linker options
+    # linker options, ignored because for compilation database will contain
+    # compilation commands only. so, the compiler would ignore these flags
+    # anyway. the benefit to get rid of them is to make the output more
+    # readable.
     '-static': 0,
     '-shared': 0,
     '-s': 0,
@@ -46,7 +57,7 @@ COMPILER_PATTERNS = frozenset([
 ])
 
 
-def split(command):
+def split_command(command):
     """ Returns a value when the command is a compilation, None otherwise.
 
     The value on success is a named tuple with the following attributes:
@@ -75,7 +86,7 @@ def split(command):
             count = IGNORED_FLAGS[arg]
             for _ in range(count):
                 next(args)
-        elif re.match(r'^-[lL].+', arg):
+        elif re.match(r'^-(l|L|Wl,).+', arg):
             pass
         # some parameters could look like filename, take as compile option
         elif arg in {'-D', '-I'}:

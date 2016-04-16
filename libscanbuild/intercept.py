@@ -33,7 +33,7 @@ import subprocess
 from libear import build_libear, TemporaryDirectory
 from libscanbuild import command_entry_point
 from libscanbuild import duplicate_check, tempdir, initialize_logging
-from libscanbuild.compilation import split
+from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
@@ -218,7 +218,7 @@ def format_entry(exec_trace):
         return os.path.normpath(fullname)
 
     logging.debug('format this command: %s', exec_trace['command'])
-    compilation = split(exec_trace['command'])
+    compilation = split_command(exec_trace['command'])
     if compilation:
         for source in compilation.files:
             compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
