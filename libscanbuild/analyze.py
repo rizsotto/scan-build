@@ -167,9 +167,7 @@ def analyze_build_wrapper(**kwargs):
     }
     # call static analyzer against the compilation
     for source in compilation.files:
-        parameters.update({'file': source})
-        logging.debug('analyzer parameters %s', parameters)
-        current = run(parameters)
+        current = run(dict(parameters, file=source))
         # display error message from the static analyzer
         logging_analyzer_output(current)
 
