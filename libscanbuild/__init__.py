@@ -104,7 +104,7 @@ def wrapper_entry_point(function):
     decorated method. The method will receive dictionary of parameters.
 
     - compiler:     the compiler name which was executed.
-    - compilation:  the command executed by the wrapper.
+    - command:      the command executed by the wrapper.
     - result:       the exit code of the compilation.
 
     The return value will be the exit code of the compiler call. (The
@@ -125,13 +125,13 @@ def wrapper_entry_point(function):
         language = 'c++' if compiler_wrapper_name[-2:] == '++' else 'c'
         compiler = os.getenv('INTERCEPT_BUILD_CC', 'cc') if language == 'c' \
             else os.getenv('INTERCEPT_BUILD_CXX', 'c++')
-        compilation = [compiler] + sys.argv[1:]
-        logging.debug('compilation: %s', compilation)
-        result = subprocess.call(compilation)
+        command = [compiler] + sys.argv[1:]
+        logging.debug('compilation: %s', command)
+        result = subprocess.call(command)
         logging.debug('compilation exit code: %d', result)
         # call the wrapped method and ignore it's return value ...
         try:
-            function(compiler=compiler, command=compilation, result=result)
+            function(compiler=compiler, command=command, result=result)
         except:
             logging.warning('wrapped function failed')
         finally:
