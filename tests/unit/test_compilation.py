@@ -3,6 +3,8 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
+#
+# RUN: %{python} %s
 
 import libscanbuild.compilation as sut
 import unittest
@@ -158,3 +160,7 @@ class SourceClassifierTest(unittest.TestCase):
         self.assertEqual('c++', sut.classify_source('file.c', False))
         self.assertEqual('c++', sut.classify_source('./file.c', False))
         self.assertEqual('c++', sut.classify_source('/path/file.c', False))
+
+
+if __name__ == '__main__':
+    unittest.main()

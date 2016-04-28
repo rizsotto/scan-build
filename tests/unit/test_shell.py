@@ -3,6 +3,8 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
+#
+# RUN: %{python} %s
 
 import libscanbuild.shell as sut
 import unittest

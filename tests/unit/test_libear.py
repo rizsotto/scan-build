@@ -3,6 +3,8 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
+#
+# RUN: %{python} %s
 
 import libear as sut
 import unittest
@@ -28,3 +30,7 @@ class TemporaryDirectoryTest(unittest.TestCase):
         except:
             self.assertIsNotNone(dir_name)
             self.assertFalse(os.path.exists(dir_name))
+
+
+if __name__ == '__main__':
+    unittest.main()

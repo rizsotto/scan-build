@@ -20,10 +20,18 @@ addons:
       - clang-3.7
 
 install:
-  - pip install pep8
+  - pip install pep8 lit
 
 script:
-  - pep8 libear libscanbuild tests
+  - lit -v tests
   - python setup.py check
   - python setup.py install
-  - python setup.py test
+  - python setup.py sdist
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/c3b71470714f6eaa03bc
+    on_success: change
+    on_failure: always
+    on_start: never

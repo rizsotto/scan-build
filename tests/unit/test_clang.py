@@ -3,6 +3,8 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
+#
+# RUN: %{python} %s
 
 import libear
 import libscanbuild.clang as sut
@@ -92,3 +94,7 @@ class ClangGetCheckersTest(unittest.TestCase):
         self.assertEqual('Checker One description', result.get('checker.one'))
         self.assertTrue('checker.two' in result)
         self.assertEqual('Checker Two description', result.get('checker.two'))
+
+
+if __name__ == '__main__':
+    unittest.main()

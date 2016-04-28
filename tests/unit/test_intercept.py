@@ -3,6 +3,8 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
+#
+# RUN: %{python} %s
 
 import libear
 import libscanbuild.intercept as sut
@@ -109,3 +111,7 @@ class InterceptUtilTest(unittest.TestCase):
             self.assertFalse(sut.is_preload_disabled('unix'))
         finally:
             os.environ['PATH'] = saved
+
+
+if __name__ == '__main__':
+    unittest.main()

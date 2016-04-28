@@ -1,4 +1,4 @@
-#include <clean-one.h>
+#include <one.h>
 
 int do_nothing_loop()
 {

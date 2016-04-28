@@ -3,6 +3,8 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
+#
+# RUN: %{python} %s
 
 import libear
 import libscanbuild.report as sut
@@ -160,3 +162,7 @@ class ReportDirectoryTest(unittest.TestCase):
              sut.report_directory(tmp_dir, False) as report_dir3:
             self.assertLess(report_dir1, report_dir2)
             self.assertLess(report_dir2, report_dir3)
+
+
+if __name__ == '__main__':
+    unittest.main()

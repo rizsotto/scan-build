@@ -8,9 +8,10 @@
 #include "config.h"
 
 #include <sys/wait.h>
-#include <unistd.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <paths.h>
 
 #if defined HAVE_POSIX_SPAWN || defined HAVE_POSIX_SPAWNP
@@ -265,10 +266,39 @@ void call_posix_spawnp() {
 #endif
 
 int main(int argc, char *const argv[]) {
-    if (argc != 2)
-        exit(EXIT_FAILURE);
 
-    expected_out_open(argv[1]);
+    char *workdir = NULL;
+    char *output = NULL;
+    int c = 0;
+
+    opterr = 0;
+    while ((c = getopt (argc, argv, "C:o:")) != -1) {
+        switch (c) {
+            case 'C':
+                workdir = optarg;
+                break;
+            case 'o':
+                output = optarg;
+                break;
+            case '?':
+                if (optopt == 'C' || optopt == 'o')
+                    fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+                else if (isprint (optopt))
+                    fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                else
+                    fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+                return 1;
+            default:
+                abort();
+        }
+    }
+    for (int index = optind; index < argc; ++index)
+        printf ("Non-option argument %s\n", argv[index]);
+
+    if (workdir != NULL) {
+        chdir(workdir);
+    }
+    expected_out_open(output);
 #ifdef HAVE_EXECV
     call_execv();
 #endif

@@ -36,6 +36,5 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Quality Assurance"
-    ],
-    test_suite="tests.suite"
+    ]
 )

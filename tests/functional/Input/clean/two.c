@@ -1,4 +1,4 @@
-#include <clean-one.h>
+#include "one.h"
 
 #include <stdlib.h>
 
