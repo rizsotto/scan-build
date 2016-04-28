@@ -3,6 +3,8 @@
 scan-build
 ==========
 
+[![Join the chat at https://gitter.im/rizsotto/scan-build](https://badges.gitter.im/rizsotto/scan-build.svg)](https://gitter.im/rizsotto/scan-build?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 A package designed to wrap a build so that all calls to gcc/clang are
 intercepted and logged into a [compilation database][1] and/or piped to
 the clang static analyzer. Includes intercept-build tool, which logs
