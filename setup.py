@@ -12,7 +12,7 @@ setup(
     url='https://github.com/rizsotto/scan-build',
     license='LICENSE.txt',
     description='static code analyzer wrapper for Clang.',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     zip_safe=False,
     scripts=['bin/scan-build',
              'bin/intercept-build', 'bin/intercept-cc', 'bin/intercept-c++',
