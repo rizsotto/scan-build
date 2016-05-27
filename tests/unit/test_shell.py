@@ -31,12 +31,12 @@ class ShellTest(unittest.TestCase):
 
     def test_encode(self):
         self.assertEqual(sut.encode(['clang', "it's me", 'again']),
-                         'clang "it\'s me" again')
+                         'clang "it\'s\ me" again')
         self.assertEqual(sut.encode(['clang', "it(s me", 'again)']),
-                         'clang "it(s me" "again)"')
+                         'clang "it(s\ me" "again)"')
         self.assertEqual(sut.encode(['clang', 'redirect > it']),
-                         'clang "redirect > it"')
+                         'clang "redirect\ >\ it"')
         self.assertEqual(sut.encode(['clang', '-DKEY="VALUE"']),
                          'clang -DKEY=\\"VALUE\\"')
         self.assertEqual(sut.encode(['clang', '-DKEY="value with spaces"']),
-                         'clang -DKEY=\\"value with spaces\\"')
+                         'clang -DKEY=\\"value\ with\ spaces\\"')

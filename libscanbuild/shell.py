@@ -44,7 +44,7 @@ def encode(command):
     def escape(word):
         """ Do protect argument if that's needed. """
 
-        table = {'\\': '\\\\', '"': '\\"'}
+        table = {'\\': '\\\\', '"': '\\"', ' ': '\\ '}
         escaped = ''.join([table.get(c, c) for c in word])
 
         return '"' + escaped + '"' if needs_quote(word) else escaped
