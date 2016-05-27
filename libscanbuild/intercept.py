@@ -174,7 +174,7 @@ def intercept_build_wrapper(**kwargs):
         # command is the same (but the compiler name is different).
         target_file = os.path.join(target_dir, str(os.getpid()) + '.cmd')
         logging.debug('writing execution report to: %s', target_file)
-        write_exec_trace(target_file, pid=os.getpid(), ppid=os.getppid(),
+        write_exec_trace(target_file, pid=os.getpid(), ppid=os.getpid(),
                          directory=os.getcwd(), command=kwargs['command'])
     except IOError:
         logging.warning(message_prefix, 'io problem')
