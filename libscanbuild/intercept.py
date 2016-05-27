@@ -119,11 +119,8 @@ def setup_environment(args, destination, bin_dir):
     The exec calls will be logged by the 'libear' preloaded library or by the
     'wrapper' programs. """
 
-    c_compiler = args.cc if 'cc' in args else 'cc'
-    cxx_compiler = args.cxx if 'cxx' in args else 'c++'
-
     libear_path = None if args.override_compiler or is_preload_disabled(
-        sys.platform) else build_libear(c_compiler, destination)
+        sys.platform) else build_libear(args.cc, destination)
 
     environment = dict(os.environ)
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
@@ -133,8 +130,8 @@ def setup_environment(args, destination, bin_dir):
         environment.update({
             'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
             'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-            'INTERCEPT_BUILD_CC': c_compiler,
-            'INTERCEPT_BUILD_CXX': cxx_compiler,
+            'INTERCEPT_BUILD_CC': args.cc,
+            'INTERCEPT_BUILD_CXX': args.cxx,
             'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
         })
     elif sys.platform == 'darwin':
@@ -330,7 +327,7 @@ def create_parser():
         '--use-cc',
         metavar='<path>',
         dest='cc',
-        default='cc',
+        default=os.getenv('CC', 'cc'),
         help="""When '%(prog)s' analyzes a project by interposing a compiler
                 wrapper, which executes a real compiler for compilation and
                 do other tasks (record the compiler invocation). Because of
@@ -345,7 +342,7 @@ def create_parser():
         '--use-c++',
         metavar='<path>',
         dest='cxx',
-        default='c++',
+        default=os.getenv('CXX', 'c++'),
         help="""This is the same as "--use-cc" but for C++ code.""")
 
     parser.add_argument(

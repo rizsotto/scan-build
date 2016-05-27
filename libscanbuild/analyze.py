@@ -397,7 +397,7 @@ def create_parser(from_build_command):
         '--use-cc',
         metavar='<path>',
         dest='cc',
-        default='cc',
+        default=os.getenv('CC', 'cc'),
         help="""When '%(prog)s' analyzes a project by interposing a "fake
                 compiler", which executes a real compiler for compilation and
                 do other tasks (to run the static analyzer or just record the
@@ -413,7 +413,7 @@ def create_parser(from_build_command):
         '--use-c++',
         metavar='<path>',
         dest='cxx',
-        default='c++',
+        default=os.getenv('CXX', 'c++'),
         help="""This is the same as "--use-cc" but for C++ code.""")
     advanced.add_argument(
         '--analyzer-config', '-analyzer-config',

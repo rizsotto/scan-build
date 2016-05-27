@@ -123,8 +123,8 @@ def wrapper_entry_point(function):
         logging.getLogger().name = compiler_wrapper_name
         # execute with real compiler
         language = 'c++' if compiler_wrapper_name[-2:] == '++' else 'c'
-        compiler = os.getenv('INTERCEPT_BUILD_CC', 'cc') if language == 'c' \
-            else os.getenv('INTERCEPT_BUILD_CXX', 'c++')
+        compiler = os.environ['INTERCEPT_BUILD_CC'] if language == 'c' \
+            else os.environ['INTERCEPT_BUILD_CXX']
         command = [compiler] + sys.argv[1:]
         logging.debug('compilation: %s', command)
         result = subprocess.call(command)
@@ -133,7 +133,7 @@ def wrapper_entry_point(function):
         try:
             function(compiler=compiler, command=command, result=result)
         except:
-            logging.warning('wrapped function failed')
+            logging.warning('wrapped function failed', exc_info=True)
         finally:
             logging.shutdown()
         # ... return the real compiler exit code instead.
