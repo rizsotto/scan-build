@@ -46,17 +46,22 @@ def analyze_build_main(bin_dir, from_build_command):
 
     with report_directory(args.output, args.keep_empty) as target_dir:
         exit_code = 0
+        cleanup = (lambda: 0)
         if not from_build_command:
             # run the analyzer against a compilation db
             run_analyzer(args, target_dir)
         else:
-            # run against a build command
+            # run against a build command. there are cases, when analyzer run
+            # is not required. but we need to set up everything for the
+            # wrappers, because 'configure' needs to capture the CC/CXX values
+            # for the Makefile.
             if args.intercept_first:
                 # run build command with intercept module
                 exit_code = capture(args, bin_dir)
                 if need_analyzer(args.build):
                     # run the analyzer against the captured commands
                     run_analyzer(args, target_dir)
+                cleanup = (lambda: os.unlink(args.cdb))
             else:
                 # run build command and analyzer with compiler wrappers
                 report_dir = target_dir if need_analyzer(args.build) else None
@@ -64,9 +69,8 @@ def analyze_build_main(bin_dir, from_build_command):
                 exit_code = run_build(args.build, environment)
         # cover report generation and bug counting
         number_of_bugs = document(args, target_dir)
-        # remove the compilation db when it was not requested
-        if from_build_command and os.path.exists(args.cdb):
-            os.unlink(args.cdb)
+        # do cleanup temporary files
+        cleanup()
         # set exit status as it was requested
         return number_of_bugs if args.status_bugs else exit_code
 
@@ -140,7 +144,7 @@ def setup_environment(args, bin_dir, destination):
 def analyze_build_wrapper(**kwargs):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 
-    # don't run analyzer when compilation fails.
+    # don't run analyzer when compilation fails. or when it's not requested.
     if kwargs['result'] or not os.getenv('ANALYZE_BUILD_CLANG'):
         return
     # don't run analyzer when the command is not a compilation

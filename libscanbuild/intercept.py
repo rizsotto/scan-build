@@ -125,12 +125,13 @@ def setup_environment(args, destination, bin_dir):
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
     if not intercept_library:
-        environment.update(wrapper_environment(
-            c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-            cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-            c_compiler=args.cc,
-            cxx_compiler=args.cxx,
-            verbose=args.verbose > 2))
+        environment.update(
+            wrapper_environment(
+                c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
+                cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
+                c_compiler=args.cc,
+                cxx_compiler=args.cxx,
+                verbose=args.verbose > 2))
     elif sys.platform == 'darwin':
         environment.update({
             'DYLD_INSERT_LIBRARIES': intercept_library,
