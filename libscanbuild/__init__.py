@@ -40,6 +40,15 @@ def tempdir():
     return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
 
 
+def run_build(build_command, environment):
+    """ Run and report build command execution """
+
+    logging.debug('run build in environment: %s', environment)
+    exit_code = subprocess.call(build_command, env=environment)
+    logging.debug('build finished with exit code: %d', exit_code)
+    return exit_code
+
+
 def reconfigure_logging(verbose_level):
     """ Logging level and format reconfigured based on the verbose flag. """
 
@@ -140,3 +149,16 @@ def wrapper_entry_point(function):
         return result
 
     return wrapper
+
+
+def wrapper_environment(c_wrapper, cxx_wrapper, c_compiler, cxx_compiler,
+                        verbose):
+    """ Set up environment for build command to interpose compiler wrapper. """
+
+    return {
+        'CC': c_wrapper,
+        'CXX': cxx_wrapper,
+        'INTERCEPT_BUILD_CC': c_compiler,
+        'INTERCEPT_BUILD_CXX': cxx_compiler,
+        'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if verbose > 2 else 'WARNING'
+    }

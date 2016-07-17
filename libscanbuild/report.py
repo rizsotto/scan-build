@@ -59,7 +59,7 @@ def report_directory(hint, keep):
             os.rmdir(name)
 
 
-def document(args, output_dir, use_cdb):
+def document(args, output_dir):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html_reports_available = args.output_format in {'html', 'plist-html'}
@@ -72,12 +72,14 @@ def document(args, output_dir, use_cdb):
     result = crash_count + bug_counter.total
 
     if html_reports_available and result:
+        use_cdb = os.path.exists(args.cdb)
+
         logging.debug('generate index.html file')
         # common prefix for source files to have sort filenames
         prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
         # assemble the cover from multiple fragments
+        fragments = []
         try:
-            fragments = []
             if bug_counter.total:
                 fragments.append(bug_summary(output_dir, bug_counter))
                 fragments.append(bug_report(output_dir, prefix))

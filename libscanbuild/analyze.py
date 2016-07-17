@@ -17,10 +17,9 @@ import os.path
 import json
 import argparse
 import logging
-import subprocess
 import multiprocessing
-from libscanbuild import reconfigure_logging, tempdir
-from libscanbuild import command_entry_point, wrapper_entry_point
+from libscanbuild import command_entry_point, wrapper_environment, \
+    wrapper_entry_point, reconfigure_logging, tempdir, run_build
 from libscanbuild.runner import run, logging_analyzer_output
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -46,37 +45,30 @@ def analyze_build_main(bin_dir, from_build_command):
     validate(parser, args, from_build_command)
 
     with report_directory(args.output, args.keep_empty) as target_dir:
+        exit_code = 0
         if not from_build_command:
-            # run analyzer only and generate cover report
+            # run the analyzer against a compilation db
             run_analyzer(args, target_dir)
-            number_of_bugs = document(args, target_dir, True)
-            return number_of_bugs if args.status_bugs else 0
-        elif args.intercept_first:
-            # run build command and capture compiler executions
-            exit_code = capture(args, bin_dir)
-            # next step to run the analyzer against the captured commands
-            if need_analyzer(args.build):
-                run_analyzer(args, target_dir)
-                # cover report generation and bug counting
-                number_of_bugs = document(args, target_dir, True)
-                # remove the compilation database when it was not requested
-                if os.path.exists(args.cdb):
-                    os.unlink(args.cdb)
-                # set exit status as it was requested
-                return number_of_bugs if args.status_bugs else exit_code
-            else:
-                return exit_code
         else:
-            # run the build command with compiler wrappers which
-            # execute the analyzer too. (interposition)
-            environment = setup_environment(args, target_dir, bin_dir)
-            logging.debug('run build in environment: %s', environment)
-            exit_code = subprocess.call(args.build, env=environment)
-            logging.debug('build finished with exit code: %d', exit_code)
-            # cover report generation and bug counting
-            number_of_bugs = document(args, target_dir, False)
-            # set exit status as it was requested
-            return number_of_bugs if args.status_bugs else exit_code
+            # run against a build command
+            if args.intercept_first:
+                # run build command with intercept module
+                exit_code = capture(args, bin_dir)
+                if need_analyzer(args.build):
+                    # run the analyzer against the captured commands
+                    run_analyzer(args, target_dir)
+            else:
+                # run build command and analyzer with compiler wrappers
+                report_dir = target_dir if need_analyzer(args.build) else None
+                environment = setup_environment(args, bin_dir, report_dir)
+                exit_code = run_build(args.build, environment)
+        # cover report generation and bug counting
+        number_of_bugs = document(args, target_dir)
+        # remove the compilation db when it was not requested
+        if from_build_command and os.path.exists(args.cdb):
+            os.unlink(args.cdb)
+        # set exit status as it was requested
+        return number_of_bugs if args.status_bugs else exit_code
 
 
 def need_analyzer(args):
@@ -121,23 +113,26 @@ def run_analyzer(args, output_dir):
         pool.join()
 
 
-def setup_environment(args, destination, bin_dir):
+def setup_environment(args, bin_dir, destination):
     """ Set up environment for build command to interpose compiler wrapper. """
 
     environment = dict(os.environ)
+    environment.update(
+        wrapper_environment(
+            c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
+            cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
+            c_compiler=args.cc,
+            cxx_compiler=args.cxx,
+            verbose=args.verbose > 2))
+    # request analyzer run when destination directory is not None
     environment.update({
-        'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-        'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-        'INTERCEPT_BUILD_CC': args.cc,
-        'INTERCEPT_BUILD_CXX': args.cxx,
-        'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'WARNING',
-        'ANALYZE_BUILD_CLANG': args.clang if need_analyzer(args.build) else '',
+        'ANALYZE_BUILD_CLANG': args.clang,
         'ANALYZE_BUILD_REPORT_DIR': destination,
         'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
         'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
         'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args)),
         'ANALYZE_BUILD_FORCE_DEBUG': 'yes' if args.force_debug else ''
-    })
+    } if destination else {})
     return environment
 
 

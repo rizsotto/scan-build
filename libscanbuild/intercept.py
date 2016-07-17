@@ -31,8 +31,9 @@ import argparse
 import logging
 import subprocess
 from libear import build_libear, TemporaryDirectory
-from libscanbuild import command_entry_point, wrapper_entry_point
-from libscanbuild import duplicate_check, tempdir, reconfigure_logging
+from libscanbuild import command_entry_point, wrapper_entry_point, \
+    wrapper_environment, run_build, duplicate_check, tempdir, \
+    reconfigure_logging
 from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
 
@@ -94,9 +95,7 @@ def capture(args, bin_dir):
     with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
         environment = setup_environment(args, tmp_dir, bin_dir)
-        logging.debug('run build in environment: %s', environment)
-        exit_code = subprocess.call(args.build, env=environment)
-        logging.info('build finished with exit code: %d', exit_code)
+        exit_code = run_build(args.build, environment)
         # read the intercepted exec calls
         exec_traces = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmp_dir, filename))
@@ -119,30 +118,26 @@ def setup_environment(args, destination, bin_dir):
     The exec calls will be logged by the 'libear' preloaded library or by the
     'wrapper' programs. """
 
-    libear_path = None if args.override_compiler or is_preload_disabled(
+    intercept_library = None if args.override_compiler or is_preload_disabled(
         sys.platform) else build_libear(args.cc, destination)
 
     environment = dict(os.environ)
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
-    if not libear_path:
-        logging.debug('intercept gonna use compiler wrappers')
-        environment.update({
-            'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-            'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-            'INTERCEPT_BUILD_CC': args.cc,
-            'INTERCEPT_BUILD_CXX': args.cxx,
-            'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
-        })
+    if not intercept_library:
+        environment.update(wrapper_environment(
+            c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
+            cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
+            c_compiler=args.cc,
+            cxx_compiler=args.cxx,
+            verbose=args.verbose > 2))
     elif sys.platform == 'darwin':
-        logging.debug('intercept gonna preload libear on OSX')
         environment.update({
-            'DYLD_INSERT_LIBRARIES': libear_path,
+            'DYLD_INSERT_LIBRARIES': intercept_library,
             'DYLD_FORCE_FLAT_NAMESPACE': '1'
         })
     else:
-        logging.debug('intercept gonna preload libear on UNIX')
-        environment.update({'LD_PRELOAD': libear_path})
+        environment.update({'LD_PRELOAD': intercept_library})
 
     return environment
 
