@@ -144,6 +144,7 @@ def setup_environment(args, destination, bin_dir):
 
 
 @wrapper_entry_point
+@command_entry_point
 def intercept_build_wrapper(**kwargs):
     """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 

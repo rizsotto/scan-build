@@ -141,6 +141,7 @@ def setup_environment(args, bin_dir, destination):
 
 
 @wrapper_entry_point
+@command_entry_point
 def analyze_build_wrapper(**kwargs):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 

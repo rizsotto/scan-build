@@ -12,6 +12,10 @@ import logging
 import functools
 import subprocess
 
+WRAPPER_CC = 'INTERCEPT_BUILD_CC'
+WRAPPER_CXX = 'INTERCEPT_BUILD_CXX'
+WRAPPER_VERBOSE = 'INTERCEPT_BUILD_VERBOSE'
+
 
 def duplicate_check(method):
     """ Predicate to detect duplicated entries.
@@ -125,15 +129,13 @@ def wrapper_entry_point(function):
     def wrapper():
         """ It executes the compilation and calls the wrapped method. """
 
-        compiler_wrapper_name = os.path.basename(sys.argv[0])
-        # initialize wrapper logging
-        logging.basicConfig(format='%(name)s: %(message)s',
-                            level=os.getenv('INTERCEPT_BUILD_VERBOSE', 'INFO'))
-        logging.getLogger().name = compiler_wrapper_name
-        # execute with real compiler
-        language = 'c++' if compiler_wrapper_name[-2:] == '++' else 'c'
-        compiler = os.environ['INTERCEPT_BUILD_CC'] if language == 'c' \
-            else os.environ['INTERCEPT_BUILD_CXX']
+        # set logging level when neeeded
+        verbose = bool(os.getenv(WRAPPER_VERBOSE, '0'))
+        reconfigure_logging(verbose)
+        # find out what is the real compiler
+        is_cxx = os.path.basename(sys.argv[0]).endswith('++')
+        compiler = os.getenv(WRAPPER_CXX) if is_cxx else os.getenv(WRAPPER_CC)
+        # execute compilation with the real compiler
         command = [compiler] + sys.argv[1:]
         logging.debug('compilation: %s', command)
         result = subprocess.call(command)
@@ -142,9 +144,7 @@ def wrapper_entry_point(function):
         try:
             function(compiler=compiler, command=command, result=result)
         except:
-            logging.warning('wrapped function failed', exc_info=True)
-        finally:
-            logging.shutdown()
+            logging.exception('Compiler wrapper failed complete.')
         # ... return the real compiler exit code instead.
         return result
 
@@ -158,7 +158,7 @@ def wrapper_environment(c_wrapper, cxx_wrapper, c_compiler, cxx_compiler,
     return {
         'CC': c_wrapper,
         'CXX': cxx_wrapper,
-        'INTERCEPT_BUILD_CC': c_compiler,
-        'INTERCEPT_BUILD_CXX': cxx_compiler,
-        'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if verbose > 2 else 'WARNING'
+        WRAPPER_CC: c_compiler,
+        WRAPPER_CXX: cxx_compiler,
+        WRAPPER_VERBOSE: str(verbose)
     }
