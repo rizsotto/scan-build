@@ -131,7 +131,7 @@ def setup_environment(args, destination, bin_dir):
                 cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
                 c_compiler=args.cc,
                 cxx_compiler=args.cxx,
-                verbose=args.verbose > 2))
+                verbose=args.verbose))
     elif sys.platform == 'darwin':
         environment.update({
             'DYLD_INSERT_LIBRARIES': intercept_library,
@@ -143,8 +143,8 @@ def setup_environment(args, destination, bin_dir):
     return environment
 
 
-@wrapper_entry_point
 @command_entry_point
+@wrapper_entry_point
 def intercept_build_wrapper(**kwargs):
     """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 

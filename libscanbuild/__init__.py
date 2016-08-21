@@ -130,7 +130,7 @@ def wrapper_entry_point(function):
         """ It executes the compilation and calls the wrapped method. """
 
         # set logging level when neeeded
-        verbose = bool(os.getenv(WRAPPER_VERBOSE, '0'))
+        verbose = int(os.getenv(WRAPPER_VERBOSE, '0'))
         reconfigure_logging(verbose)
         # find out what is the real compiler
         is_cxx = os.path.basename(sys.argv[0]).endswith('++')

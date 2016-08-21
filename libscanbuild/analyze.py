@@ -127,7 +127,7 @@ def setup_environment(args, bin_dir, destination):
             cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
             c_compiler=args.cc,
             cxx_compiler=args.cxx,
-            verbose=args.verbose > 2))
+            verbose=args.verbose))
     # request analyzer run when destination directory is not None
     environment.update({
         'ANALYZE_BUILD_CLANG': args.clang,
@@ -140,8 +140,8 @@ def setup_environment(args, bin_dir, destination):
     return environment
 
 
-@wrapper_entry_point
 @command_entry_point
+@wrapper_entry_point
 def analyze_build_wrapper(**kwargs):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 
