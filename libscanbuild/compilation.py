@@ -9,7 +9,7 @@ import re
 import os
 import collections
 
-__all__ = ['split_command', 'classify_source', 'compiler_language']
+__all__ = ['split_command', 'split_compiler', 'classify_source']
 
 # Ignored compiler options map for compilation database creation.
 # The map is used in `split_command` method. (Which does ignore and classify
@@ -48,6 +48,9 @@ IGNORED_FLAGS = {
     '-Xlinker': 1
 }
 
+# Known C/C++ compiler wrapper name patterns
+COMPILER_WRAPPER_PATTERN = re.compile(r'^(distcc|ccache)$')
+
 # Known C/C++ compiler executable name patterns
 COMPILER_PATTERNS = frozenset([
     re.compile(r'^c(c|\+\+)$'),
@@ -55,6 +58,9 @@ COMPILER_PATTERNS = frozenset([
     re.compile(r'^([^-]*-)*clang(\+\+)?(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^llvm-g(cc|\+\+)$'),
 ])
+
+# C++ compiler name has '++' in it's name.
+COMPILER_CPP_PATTERN = re.compile(r'^(.+)(\+\+)(-.+|)$')
 
 
 def split_command(command):
@@ -66,17 +72,19 @@ def split_command(command):
         flags:    list of compile options
         compiler: string value of 'c' or 'c++' """
 
+    # quit right now, if the program was not a C/C++ compiler
+    compiler_and_arguments = split_compiler(command)
+    if compiler_and_arguments is None:
+        return None
+
     # the result of this method
     result = collections.namedtuple('Compilation',
                                     ['compiler', 'flags', 'files'])
-    result.compiler = compiler_language(command)
+    result.compiler = compiler_and_arguments[0]
     result.flags = []
     result.files = []
-    # quit right now, if the program was not a C/C++ compiler
-    if not result.compiler:
-        return None
     # iterate on the compile options
-    args = iter(command[1:])
+    args = iter(compiler_and_arguments[1])
     for arg in args:
         # quit when compilation pass is not involved
         if arg in {'-E', '-S', '-cc1', '-M', '-MM', '-###'}:
@@ -102,7 +110,12 @@ def split_command(command):
 
 
 def classify_source(filename, c_compiler=True):
-    """ Return the language from file name extension. """
+    """ Classify source file names and returns the presumed language,
+    based on the file name extension.
+
+    :param filename:    the source file name
+    :param c_compiler:  indicate that the compiler is a C compiler,
+    :return:            the language from file name extension. """
 
     mapping = {
         '.c': 'c' if c_compiler else 'c++',
@@ -127,15 +140,34 @@ def classify_source(filename, c_compiler=True):
     return mapping.get(extension)
 
 
-def compiler_language(command):
+def split_compiler(command):
     """ A predicate to decide the command is a compiler call or not.
 
-    Returns 'c' or 'c++' when it match. None otherwise. """
+    :param command: the command to classify
+    :return:        None if the command is not a compilation
+                    (compiler_language, rest of the command) tuple if the
+                    command is a compilation. """
 
-    cplusplus = re.compile(r'^(.+)(\+\+)(-.+|)$')
+    def is_wrapper(candidate):
+        return True if COMPILER_WRAPPER_PATTERN.match(candidate) else False
 
-    if command:
+    def is_compiler(candidate):
+        return any(pattern.match(candidate) for pattern in COMPILER_PATTERNS)
+
+    def is_cplusplus(candidate):
+        return True if COMPILER_CPP_PATTERN.match(candidate) else False
+
+    if command:  # not empty list will allow to index '0' and '1:'
         executable = os.path.basename(command[0])
-        if any(pattern.match(executable) for pattern in COMPILER_PATTERNS):
-            return 'c++' if cplusplus.match(executable) else 'c'
+        parameters = command[1:]
+        # 'wrapper' 'parameters' and
+        # 'wrapper' 'compiler' 'parameters' are valid.
+        # plus, a wrapper can wrap wrapper too.
+        if is_wrapper(executable):
+            result = split_compiler(parameters)
+            return ('c', parameters) if result is None else result
+        # and 'compiler' 'parameters' is valid.
+        elif is_compiler(executable):
+            language = 'c++' if is_cplusplus(executable) else 'c'
+            return language, parameters
     return None

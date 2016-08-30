@@ -12,7 +12,7 @@ import tempfile
 import functools
 import subprocess
 import logging
-from libscanbuild.compilation import classify_source, compiler_language
+from libscanbuild.compilation import classify_source, split_compiler
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
 
@@ -278,15 +278,19 @@ def classify_parameters(command):
     """ Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing. """
 
+    # this should never be None
+    compiler, arguments = split_compiler(command)
+
+    # the result of the method
     result = {
         'flags': [],  # the filtered compiler flags
         'arch_list': [],  # list of architecture flags
         'language': None,  # compilation language, None, if not specified
-        'compiler': compiler_language(command)  # 'c' or 'c++'
+        'compiler': compiler  # 'c' or 'c++'
     }
 
     # iterate on the compile options
-    args = iter(command[1:])
+    args = iter(arguments)
     for arg in args:
         # take arch flags into a separate basket
         if arg == '-arch':

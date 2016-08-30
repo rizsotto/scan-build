@@ -11,25 +11,45 @@ import unittest
 class CompilerTest(unittest.TestCase):
 
     def test_is_compiler_call(self):
-        self.assertIsNotNone(sut.compiler_language(['clang']))
-        self.assertIsNotNone(sut.compiler_language(['clang-3.6']))
-        self.assertIsNotNone(sut.compiler_language(['clang++']))
-        self.assertIsNotNone(sut.compiler_language(['clang++-3.5.1']))
-        self.assertIsNotNone(sut.compiler_language(['cc']))
-        self.assertIsNotNone(sut.compiler_language(['c++']))
-        self.assertIsNotNone(sut.compiler_language(['gcc']))
-        self.assertIsNotNone(sut.compiler_language(['g++']))
-        self.assertIsNotNone(sut.compiler_language(['/usr/local/bin/gcc']))
-        self.assertIsNotNone(sut.compiler_language(['/usr/local/bin/g++']))
-        self.assertIsNotNone(sut.compiler_language(['/usr/local/bin/clang']))
+        self.assertIsNotNone(sut.split_compiler(['clang']))
+        self.assertIsNotNone(sut.split_compiler(['clang-3.6']))
+        self.assertIsNotNone(sut.split_compiler(['clang++']))
+        self.assertIsNotNone(sut.split_compiler(['clang++-3.5.1']))
+        self.assertIsNotNone(sut.split_compiler(['cc']))
+        self.assertIsNotNone(sut.split_compiler(['c++']))
+        self.assertIsNotNone(sut.split_compiler(['gcc']))
+        self.assertIsNotNone(sut.split_compiler(['g++']))
+        self.assertIsNotNone(sut.split_compiler(['/usr/local/bin/gcc']))
+        self.assertIsNotNone(sut.split_compiler(['/usr/local/bin/g++']))
+        self.assertIsNotNone(sut.split_compiler(['/usr/local/bin/clang']))
         self.assertIsNotNone(
-            sut.compiler_language(['armv7_neno-linux-gnueabi-g++']))
+            sut.split_compiler(['armv7_neno-linux-gnueabi-g++']))
+        self.assertIsNotNone(sut.split_compiler(['distcc']))
+        self.assertIsNotNone(sut.split_compiler(['distcc', 'cc']))
+        self.assertIsNotNone(sut.split_compiler(['distcc', 'c++']))
+        self.assertIsNotNone(sut.split_compiler(['ccache']))
+        self.assertIsNotNone(sut.split_compiler(['ccache', 'cc']))
+        self.assertIsNotNone(sut.split_compiler(['ccache', 'c++']))
 
-        self.assertIsNone(sut.compiler_language([]))
-        self.assertIsNone(sut.compiler_language(['']))
-        self.assertIsNone(sut.compiler_language(['ld']))
-        self.assertIsNone(sut.compiler_language(['as']))
-        self.assertIsNone(sut.compiler_language(['/usr/local/bin/compiler']))
+        self.assertIsNone(sut.split_compiler([]))
+        self.assertIsNone(sut.split_compiler(['']))
+        self.assertIsNone(sut.split_compiler(['ld']))
+        self.assertIsNone(sut.split_compiler(['as']))
+        self.assertIsNone(sut.split_compiler(['/usr/local/bin/compiler']))
+
+        arguments = ['-c', 'file.c']
+        self.assertEquals(('c', arguments),
+                          sut.split_compiler(['distcc'] + arguments))
+        self.assertEquals(('c', arguments),
+                          sut.split_compiler(['distcc', 'cc'] + arguments))
+        self.assertEquals(('c++', arguments),
+                          sut.split_compiler(['distcc', 'c++'] + arguments))
+        self.assertEquals(('c', arguments),
+                          sut.split_compiler(['ccache'] + arguments))
+        self.assertEquals(('c', arguments),
+                          sut.split_compiler(['ccache', 'cc'] + arguments))
+        self.assertEquals(('c++', arguments),
+                          sut.split_compiler(['ccache', 'c++'] + arguments))
 
 
 class SplitTest(unittest.TestCase):

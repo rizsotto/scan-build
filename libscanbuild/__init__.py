@@ -11,6 +11,7 @@ import sys
 import logging
 import functools
 import subprocess
+from libscanbuild.shell import decode
 
 WRAPPER_CC = 'INTERCEPT_BUILD_CC'
 WRAPPER_CXX = 'INTERCEPT_BUILD_CXX'
@@ -136,7 +137,7 @@ def wrapper_entry_point(function):
         is_cxx = os.path.basename(sys.argv[0]).endswith('++')
         compiler = os.getenv(WRAPPER_CXX) if is_cxx else os.getenv(WRAPPER_CC)
         # execute compilation with the real compiler
-        command = [compiler] + sys.argv[1:]
+        command = decode(compiler) + sys.argv[1:]
         logging.debug('compilation: %s', command)
         result = subprocess.call(command)
         logging.debug('compilation exit code: %d', result)
