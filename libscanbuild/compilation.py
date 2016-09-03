@@ -53,14 +53,19 @@ COMPILER_WRAPPER_PATTERN = re.compile(r'^(distcc|ccache)$')
 
 # Known C/C++ compiler executable name patterns
 COMPILER_PATTERNS = frozenset([
-    re.compile(r'^c(c|\+\+)$'),
+    re.compile(r'^(cc|c\+\+|cxx|CC)$'),
     re.compile(r'^([^-]*-)*[mg](cc|\+\+)(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^([^-]*-)*clang(\+\+)?(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^llvm-g(cc|\+\+)$'),
+    re.compile(r'^i(cc|cpc)$'),
+    re.compile(r'^(g|)xl(c|C|c\+\+)$'),
 ])
 
-# C++ compiler name has '++' in it's name.
-COMPILER_CPP_PATTERN = re.compile(r'^(.+)(\+\+)(-.+|)$')
+# Known C++ compiler executable name patterns
+COMPILER_CPP_PATTERNS = frozenset([
+    re.compile(r'^(.+)(\+\+)(-.+|)$'),  # C++ compilers usually ends with '++'
+    re.compile(r'^(icpc|xlC|cxx|CC)$'),
+])
 
 
 def split_command(command):
@@ -155,7 +160,8 @@ def split_compiler(command):
         return any(pattern.match(candidate) for pattern in COMPILER_PATTERNS)
 
     def is_cplusplus(candidate):
-        return True if COMPILER_CPP_PATTERN.match(candidate) else False
+        return any(pattern.match(candidate)
+                   for pattern in COMPILER_CPP_PATTERNS)
 
     if command:  # not empty list will allow to index '0' and '1:'
         executable = os.path.basename(command[0])
