@@ -54,7 +54,7 @@ def call_and_report(analyzer_cmd, build_cmd):
     child.stdout.close()
     child.wait()
 
-    return (child.returncode, directory)
+    return child.returncode, directory
 
 
 def check_call_and_report(analyzer_cmd, build_cmd):

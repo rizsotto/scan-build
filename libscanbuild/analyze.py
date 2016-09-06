@@ -19,7 +19,7 @@ import argparse
 import logging
 import multiprocessing
 from libscanbuild import command_entry_point, wrapper_environment, \
-    wrapper_entry_point, reconfigure_logging, tempdir, run_build
+    wrapper_entry_point, reconfigure_logging, tempdir, execute_and_report
 from libscanbuild.runner import run, logging_analyzer_output
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -66,7 +66,7 @@ def analyze_build_main(bin_dir, from_build_command):
                 # run build command and analyzer with compiler wrappers
                 report_dir = target_dir if need_analyzer(args.build) else None
                 environment = setup_environment(args, bin_dir, report_dir)
-                exit_code = run_build(args.build, environment)
+                exit_code = execute_and_report(args.build, env=environment)
         # cover report generation and bug counting
         number_of_bugs = document(args, target_dir)
         # do cleanup temporary files
@@ -81,7 +81,7 @@ def need_analyzer(args):
     When static analyzer run against project configure step, it should be
     silent and no need to run the analyzer or generate report.
 
-    To run `scan-build` against the configure step might be neccessary,
+    To run `scan-build` against the configure step might be necessary,
     when compiler wrappers are used. That's the moment when build setup
     check the compiler and capture the location for the build process. """
 
@@ -381,7 +381,7 @@ def create_parser(from_build_command):
         metavar='<model>',
         dest='constraints_model',
         choices=['range', 'basic'],
-        help="""Specify the contraint engine used by the analyzer. Specifying
+        help="""Specify the constraint engine used by the analyzer. Specifying
                 'basic' uses a simpler, less powerful constraint model used by
                 checker-0.160 and earlier.""")
     advanced.add_argument(
@@ -436,7 +436,7 @@ def create_parser(from_build_command):
         default=[],
         help="""Do not run static analyzer against files found in this
                 directory. (You can specify this option multiple times.)
-                Could be usefull when project contains 3rd party libraries.
+                Could be useful when project contains 3rd party libraries.
                 The directory path shall be absolute path as file names in
                 the compilation database.""")
     advanced.add_argument(

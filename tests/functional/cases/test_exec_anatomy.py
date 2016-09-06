@@ -26,7 +26,7 @@ def run(source_dir, target_dir):
     expected_file = os.path.join(target_dir, 'expected.json')
     execute(['intercept-build', '--cdb', result_file, './exec',
              expected_file])
-    return (expected_file, result_file)
+    return expected_file, result_file
 
 
 class ExecAnatomyTest(unittest.TestCase):
@@ -45,6 +45,6 @@ class ExecAnatomyTest(unittest.TestCase):
     def test_all_exec_calls(self):
         this_dir, _ = os.path.split(__file__)
         source_dir = os.path.normpath(os.path.join(this_dir, '..', 'exec'))
-        with libear.TemporaryDirectory() as tmp_dir:
+        with libear.temporary_directory() as tmp_dir:
             expected, result = run(source_dir, tmp_dir)
             self.assertEqualJson(expected, result)

@@ -116,7 +116,7 @@ class RunAnalyzerTest(unittest.TestCase):
 
     @staticmethod
     def run_analyzer(content, failures_report):
-        with libear.TemporaryDirectory() as tmpdir:
+        with libear.temporary_directory() as tmpdir:
             filename = os.path.join(tmpdir, 'test.cpp')
             with open(filename, 'w') as handle:
                 handle.write(content)
@@ -133,7 +133,7 @@ class RunAnalyzerTest(unittest.TestCase):
             }
             spy = Spy()
             result = sut.run_analyzer(opts, spy.call)
-            return (result, spy.arg)
+            return result, spy.arg
 
     def test_run_analyzer(self):
         content = "int div(int n, int d) { return n / d; }"
@@ -161,7 +161,7 @@ class ReportFailureTest(unittest.TestCase):
         self.assertEqual('failures', os.path.basename(os.path.dirname(path)))
 
     def test_report_failure_create_files(self):
-        with libear.TemporaryDirectory() as tmpdir:
+        with libear.temporary_directory() as tmpdir:
             # create input file
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:

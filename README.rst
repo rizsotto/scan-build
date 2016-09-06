@@ -89,11 +89,11 @@ tool has three distinct model to run the analyzer:
     This is the default behaviour, can be enforced with ``--override-compiler``
     flag.
 
-2.  Use special library to intercept compiler calls durring the build process.
+2.  Use special library to intercept compiler calls during the build process.
     The analyzer run against each modules after the build finished.
     Use ``--intercept-first`` flag to get this model.
 
-3.  Use compiler wrappers to intercept compiler calls durring the build process.
+3.  Use compiler wrappers to intercept compiler calls during the build process.
     The analyzer run against each modules after the build finished.
     Use ``--intercept-first`` and ``--override-compiler`` flags together to get
     this model.
@@ -110,13 +110,13 @@ process removes removes intermediate modules (generated sources) the analyzer
 output still kept.
 
 The 2. and 3. generate the compilation database first, and filters out those
-modules which are not exists. So, it's suitable for incremental analysis durring
+modules which are not exists. So, it's suitable for incremental analysis during
 the development.
 
 The 2. mode is available only on FreeBSD, Linux and OSX. Where library preload
 is available from the dynamic loader. Security extension/modes on different
-operating systems might disable library preloads. This case the build behaves
-normaly, but the result compilation database will be empty. (Notable examples
+operating systems might disable library preload. This case the build behaves
+normally, but the result compilation database will be empty. (Notable examples
 for enabled security modes are: SIP on OS X Captain and SELinux on Fedora,
 RHEL and CentOS.) The program checks the security modes for SIP and SELinux,
 and falls back to 3. mode.

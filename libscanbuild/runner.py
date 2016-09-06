@@ -108,24 +108,24 @@ def report_failure(opts):
     randomly. The compiler output also captured into '.stderr.txt' file.
     And some more execution context also saved into '.info.txt' file. """
 
-    def extension(opts):
+    def extension():
         """ Generate preprocessor file extension. """
 
         mapping = {'objective-c++': '.mii', 'objective-c': '.mi', 'c++': '.ii'}
         return mapping.get(opts['language'], '.i')
 
-    def destination(opts):
+    def destination():
         """ Creates failures directory if not exits yet. """
 
-        name = os.path.join(opts['output_dir'], 'failures')
-        if not os.path.isdir(name):
-            os.makedirs(name)
-        return name
+        failures_dir = os.path.join(opts['output_dir'], 'failures')
+        if not os.path.isdir(failures_dir):
+            os.makedirs(failures_dir)
+        return failures_dir
 
     error = opts['error_type']
-    (handle, name) = tempfile.mkstemp(suffix=extension(opts),
+    (handle, name) = tempfile.mkstemp(suffix=extension(),
                                       prefix='clang_' + error + '_',
-                                      dir=destination(opts))
+                                      dir=destination())
     os.close(handle)
     cwd = opts['directory']
     cmd = get_arguments([opts['clang'], '-fsyntax-only', '-E'] +

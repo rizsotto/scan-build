@@ -22,7 +22,7 @@ class ClangGetVersion(unittest.TestCase):
 
 class ClangGetArgumentsTest(unittest.TestCase):
     def test_get_clang_arguments(self):
-        with libear.TemporaryDirectory() as tmpdir:
+        with libear.temporary_directory() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('')

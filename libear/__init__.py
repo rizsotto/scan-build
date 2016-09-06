@@ -68,7 +68,7 @@ def execute(cmd, *args, **kwargs):
 
 
 @contextlib.contextmanager
-def TemporaryDirectory(**kwargs):
+def temporary_directory(**kwargs):
     name = tempfile.mkdtemp(**kwargs)
     try:
         yield name
@@ -167,7 +167,7 @@ class Configure(object):
 
     def _try_to_compile_and_link(self, source):
         try:
-            with TemporaryDirectory() as work_dir:
+            with temporary_directory() as work_dir:
                 src_file = 'check.c'
                 with open(os.path.join(work_dir, src_file), 'w') as handle:
                     handle.write(source)

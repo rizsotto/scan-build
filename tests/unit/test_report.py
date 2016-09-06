@@ -12,7 +12,7 @@ import os.path
 
 
 def run_bug_parse(content):
-    with libear.TemporaryDirectory() as tmpdir:
+    with libear.temporary_directory() as tmpdir:
         file_name = os.path.join(tmpdir, 'test.html')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
@@ -21,7 +21,7 @@ def run_bug_parse(content):
 
 
 def run_crash_parse(content, preproc):
-    with libear.TemporaryDirectory() as tmpdir:
+    with libear.temporary_directory() as tmpdir:
         file_name = os.path.join(tmpdir, preproc + '.info.txt')
         with open(file_name, 'w') as handle:
             handle.writelines(content)
@@ -77,7 +77,7 @@ class ParseFileTest(unittest.TestCase):
     def test_parse_real_crash(self):
         import libscanbuild.runner as sut2
         import re
-        with libear.TemporaryDirectory() as tmpdir:
+        with libear.temporary_directory() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')

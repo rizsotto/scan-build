@@ -89,37 +89,35 @@ class InterceptUtilTest(unittest.TestCase):
             message = 'SELinux status:\t{0}'.format(status)
             return create_status_report(filename, message)
 
-        ENABLED = 'enabled'
-        DISABLED = 'disabled'
+        enabled = 'enabled'
+        disabled = 'disabled'
+        osx = 'darwin'
+        linux = 'linux'
 
-        OSX = 'darwin'
-        LINUX = 'linux'
-
-        with libear.TemporaryDirectory() as tmpdir:
+        saved = os.environ['PATH']
+        with libear.temporary_directory() as tmp_dir:
             try:
-                saved = os.environ['PATH']
-                os.environ['PATH'] = tmpdir + ':' + saved
+                os.environ['PATH'] = tmp_dir + ':' + saved
 
-                create_csrutil(tmpdir, ENABLED)
-                self.assertTrue(sut.is_preload_disabled(OSX))
+                create_csrutil(tmp_dir, enabled)
+                self.assertTrue(sut.is_preload_disabled(osx))
 
-                create_csrutil(tmpdir, DISABLED)
-                self.assertFalse(sut.is_preload_disabled(OSX))
+                create_csrutil(tmp_dir, disabled)
+                self.assertFalse(sut.is_preload_disabled(osx))
 
-                create_sestatus(tmpdir, ENABLED)
-                self.assertTrue(sut.is_preload_disabled(LINUX))
+                create_sestatus(tmp_dir, enabled)
+                self.assertTrue(sut.is_preload_disabled(linux))
 
-                create_sestatus(tmpdir, DISABLED)
-                self.assertFalse(sut.is_preload_disabled(LINUX))
+                create_sestatus(tmp_dir, disabled)
+                self.assertFalse(sut.is_preload_disabled(linux))
             finally:
                 os.environ['PATH'] = saved
 
         try:
-            saved = os.environ['PATH']
             os.environ['PATH'] = ''
             # shall be false when it's not in the path
-            self.assertFalse(sut.is_preload_disabled(OSX))
-            self.assertFalse(sut.is_preload_disabled(LINUX))
+            self.assertFalse(sut.is_preload_disabled(osx))
+            self.assertFalse(sut.is_preload_disabled(linux))
 
             self.assertFalse(sut.is_preload_disabled('unix'))
         finally:

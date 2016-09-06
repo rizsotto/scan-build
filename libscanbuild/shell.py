@@ -59,8 +59,7 @@ def decode(string):
         """ Gets rid of the escaping characters. """
 
         if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] == '"':
-            arg = arg[1:-1]
-            return re.sub(r'\\(["\\])', r'\1', arg)
+            return re.sub(r'\\(["\\])', r'\1', arg[1:-1])
         return re.sub(r'\\([\\ $%&\(\)\[\]\{\}\*|<>@?!])', r'\1', arg)
 
-    return [unescape(arg) for arg in shlex.split(string)]
+    return [unescape(token) for token in shlex.split(string)]

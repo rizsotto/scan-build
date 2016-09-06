@@ -35,10 +35,10 @@ def report_directory(hint, keep):
     keep -- a boolean value to keep or delete the empty report directory. """
 
     stamp = time.strftime('scan-build-%Y-%m-%d-%H%M%S-', time.localtime())
-    parentdir = os.path.abspath(hint)
-    if not os.path.exists(parentdir):
-        os.makedirs(parentdir)
-    name = tempfile.mkdtemp(prefix=stamp, dir=parentdir)
+    parent_dir = os.path.abspath(hint)
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
+    name = tempfile.mkdtemp(prefix=stamp, dir=parent_dir)
 
     logging.info('Report directory created: %s', name)
 
@@ -50,7 +50,7 @@ def report_directory(hint, keep):
             keep = True
         else:
             if keep:
-                msg = "Report directory '%s' contans no report, but kept."
+                msg = "Report directory '%s' contains no report, but kept."
             else:
                 msg = "Removing directory '%s' because it contains no report."
         logging.warning(msg, name)
@@ -75,7 +75,7 @@ def document(args, output_dir):
         use_cdb = os.path.exists(args.cdb)
 
         logging.debug('generate index.html file')
-        # common prefix for source files to have sort filenames
+        # common prefix for source files to have sorter path
         prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
         # assemble the cover from multiple fragments
         fragments = []
@@ -86,7 +86,7 @@ def document(args, output_dir):
             if crash_count:
                 fragments.append(crash_report(output_dir, prefix))
             assemble_cover(output_dir, prefix, args, fragments)
-            # copy additinal files to the report
+            # copy additional files to the report
             copy_resource_files(output_dir)
             if use_cdb:
                 shutil.copy(args.cdb, output_dir)
@@ -517,9 +517,11 @@ def commonprefix_from(filename):
 
 
 def commonprefix(files):
-    """ Fixed version of os.path.commonprefix. Return the longest path prefix
-    that is a prefix of all paths in filenames. """
+    """ Fixed version of os.path.commonprefix.
 
+    :param files: list of file names
+    :return: the longest path prefix that is a prefix of all paths in files
+    """
     result = None
     for current in files:
         if result is not None:

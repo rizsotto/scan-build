@@ -18,45 +18,60 @@ WRAPPER_CXX = 'INTERCEPT_BUILD_CXX'
 WRAPPER_VERBOSE = 'INTERCEPT_BUILD_VERBOSE'
 
 
-def duplicate_check(method):
-    """ Predicate to detect duplicated entries.
+def duplicate_check(hash_function):
+    """ Workaround to detect duplicate dictionary values.
 
-    Unique hash method can be use to detect duplicates. Entries are
-    represented as dictionaries, which has no default hash method.
-    This implementation uses a set datatype to store the unique hash values.
+    Python `dict` type has no `hash` method, which is required by the `set`
+    type to store elements.
 
-    This method returns a method which can detect the duplicate values. """
+    This solution still not store the `dict` as value in a `set`. Instead
+    it calculate a `string` hash and store that. Therefore it can only say
+    that hash is already taken or not.
+
+    This method is a factory method, which returns a predicate. """
 
     def predicate(entry):
-        entry_hash = predicate.unique(entry)
-        if entry_hash not in predicate.state:
-            predicate.state.add(entry_hash)
+        """ The predicate which calculates and stores the hash of the given
+        entries. The entry type has to work with the given hash function.
+
+        :param entry: the questioned entry,
+        :return: true/false depends the hash value is already seen or not.
+        """
+        entry_hash = hash_function(entry)
+        if entry_hash not in state:
+            state.add(entry_hash)
             return False
         return True
 
-    predicate.unique = method
-    predicate.state = set()
+    state = set()
     return predicate
 
 
 def tempdir():
-    """ Return the default temorary directory. """
+    """ Return the default temporary directory. """
 
     return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
 
 
-def run_build(build_command, environment):
-    """ Run and report build command execution """
+def execute_and_report(build_command, *args, **kwargs):
+    """ Run and report build command execution
 
+    :param build_command: array of tokens
+    :return: exit code of the process
+    """
+    environment = kwargs.get('env', os.environ)
     logging.debug('run build in environment: %s', environment)
-    exit_code = subprocess.call(build_command, env=environment)
+    exit_code = subprocess.call(build_command, *args, **kwargs)
     logging.debug('build finished with exit code: %d', exit_code)
     return exit_code
 
 
 def reconfigure_logging(verbose_level):
-    """ Logging level and format reconfigured based on the verbose flag. """
+    """ Reconfigure logging level and format based on the verbose flag.
 
+    :param verbose_level: number of `-v` flags received by the command
+    :return: no return value
+    """
     # exit when nothing to do
     if verbose_level == 0:
         return
@@ -95,7 +110,7 @@ def command_entry_point(function):
             logging.getLogger().name = os.path.basename(sys.argv[0])
             exit_code = function(*args, **kwargs)
         except KeyboardInterrupt:
-            logging.warning('Keyboard interupt')
+            logging.warning('Keyboard interrupt')
         except Exception:
             logging.exception('Internal error.')
             if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -130,7 +145,7 @@ def wrapper_entry_point(function):
     def wrapper():
         """ It executes the compilation and calls the wrapped method. """
 
-        # set logging level when neeeded
+        # set logging level when needed
         verbose = int(os.getenv(WRAPPER_VERBOSE, '0'))
         reconfigure_logging(verbose)
         # find out what is the real compiler

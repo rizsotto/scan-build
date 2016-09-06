@@ -11,20 +11,20 @@ import os.path
 
 class TemporaryDirectoryTest(unittest.TestCase):
     def test_creates_directory(self):
-        dirname = None
-        with sut.TemporaryDirectory() as tmpdir:
+        dir_name = None
+        with sut.temporary_directory() as tmpdir:
             self.assertTrue(os.path.isdir(tmpdir))
-            dirname = tmpdir
-        self.assertIsNotNone(dirname)
-        self.assertFalse(os.path.exists(dirname))
+            dir_name = tmpdir
+        self.assertIsNotNone(dir_name)
+        self.assertFalse(os.path.exists(dir_name))
 
     def test_removes_directory_when_exception(self):
-        dirname = None
+        dir_name = None
         try:
-            with sut.TemporaryDirectory() as tmpdir:
+            with sut.temporary_directory() as tmpdir:
                 self.assertTrue(os.path.isdir(tmpdir))
-                dirname = tmpdir
+                dir_name = tmpdir
                 raise RuntimeError('message')
         except:
-            self.assertIsNotNone(dirname)
-            self.assertFalse(os.path.exists(dirname))
+            self.assertIsNotNone(dir_name)
+            self.assertFalse(os.path.exists(dir_name))

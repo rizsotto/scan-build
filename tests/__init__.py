@@ -12,7 +12,7 @@ import tests.functional.cases
 
 def suite():
     loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    suite.addTests(loader.loadTestsFromModule(tests.unit))
-    suite.addTests(loader.loadTestsFromModule(tests.functional.cases))
-    return suite
+    ts = unittest.TestSuite()
+    ts.addTests(loader.loadTestsFromModule(tests.unit))
+    ts.addTests(loader.loadTestsFromModule(tests.functional.cases))
+    return ts

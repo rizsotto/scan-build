@@ -30,9 +30,9 @@ import glob
 import argparse
 import logging
 import subprocess
-from libear import build_libear, TemporaryDirectory
+from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, duplicate_check, tempdir, \
+    wrapper_environment, execute_and_report, duplicate_check, tempdir, \
     reconfigure_logging
 from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
@@ -92,10 +92,10 @@ def capture(args, bin_dir):
                 for entry in itertools.chain(previous, current)
                 if os.path.exists(entry['file']) and not duplicate(entry))
 
-    with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
+    with temporary_directory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
         environment = setup_environment(args, tmp_dir, bin_dir)
-        exit_code = run_build(args.build, environment)
+        exit_code = execute_and_report(args.build, env=environment)
         # read the intercepted exec calls
         exec_traces = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmp_dir, filename))
@@ -234,7 +234,7 @@ def format_entry(exec_trace):
         for source in compilation.files:
             compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
             command = [compiler, '-c'] + compilation.flags + [source]
-            logging.debug('formated as: %s', command)
+            logging.debug('formatted as: %s', command)
             yield {
                 'directory': exec_trace['directory'],
                 'command': encode(command),
