@@ -84,15 +84,9 @@ class InterceptUtilTest(unittest.TestCase):
             message = 'System Integrity Protection status: {0}'.format(status)
             return create_status_report(filename, message)
 
-        def create_sestatus(dest_dir, status):
-            filename = os.path.join(dest_dir, 'sestatus')
-            message = 'SELinux status:\t{0}'.format(status)
-            return create_status_report(filename, message)
-
         enabled = 'enabled'
         disabled = 'disabled'
         osx = 'darwin'
-        linux = 'linux'
 
         saved = os.environ['PATH']
         with libear.temporary_directory() as tmp_dir:
@@ -104,12 +98,6 @@ class InterceptUtilTest(unittest.TestCase):
 
                 create_csrutil(tmp_dir, disabled)
                 self.assertFalse(sut.is_preload_disabled(osx))
-
-                create_sestatus(tmp_dir, enabled)
-                self.assertTrue(sut.is_preload_disabled(linux))
-
-                create_sestatus(tmp_dir, disabled)
-                self.assertFalse(sut.is_preload_disabled(linux))
             finally:
                 os.environ['PATH'] = saved
 
@@ -117,7 +105,6 @@ class InterceptUtilTest(unittest.TestCase):
             os.environ['PATH'] = ''
             # shall be false when it's not in the path
             self.assertFalse(sut.is_preload_disabled(osx))
-            self.assertFalse(sut.is_preload_disabled(linux))
 
             self.assertFalse(sut.is_preload_disabled('unix'))
         finally:

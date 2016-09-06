@@ -118,8 +118,8 @@ is available from the dynamic loader. Security extension/modes on different
 operating systems might disable library preload. This case the build behaves
 normally, but the result compilation database will be empty. (Notable examples
 for enabled security modes are: SIP on OS X Captain and SELinux on Fedora,
-RHEL and CentOS.) The program checks the security modes for SIP and SELinux,
-and falls back to 3. mode.
+RHEL and CentOS.) The program checks the security modes for SIP, and falls
+back to 3. mode.
 
 ``intercept-build`` command uses only the 2. and 3. mode to generate the
 compilation database. ``analyze-build`` does only run the analyzer against the

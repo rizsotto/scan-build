@@ -247,17 +247,11 @@ def is_preload_disabled(platform):
     so this should be detected. You can detect whether SIP is enabled on
     Darwin by checking whether (1) there is a binary called 'csrutil' in
     the path and, if so, (2) whether the output of executing 'csrutil status'
-    contains 'System Integrity Protection status: enabled'.
-
-    Same problem on linux when SELinux is enabled. The status query program
-    'sestatus' and the output when it's enabled 'SELinux status: enabled'. """
+    contains 'System Integrity Protection status: enabled'. """
 
     if platform == 'darwin':
         pattern = re.compile(r'System Integrity Protection status:\s+enabled')
         command = ['csrutil', 'status']
-    elif platform in {'linux', 'linux2'}:
-        pattern = re.compile(r'SELinux status:\s+enabled')
-        command = ['sestatus']
     else:
         return False
 
