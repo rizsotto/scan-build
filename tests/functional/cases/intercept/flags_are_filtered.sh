@@ -9,10 +9,10 @@ set -o xtrace
 # set up unique names for this test
 PREFIX=flagfiltering
 # set up platform specific linker options
-if [ `uname -o | grep -i linux` ]; then
-  LD_FLAGS="-o ${test_output_dir}/lib${PREFIX}.so -shared -Wl,-soname,${PREFIX}"
-elif [ `uname -o | grep -i darwin` ]; then
+if [ $(uname | grep -i "darwin") ]; then
   LD_FLAGS="-o ${test_output_dir}/lib${PREFIX}.dylib -dynamiclib -install_name @rpath/${PREFIX}"
+else
+  LD_FLAGS="-o ${test_output_dir}/lib${PREFIX}.so -shared -Wl,-soname,${PREFIX}"
 fi
 
 cd ${test_input_dir}

@@ -1,14 +1,41 @@
 language: python
 
-python:
-  - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "pypy"
-
-sudo: false
+matrix:
+  include:
+    - os: linux
+      sudo: false
+      python: 2.7
+    - os: linux
+      sudo: false
+      python: 3.2
+    - os: linux
+      sudo: false
+      python: 3.3
+    - os: linux
+      sudo: false
+      python: 3.4
+    - os: linux
+      sudo: false
+      python: 3.5
+    - os: linux
+      sudo: false
+      python: "pypy"
+    - os: linux
+      sudo: required
+      dist: trusty
+      python: 2.7
+    - os: osx
+      osx_image: xcode6.1
+      language: generic
+    - os: osx
+      osx_image: xcode6.4
+      language: generic
+    - os: osx
+      osx_image: xcode7.3
+      language: generic
+    - os: osx
+      osx_image: xcode8
+      language: generic
 
 addons:
   apt:
@@ -19,10 +46,16 @@ addons:
     packages:
       - clang-3.7
 
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update;            fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python;    fi
+
 install:
   - pip install pep8 lit
 
 script:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then csrutil status || true; fi
+  - uname
   - lit -v tests
   - python setup.py check
   - python setup.py install
