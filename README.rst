@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.org/rizsotto/scan-build.svg?branch=master
         :target: https://travis-ci.org/rizsotto/scan-build
 
+.. image:: https://ci.appveyor.com/api/projects/status/k5fi1xy90xieqxir/branch/master?svg=true
+        :target: https://ci.appveyor.com/project/rizsotto/scan-build/branch/master
+
 .. image:: https://img.shields.io/pypi/v/scan-build.svg
        :target: https://pypi.python.org/pypi/scan-build
 

@@ -51,7 +51,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python;    fi
 
 install:
-  - pip install pep8 lit
+  - pip install -r test-requirements.txt
 
 script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then csrutil status || true; fi
