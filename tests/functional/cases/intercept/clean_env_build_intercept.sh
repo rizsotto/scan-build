@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # REQUIRES: preload
-# RUN: intercept-build --cdb %t.json.result sh %s
+# RUN: intercept-build -vvv --cdb %t.json.result sh %s
 # RUN: cdb_diff %T/clean_env_build_intercept.sh.json %t.json.result
 
 set -o errexit

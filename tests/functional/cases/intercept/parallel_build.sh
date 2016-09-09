@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# RUN: intercept-build --override-compiler --cdb %t.json.wrapper sh %s
+# RUN: intercept-build -vvv --override-compiler --cdb %t.json.wrapper sh %s
 # RUN: cdb_diff %t.json.wrapper %T/parallel_build.json.expected
 #
 # when library preload disabled, it falls back to use compiler wrapper
 #
-# RUN: intercept-build --cdb %t.json.preload sh %s
+# RUN: intercept-build -vvv --cdb %t.json.preload sh %s
 # RUN: cdb_diff %t.json.preload %T/parallel_build.json.expected
 
 set -o errexit

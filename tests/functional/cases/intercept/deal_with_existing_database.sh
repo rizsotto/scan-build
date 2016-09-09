@@ -76,11 +76,11 @@ cat > ${PREFIX}.final.json << EOF
 EOF
 
 # preparation: create a simple compilation database
-intercept-build --cdb ${PREFIX}.json sh ${PREFIX}.compile_main.sh
+intercept-build -vvv --cdb ${PREFIX}.json sh ${PREFIX}.compile_main.sh
 cdb_diff ${PREFIX}.main.json ${PREFIX}.json
 # overwrite the previously created compilation database
-intercept-build --cdb ${PREFIX}.json sh ${PREFIX}.compile_dirty.sh
+intercept-build -vvv --cdb ${PREFIX}.json sh ${PREFIX}.compile_dirty.sh
 cdb_diff ${PREFIX}.dirty.json ${PREFIX}.json
 # append to the previously created compilation database
-intercept-build --cdb ${PREFIX}.json --append sh ${PREFIX}.compile_main.sh
+intercept-build -vvv --cdb ${PREFIX}.json --append sh ${PREFIX}.compile_main.sh
 cdb_diff ${PREFIX}.final.json ${PREFIX}.json

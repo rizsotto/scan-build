@@ -11,11 +11,15 @@ import libscanbuild.report as sut
 import unittest
 import os
 import os.path
+import sys
+import glob
+
+IS_WINDOWS = sys.platform in {'win32', 'cygwin'}
 
 
 def run_bug_parse(content):
-    with libear.temporary_directory() as tmpdir:
-        file_name = os.path.join(tmpdir, 'test.html')
+    with libear.temporary_directory() as tmp_dir:
+        file_name = os.path.join(tmp_dir, 'test.html')
         with open(file_name, 'w') as handle:
             lines = (line + os.linesep for line in content)
             handle.writelines(lines)
@@ -23,9 +27,9 @@ def run_bug_parse(content):
             return bug
 
 
-def run_crash_parse(content, preproc):
-    with libear.temporary_directory() as tmpdir:
-        file_name = os.path.join(tmpdir, preproc + '.info.txt')
+def run_crash_parse(content, prefix):
+    with libear.temporary_directory() as tmp_dir:
+        file_name = os.path.join(tmp_dir, prefix + '.info.txt')
         with open(file_name, 'w') as handle:
             lines = (line + os.linesep for line in content)
             handle.writelines(lines)
@@ -80,9 +84,8 @@ class ParseFileTest(unittest.TestCase):
 
     def test_parse_real_crash(self):
         import libscanbuild.runner as sut2
-        import re
-        with libear.temporary_directory() as tmpdir:
-            filename = os.path.join(tmpdir, 'test.c')
+        with libear.temporary_directory() as tmp_dir:
+            filename = os.path.join(tmp_dir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
             # produce failure report
@@ -91,7 +94,7 @@ class ParseFileTest(unittest.TestCase):
                 'directory': os.getcwd(),
                 'flags': [],
                 'file': filename,
-                'output_dir': tmpdir,
+                'output_dir': tmp_dir,
                 'language': 'c',
                 'error_type': 'other_error',
                 'error_output': 'some output',
@@ -99,13 +102,9 @@ class ParseFileTest(unittest.TestCase):
             }
             sut2.report_failure(opts)
             # find the info file
-            pp_file = None
-            for root, _, files in os.walk(tmpdir):
-                keys = [os.path.join(root, name) for name in files]
-                for key in keys:
-                    if re.match(r'^(.*/)+clang(.*)\.i$', key):
-                        pp_file = key
-            self.assertIsNot(pp_file, None)
+            pp_files = glob.glob(os.path.join(tmp_dir, 'failures', '*.i'))
+            self.assertIsNot(pp_files, [])
+            pp_file = pp_files[0]
             # read the failure report back
             result = sut.parse_crash(pp_file + '.info.txt')
             self.assertEqual(result['source'], filename)
@@ -117,39 +116,88 @@ class ParseFileTest(unittest.TestCase):
 
 class ReportMethodTest(unittest.TestCase):
 
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
     def test_chop(self):
         self.assertEqual('file', sut.chop('/prefix', '/prefix/file'))
         self.assertEqual('file', sut.chop('/prefix/', '/prefix/file'))
         self.assertEqual('lib/file', sut.chop('/prefix/', '/prefix/lib/file'))
         self.assertEqual('/prefix/file', sut.chop('', '/prefix/file'))
 
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
     def test_chop_when_cwd(self):
         self.assertEqual('../src/file', sut.chop('/cwd', '/src/file'))
         self.assertEqual('../src/file', sut.chop('/prefix/cwd',
                                                  '/prefix/src/file'))
 
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_chop_on_windows(self):
+        self.assertEqual('file', sut.chop('c:\\prefix', 'c:\\prefix\\file'))
+        self.assertEqual('file', sut.chop('c:\\prefix\\', 'c:\\prefix\\file'))
+        self.assertEqual('lib\\file',
+                         sut.chop('c:\\prefix\\', 'c:\\prefix\\lib\\file'))
+        self.assertEqual('c:\\prefix\\file', sut.chop('', 'c:\\prefix\\file'))
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_chop_when_cwd_on_windows(self):
+        self.assertEqual('..\\src\\file',
+                         sut.chop('c:\\cwd', 'c:\\src\\file'))
+        self.assertEqual('..\\src\\file',
+                         sut.chop('z:\\prefix\\cwd', 'z:\\prefix\\src\\file'))
+
 
 class GetPrefixFromCompilationDatabaseTest(unittest.TestCase):
-
-    def test_with_different_filenames(self):
-        self.assertEqual(
-            sut.commonprefix(['/tmp/a.c', '/tmp/b.c']), '/tmp')
-
-    def test_with_different_dirnames(self):
-        self.assertEqual(
-            sut.commonprefix(['/tmp/abs/a.c', '/tmp/ack/b.c']), '/tmp')
-
-    def test_no_common_prefix(self):
-        self.assertEqual(
-            sut.commonprefix(['/tmp/abs/a.c', '/usr/ack/b.c']), '/')
-
-    def test_with_single_file(self):
-        self.assertEqual(
-            sut.commonprefix(['/tmp/a.c']), '/tmp')
 
     def test_empty(self):
         self.assertEqual(
             sut.commonprefix([]), '')
+
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
+    def test_with_different_filenames(self):
+        self.assertEqual(
+            sut.commonprefix(['/tmp/a.c', '/tmp/b.c']), '/tmp')
+
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
+    def test_with_different_dirnames(self):
+        self.assertEqual(
+            sut.commonprefix(['/tmp/abs/a.c', '/tmp/ack/b.c']), '/tmp')
+
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
+    def test_no_common_prefix(self):
+        self.assertEqual(
+            sut.commonprefix(['/tmp/abs/a.c', '/usr/ack/b.c']), '/')
+
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
+    def test_with_single_file(self):
+        self.assertEqual(
+            sut.commonprefix(['/tmp/a.c']), '/tmp')
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_with_different_filenames_on_windows(self):
+        self.assertEqual(
+            sut.commonprefix(['c:\\tmp\\a.c', 'c:\\tmp\\b.c']), 'c:\\tmp')
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_with_different_dirnames_on_windows(self):
+        self.assertEqual(
+            sut.commonprefix(['c:\\tmp\\abs\\a.c', 'c:\\tmp\\ack\\b.c']),
+            'c:\\tmp')
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_no_common_prefix_on_windows(self):
+        self.assertEqual(
+            sut.commonprefix(['z:\\tmp\\abs\\a.c', 'z:\\usr\\ack\\b.c']),
+            'z:\\')
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_different_drive_on_windows(self):
+        self.assertEqual(
+            sut.commonprefix(['c:\\tmp\\abs\\a.c', 'z:\\usr\\ack\\b.c']),
+            '')
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_with_single_file_on_windows(self):
+        self.assertEqual(
+            sut.commonprefix(['z:\\tmp\\a.c']), 'z:\\tmp')
 
 
 class ReportDirectoryTest(unittest.TestCase):
@@ -157,6 +205,7 @@ class ReportDirectoryTest(unittest.TestCase):
     # Test that successive report directory names ascend in lexicographic
     # order. This is required so that report directories from two runs of
     # scan-build can be easily matched up to compare results.
+    @unittest.skipIf(IS_WINDOWS, 'windows has low resolution timer')
     def test_directory_name_comparison(self):
         with libear.temporary_directory() as tmp_dir, \
              sut.report_directory(tmp_dir, False) as report_dir1, \

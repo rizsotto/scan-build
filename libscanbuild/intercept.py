@@ -45,6 +45,7 @@ US = chr(0x1f)
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
+WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
 @command_entry_point
@@ -114,13 +115,12 @@ def setup_environment(args, destination, bin_dir):
     The exec calls will be logged by the 'libear' preloaded library or by the
     'wrapper' programs. """
 
-    intercept_library = None if args.override_compiler or is_preload_disabled(
-        sys.platform) else build_libear(args.cc, destination)
+    use_wrapper = args.override_compiler or is_preload_disabled(sys.platform)
 
     environment = dict(os.environ)
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
-    if not intercept_library:
+    if use_wrapper:
         environment.update(
             wrapper_environment(
                 c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
@@ -128,13 +128,15 @@ def setup_environment(args, destination, bin_dir):
                 c_compiler=args.cc,
                 cxx_compiler=args.cxx,
                 verbose=args.verbose))
-    elif sys.platform == 'darwin':
-        environment.update({
-            'DYLD_INSERT_LIBRARIES': intercept_library,
-            'DYLD_FORCE_FLAT_NAMESPACE': '1'
-        })
     else:
-        environment.update({'LD_PRELOAD': intercept_library})
+        intercept_library = build_libear(args.cc, destination)
+        if sys.platform == 'darwin':
+            environment.update({
+                'DYLD_INSERT_LIBRARIES': intercept_library,
+                'DYLD_FORCE_FLAT_NAMESPACE': '1'
+            })
+        else:
+            environment.update({'LD_PRELOAD': intercept_library})
 
     return environment
 
@@ -245,16 +247,17 @@ def is_preload_disabled(platform):
     the path and, if so, (2) whether the output of executing 'csrutil status'
     contains 'System Integrity Protection status: enabled'. """
 
-    if platform == 'darwin':
-        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+    if platform in WRAPPER_ONLY_PLATFORMS:
+        return True
+    elif platform == 'darwin':
         command = ['csrutil', 'status']
+        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+        try:
+            lines = subprocess.check_output(command).decode('utf-8')
+            return any((pattern.match(line) for line in lines.splitlines()))
+        except:
+            return False
     else:
-        return False
-
-    try:
-        lines = subprocess.check_output(command).decode('utf-8')
-        return any((pattern.match(line) for line in lines.splitlines()))
-    except:
         return False
 
 

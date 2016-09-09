@@ -9,6 +9,7 @@
 import libear
 import libscanbuild.intercept as sut
 import unittest
+import sys
 import tempfile
 import os.path
 
@@ -31,15 +32,17 @@ class InterceptUtilTest(unittest.TestCase):
             'command': ['cc', '-c', 'that.c']
         }
         # test with a single exec report
-        with tempfile.NamedTemporaryFile() as temp_file:
-            sut.write_exec_trace(temp_file.name, **input_one)
-            result = sut.parse_exec_trace(temp_file.name)
+        with libear.temporary_directory() as tmp_dir:
+            temp_file = os.path.join(tmp_dir, 'single_report.cmd')
+            sut.write_exec_trace(temp_file, **input_one)
+            result = sut.parse_exec_trace(temp_file)
             self.assertEqual([input_one], list(result))
         # test with multiple exec report
-        with tempfile.NamedTemporaryFile() as temp_file:
-            sut.write_exec_trace(temp_file.name, **input_one)
-            sut.write_exec_trace(temp_file.name, **input_two)
-            result = sut.parse_exec_trace(temp_file.name)
+        with libear.temporary_directory() as tmp_dir:
+            temp_file = os.path.join(tmp_dir, 'multiple_report.cmd')
+            sut.write_exec_trace(temp_file, **input_one)
+            sut.write_exec_trace(temp_file, **input_two)
+            result = sut.parse_exec_trace(temp_file)
             self.assertEqual([input_one, input_two], list(result))
 
     def test_format_entry_filters_action(self):
@@ -66,6 +69,8 @@ class InterceptUtilTest(unittest.TestCase):
         self.assertEqual(os.path.join(current, 'file.c'),
                          test(os.path.join(current, 'file.c')))
 
+    @unittest.skipIf(sys.platform in {'win32', 'cygwin'},
+                     'this code is not running on windows')
     def test_sip(self):
         def create_status_report(filename, message):
             content = """#!/usr/bin/env sh

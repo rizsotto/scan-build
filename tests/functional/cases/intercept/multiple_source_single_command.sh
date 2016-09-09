@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# RUN: intercept-build --cdb %t.json.result sh %s
+# RUN: intercept-build -vvv --cdb %t.json.result sh %s
 # RUN: cdb_diff %T/multiple_source_single_command.sh.json %t.json.result
 
 set -o errexit
