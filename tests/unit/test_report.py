@@ -17,7 +17,8 @@ def run_bug_parse(content):
     with libear.temporary_directory() as tmpdir:
         file_name = os.path.join(tmpdir, 'test.html')
         with open(file_name, 'w') as handle:
-            handle.writelines(content)
+            lines = (line + os.linesep for line in content)
+            handle.writelines(lines)
         for bug in sut.parse_bug_html(file_name):
             return bug
 
@@ -26,7 +27,8 @@ def run_crash_parse(content, preproc):
     with libear.temporary_directory() as tmpdir:
         file_name = os.path.join(tmpdir, preproc + '.info.txt')
         with open(file_name, 'w') as handle:
-            handle.writelines(content)
+            lines = (line + os.linesep for line in content)
+            handle.writelines(lines)
         return sut.parse_crash(file_name)
 
 
@@ -34,17 +36,17 @@ class ParseFileTest(unittest.TestCase):
 
     def test_parse_bug(self):
         content = [
-            "some header\n",
-            "<!-- BUGDESC Division by zero -->\n",
-            "<!-- BUGTYPE Division by zero -->\n",
-            "<!-- BUGCATEGORY Logic error -->\n",
-            "<!-- BUGFILE xx -->\n",
-            "<!-- BUGLINE 5 -->\n",
-            "<!-- BUGCOLUMN 22 -->\n",
-            "<!-- BUGPATHLENGTH 4 -->\n",
-            "<!-- BUGMETAEND -->\n",
-            "<!-- REPORTHEADER -->\n",
-            "some tails\n"]
+            "some header",
+            "<!-- BUGDESC Division by zero -->",
+            "<!-- BUGTYPE Division by zero -->",
+            "<!-- BUGCATEGORY Logic error -->",
+            "<!-- BUGFILE xx -->",
+            "<!-- BUGLINE 5 -->",
+            "<!-- BUGCOLUMN 22 -->",
+            "<!-- BUGPATHLENGTH 4 -->",
+            "<!-- BUGMETAEND -->",
+            "<!-- REPORTHEADER -->",
+            "some tails"]
         result = run_bug_parse(content)
         self.assertEqual(result['bug_category'], 'Logic error')
         self.assertEqual(result['bug_path_length'], 4)
@@ -62,10 +64,10 @@ class ParseFileTest(unittest.TestCase):
 
     def test_parse_crash(self):
         content = [
-            "/some/path/file.c\n",
-            "Some very serious Error\n",
-            "bla\n",
-            "bla-bla\n"]
+            "/some/path/file.c",
+            "Some very serious Error",
+            "bla",
+            "bla-bla"]
         result = run_crash_parse(content, 'file.i')
         self.assertEqual(result['source'], content[0].rstrip())
         self.assertEqual(result['problem'], content[1].rstrip())

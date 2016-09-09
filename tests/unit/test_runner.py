@@ -12,6 +12,7 @@ import unittest
 import re
 import os
 import os.path
+import platform
 
 
 class FilteringFlagsTest(unittest.TestCase):
@@ -168,7 +169,7 @@ class ReportFailureTest(unittest.TestCase):
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
-            uname_msg = ' '.join(os.uname()) + os.linesep
+            uname_msg = ' '.join(platform.uname()) + os.linesep
             error_msg = 'this is my error output'
             # execute test
             opts = {
@@ -199,7 +200,7 @@ class ReportFailureTest(unittest.TestCase):
             # info file generated and content dumped
             info_file = pp_file + '.info.txt'
             self.assertTrue(info_file in result)
-            self.assertEqual('Other Error\n', result[info_file][1])
+            self.assertEqual('Other Error' + os.linesep, result[info_file][1])
             self.assertEqual(uname_msg, result[info_file][3])
             # error file generated and content dumped
             error_file = pp_file + '.stderr.txt'

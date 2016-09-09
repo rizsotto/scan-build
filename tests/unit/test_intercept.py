@@ -75,9 +75,9 @@ class InterceptUtilTest(unittest.TestCase):
                          echo 'sa-la-la-la'
                          echo 'la-la-la'
                       """.format(message)
-            lines = [line.strip() for line in content.split('\n')]
+            lines = [line.strip() for line in content.split(os.linesep)]
             with open(filename, 'w') as handle:
-                handle.write('\n'.join(lines))
+                handle.write(os.linesep.join(lines))
                 handle.close()
             os.chmod(filename, 0x1ff)
 
@@ -93,7 +93,7 @@ class InterceptUtilTest(unittest.TestCase):
         saved = os.environ['PATH']
         with libear.temporary_directory() as tmp_dir:
             try:
-                os.environ['PATH'] = tmp_dir + ':' + saved
+                os.environ['PATH'] = os.pathsep.join([tmp_dir, saved])
 
                 create_csrutil(tmp_dir, enabled)
                 self.assertTrue(sut.is_preload_disabled(osx))
