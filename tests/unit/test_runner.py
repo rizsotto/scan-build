@@ -12,7 +12,11 @@ import unittest
 import re
 import os
 import os.path
+import sys
+import glob
 import platform
+
+IS_WINDOWS = sys.platform in {'win32', 'cygwin'}
 
 
 class FilteringFlagsTest(unittest.TestCase):
@@ -164,9 +168,9 @@ class ReportFailureTest(unittest.TestCase):
         self.assertEqual('failures', os.path.basename(os.path.dirname(path)))
 
     def test_report_failure_create_files(self):
-        with libear.temporary_directory() as tmpdir:
+        with libear.temporary_directory() as tmp_dir:
             # create input file
-            filename = os.path.join(tmpdir, 'test.c')
+            filename = os.path.join(tmp_dir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
             uname_msg = ' '.join(platform.uname()) + os.linesep
@@ -177,35 +181,29 @@ class ReportFailureTest(unittest.TestCase):
                 'directory': os.getcwd(),
                 'flags': [],
                 'file': filename,
-                'output_dir': tmpdir,
+                'output_dir': tmp_dir,
                 'language': 'c',
                 'error_type': 'other_error',
                 'error_output': error_msg,
                 'exit_code': 13
             }
             sut.report_failure(opts)
-            # verify the result
-            result = dict()
-            pp_file = None
-            for root, _, files in os.walk(tmpdir):
-                keys = [os.path.join(root, name) for name in files]
-                for key in keys:
-                    with open(key, 'r') as handle:
-                        result[key] = handle.readlines()
-                    if re.match(r'^(.*/)+clang(.*)\.i$', key):
-                        pp_file = key
-
-            # prepocessor file generated
-            self.assertUnderFailures(pp_file)
+            # find the info file
+            pp_files = glob.glob(os.path.join(tmp_dir, 'failures', '*.i'))
+            self.assertIsNot(pp_files, [])
+            pp_file = pp_files[0]
             # info file generated and content dumped
             info_file = pp_file + '.info.txt'
-            self.assertTrue(info_file in result)
-            self.assertEqual('Other Error' + os.linesep, result[info_file][1])
-            self.assertEqual(uname_msg, result[info_file][3])
+            self.assertTrue(os.path.exists(info_file))
+            with open(info_file) as info_handler:
+                lines = info_handler.readlines()
+                self.assertEqual('Other Error' + os.linesep, lines[1])
+                self.assertEqual(uname_msg, lines[3])
             # error file generated and content dumped
             error_file = pp_file + '.stderr.txt'
-            self.assertTrue(error_file in result)
-            self.assertEqual([error_msg], result[error_file])
+            self.assertTrue(os.path.exists(error_file))
+            with open(error_file) as error_handle:
+                self.assertEqual([error_msg], error_handle.readlines())
 
 
 class AnalyzerTest(unittest.TestCase):
@@ -221,6 +219,36 @@ class AnalyzerTest(unittest.TestCase):
         self.assertEqual(['-UNDEBUG'], test([]))
         self.assertEqual(['-DNDEBUG', '-UNDEBUG'], test(['-DNDEBUG']))
         self.assertEqual(['-DSomething', '-UNDEBUG'], test(['-DSomething']))
+
+    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
+    def test_set_file_relative_path(self):
+        def test(expected, input):
+            spy = Spy()
+            self.assertEqual(spy.success,
+                             sut.set_file_path_relative(input, spy.call))
+            self.assertEqual(expected, spy.arg['file'])
+
+        test('source.c',
+             {'file': '/home/me/source.c', 'directory': '/home/me'})
+        test('me/source.c',
+             {'file': '/home/me/source.c', 'directory': '/home'})
+        test('../home/me/source.c',
+             {'file': '/home/me/source.c', 'directory': '/tmp'})
+
+    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
+    def test_set_file_relative_path(self):
+        def test(expected, input):
+            spy = Spy()
+            self.assertEqual(spy.success,
+                             sut.set_file_path_relative(input, spy.call))
+            self.assertEqual(expected, spy.arg['file'])
+
+        test('source.c',
+             {'file': 'c:\\home\\me\\source.c', 'directory': 'c:\\home\\me'})
+        test('me\\source.c',
+             {'file': 'c:\\home\\me\\source.c', 'directory': 'c:\\home'})
+        test('..\\home\\me\\source.c',
+             {'file': 'c:\\home\\me\\source.c', 'directory': 'c:\\tmp'})
 
     def test_set_language_fall_through(self):
         def language(expected, input):
@@ -323,3 +351,7 @@ class RequireDecoratorTest(unittest.TestCase):
 
     def test_method_exception_not_caught(self):
         self.assertRaises(Exception, method_exception_from_inside, dict())
+
+
+if __name__ == '__main__':
+    unittest.main()

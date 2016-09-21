@@ -42,3 +42,7 @@ class ShellTest(unittest.TestCase):
                          'clang -DKEY=\\"VALUE\\"')
         self.assertEqual(sut.encode(['clang', '-DKEY="value with spaces"']),
                          'clang -DKEY=\\"value\ with\ spaces\\"')
+
+
+if __name__ == '__main__':
+    unittest.main()
