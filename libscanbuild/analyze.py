@@ -32,8 +32,16 @@ COMPILER_WRAPPER_CC = 'analyze-cc'
 COMPILER_WRAPPER_CXX = 'analyze-c++'
 
 
+def scan_build():
+    return analyze_build_main(True)
+
+
+def analyze_build():
+    return analyze_build_main(False)
+
+
 @command_entry_point
-def analyze_build_main(bin_dir, from_build_command):
+def analyze_build_main(from_build_command):
     """ Entry point for 'analyze-build' and 'scan-build'. """
 
     parser = create_parser(from_build_command)
@@ -57,7 +65,7 @@ def analyze_build_main(bin_dir, from_build_command):
             # for the Makefile.
             if args.intercept_first:
                 # run build command with intercept module
-                exit_code = capture(args, bin_dir)
+                exit_code = capture(args)
                 if need_analyzer(args.build):
                     # run the analyzer against the captured commands
                     run_analyzer(args, target_dir)
@@ -65,7 +73,7 @@ def analyze_build_main(bin_dir, from_build_command):
             else:
                 # run build command and analyzer with compiler wrappers
                 report_dir = target_dir if need_analyzer(args.build) else None
-                environment = setup_environment(args, bin_dir, report_dir)
+                environment = setup_environment(args, report_dir)
                 exit_code = execute_and_report(args.build, env=environment)
         # cover report generation and bug counting
         number_of_bugs = document(args, target_dir)
@@ -117,14 +125,14 @@ def run_analyzer(args, output_dir):
         pool.join()
 
 
-def setup_environment(args, bin_dir, destination):
+def setup_environment(args, destination):
     """ Set up environment for build command to interpose compiler wrapper. """
 
     environment = dict(os.environ)
     environment.update(
         wrapper_environment(
-            c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-            cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
+            c_wrapper=COMPILER_WRAPPER_CC,
+            cxx_wrapper=COMPILER_WRAPPER_CXX,
             c_compiler=args.cc,
             cxx_compiler=args.cxx,
             verbose=args.verbose))

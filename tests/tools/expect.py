@@ -7,7 +7,6 @@
 
 import os
 import os.path
-import sys
 import argparse
 import json
 
@@ -35,6 +34,3 @@ def main():
     with open(args.cdb, 'w') as handle:
         json.dump(list(entries), handle, sort_keys=True, indent=4)
     return 0
-
-
-sys.exit(main())

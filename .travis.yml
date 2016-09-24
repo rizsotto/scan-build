@@ -51,14 +51,14 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python;    fi
 
 install:
-  - pip install -r test-requirements.txt
+  - pip install -r tests/requirements.txt
 
 script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then csrutil status || true; fi
   - uname
+  - pip install .
+  - pip install ./tests
   - lit -v tests
-  - python setup.py check
-  - python setup.py install
   - python setup.py sdist
 
 notifications:

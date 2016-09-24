@@ -43,6 +43,3 @@ def main():
     for line in outputs:
         sys.stdout.write(line)
     return 0
-
-
-sys.exit(main())

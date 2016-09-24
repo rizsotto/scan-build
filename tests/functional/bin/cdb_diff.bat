@@ -1,1 +1,0 @@
-python %~dp0cdb_diff %*

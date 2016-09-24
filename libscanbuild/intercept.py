@@ -49,7 +49,7 @@ WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
 @command_entry_point
-def intercept_build_main(bin_dir):
+def intercept_build_main():
     """ Entry point for 'intercept-build' command. """
 
     parser = create_parser()
@@ -58,10 +58,10 @@ def intercept_build_main(bin_dir):
     reconfigure_logging(args.verbose)
     logging.debug('Parsed arguments: %s', args)
 
-    return capture(args, bin_dir)
+    return capture(args)
 
 
-def capture(args, bin_dir):
+def capture(args):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
@@ -91,7 +91,7 @@ def capture(args, bin_dir):
 
     with temporary_directory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
-        environment = setup_environment(args, tmp_dir, bin_dir)
+        environment = setup_environment(args, tmp_dir)
         exit_code = execute_and_report(args.build, env=environment)
         # read the intercepted exec calls
         exec_traces = itertools.chain.from_iterable(
@@ -108,7 +108,7 @@ def capture(args, bin_dir):
         return exit_code
 
 
-def setup_environment(args, destination, bin_dir):
+def setup_environment(args, destination):
     """ Sets up the environment for the build command.
 
     It sets the required environment variables and execute the given command.
@@ -123,8 +123,8 @@ def setup_environment(args, destination, bin_dir):
     if use_wrapper:
         environment.update(
             wrapper_environment(
-                c_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-                cxx_wrapper=os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
+                c_wrapper=COMPILER_WRAPPER_CC,
+                cxx_wrapper=COMPILER_WRAPPER_CXX,
                 c_compiler=args.cc,
                 cxx_compiler=args.cxx,
                 verbose=args.verbose))

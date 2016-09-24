@@ -6,7 +6,6 @@
 # License. See LICENSE.TXT for details.
 
 import os
-import sys
 import argparse
 import json
 import shlex
@@ -40,6 +39,3 @@ def main():
     pool.close()
     pool.join()
     return failures
-
-
-sys.exit(main())
