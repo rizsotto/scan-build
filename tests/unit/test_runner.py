@@ -9,7 +9,6 @@
 import libear
 import libscanbuild.runner as sut
 import unittest
-import re
 import os
 import os.path
 import sys
@@ -173,7 +172,7 @@ class ReportFailureTest(unittest.TestCase):
             filename = os.path.join(tmp_dir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('int main() { return 0')
-            uname_msg = ' '.join(platform.uname()) + os.linesep
+            uname_msg = ' '.join(platform.uname()).strip()
             error_msg = 'this is my error output'
             # execute test
             opts = {
@@ -196,8 +195,9 @@ class ReportFailureTest(unittest.TestCase):
             info_file = pp_file + '.info.txt'
             self.assertTrue(os.path.exists(info_file))
             with open(info_file) as info_handler:
-                lines = info_handler.readlines()
-                self.assertEqual('Other Error' + os.linesep, lines[1])
+                lines = [line.strip() for line in info_handler.readlines() if
+                         line.strip()]
+                self.assertEqual('Other Error', lines[1])
                 self.assertEqual(uname_msg, lines[3])
             # error file generated and content dumped
             error_file = pp_file + '.stderr.txt'

@@ -8,6 +8,7 @@
 import os
 import os.path
 import sys
+import re
 import logging
 import functools
 import subprocess
@@ -151,7 +152,8 @@ def wrapper_entry_point(function):
         verbose = int(os.getenv(WRAPPER_VERBOSE, '0'))
         reconfigure_logging(verbose)
         # find out what is the real compiler
-        is_cxx = os.path.basename(sys.argv[0]).endswith('++')
+        wrapper_command = os.path.basename(sys.argv[0])
+        is_cxx = re.match(r'(.+)c\+\+(.*)', wrapper_command)
         compiler = os.getenv(WRAPPER_CXX) if is_cxx else os.getenv(WRAPPER_CC)
         # execute compilation with the real compiler
         command = decode(compiler) + sys.argv[1:]

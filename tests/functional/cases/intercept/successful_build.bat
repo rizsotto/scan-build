@@ -22,7 +22,7 @@ cd "%test_input_dir%"
 %CXX% -c -o "%test_output_dir%\clean_two.o" -I .\clean\include clean\two.c
 cdb_expect ^
     --cdb %output% ^
-    --command "cc -c -o %test_output_dir%\clean_two.o -I .\clean\include clean\two.c" ^
+    --command "c++ -c -o %test_output_dir%\clean_two.o -I .\clean\include clean\two.c" ^
     --file "%test_input_dir%\clean\two.c"
 
 cd "%test_input_dir%\dirty"
@@ -36,5 +36,5 @@ cd "%test_input_dir%"
 %CXX% -c -o "%test_output_dir%\dirty_two.o" -Wall dirty\two.c
 cdb_expect ^
     --cdb %output% ^
-    --command "cc -c -o %test_output_dir%\dirty_two.o -Wall dirty\two.c" ^
+    --command "c++ -c -o %test_output_dir%\dirty_two.o -Wall dirty\two.c" ^
     --file "%test_input_dir%\dirty\two.c"

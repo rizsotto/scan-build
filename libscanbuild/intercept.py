@@ -35,7 +35,11 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, execute_and_report, duplicate_check, tempdir, \
     reconfigure_logging
 from libscanbuild.compilation import split_command
-from libscanbuild.shell import encode, decode
+
+if sys.platform in {'win32', 'cygwin'}:
+    from libscanbuild.wincmd import encode, decode
+else:
+    from libscanbuild.shell import encode, decode
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
 
@@ -232,7 +236,7 @@ def format_entry(exec_trace):
         for source in compilation.files:
             compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
             command = [compiler, '-c'] + compilation.flags + [source]
-            logging.debug('formatted as: %s', command)
+            logging.debug('formatted as: %s', encode(command))
             yield {
                 'directory': exec_trace['directory'],
                 'command': encode(command),
