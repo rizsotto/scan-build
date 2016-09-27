@@ -7,9 +7,6 @@ matrix:
       python: 2.7
     - os: linux
       sudo: false
-      python: 3.2
-    - os: linux
-      sudo: false
       python: 3.3
     - os: linux
       sudo: false
@@ -47,15 +44,17 @@ addons:
       - clang-3.7
 
 before_install:
+  - uname
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then csrutil status || true; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update;            fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python;    fi
 
 install:
+  - pip --version
+  - pip install --upgrade pip
   - pip install -r tests/requirements.txt
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then csrutil status || true; fi
-  - uname
   - pip install .
   - pip install ./tests
   - lit -v tests

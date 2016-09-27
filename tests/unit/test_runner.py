@@ -220,36 +220,6 @@ class AnalyzerTest(unittest.TestCase):
         self.assertEqual(['-DNDEBUG', '-UNDEBUG'], test(['-DNDEBUG']))
         self.assertEqual(['-DSomething', '-UNDEBUG'], test(['-DSomething']))
 
-    @unittest.skipIf(IS_WINDOWS, 'windows has different path patterns')
-    def test_set_file_relative_path(self):
-        def test(expected, input):
-            spy = Spy()
-            self.assertEqual(spy.success,
-                             sut.set_file_path_relative(input, spy.call))
-            self.assertEqual(expected, spy.arg['file'])
-
-        test('source.c',
-             {'file': '/home/me/source.c', 'directory': '/home/me'})
-        test('me/source.c',
-             {'file': '/home/me/source.c', 'directory': '/home'})
-        test('../home/me/source.c',
-             {'file': '/home/me/source.c', 'directory': '/tmp'})
-
-    @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
-    def test_set_file_relative_path(self):
-        def test(expected, input):
-            spy = Spy()
-            self.assertEqual(spy.success,
-                             sut.set_file_path_relative(input, spy.call))
-            self.assertEqual(expected, spy.arg['file'])
-
-        test('source.c',
-             {'file': 'c:\\home\\me\\source.c', 'directory': 'c:\\home\\me'})
-        test('me\\source.c',
-             {'file': 'c:\\home\\me\\source.c', 'directory': 'c:\\home'})
-        test('..\\home\\me\\source.c',
-             {'file': 'c:\\home\\me\\source.c', 'directory': 'c:\\tmp'})
-
     def test_set_language_fall_through(self):
         def language(expected, input):
             spy = Spy()
