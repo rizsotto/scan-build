@@ -57,10 +57,6 @@ def intercept_build_main(bin_dir):
     reconfigure_logging(args.verbose)
     logging.debug('Parsed arguments: %s', args)
 
-    if not args.build:
-        parser.print_help()
-        return 0
-
     return capture(args, bin_dir)
 
 

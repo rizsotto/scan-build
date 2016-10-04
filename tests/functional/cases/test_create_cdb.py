@@ -93,6 +93,10 @@ class ExitCodeTest(unittest.TestCase):
             exitcode = self.run_intercept(tmpdir, 'build_broken')
             self.assertTrue(exitcode)
 
+    def test_intercept_help(self):
+        exitcode = silent_call(['intercept-build', '--help'])
+        self.assertFalse(exitcode)
+
 
 class ResumeFeatureTest(unittest.TestCase):
     @staticmethod

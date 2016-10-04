@@ -119,6 +119,8 @@ def command_entry_point(function):
             else:
                 logging.error("Please run this command again and turn on "
                               "verbose mode (add '-vvvv' as argument).")
+        except SystemExit as syserr:
+            exit_code = syserr.code
         finally:
             logging.shutdown()
             return exit_code
