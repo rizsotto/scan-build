@@ -119,14 +119,14 @@ def command_entry_point(function):
     def wrapper(*args, **kwargs):
         """ Do housekeeping tasks and execute the wrapped method. """
 
-        exit_code = 127
         try:
             logging.basicConfig(format='%(name)s: %(message)s',
                                 level=logging.WARNING)
             logging.getLogger().name = os.path.basename(sys.argv[0])
-            exit_code = function(*args, **kwargs)
+            return function(*args, **kwargs)
         except KeyboardInterrupt:
             logging.warning('Keyboard interrupt')
+            return 130  # signal received exit code for bash
         except Exception:
             logging.exception('Internal error.')
             if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -135,11 +135,11 @@ def command_entry_point(function):
             else:
                 logging.error("Please run this command again and turn on "
                               "verbose mode (add '-vvvv' as argument).")
+            return 64  # some non used exit code for internal errors
         except SystemExit as syserr:
-            exit_code = syserr.code
+            return syserr.code  # exit code from sys.exit calls (argparse)
         finally:
             logging.shutdown()
-            return exit_code
 
     return wrapper
 
