@@ -96,7 +96,6 @@ class ParseFileTest(unittest.TestCase):
                 'file': filename,
                 'output_dir': tmp_dir,
                 'language': 'c',
-                'error_type': 'other_error',
                 'error_output': 'some output',
                 'exit_code': 13
             }

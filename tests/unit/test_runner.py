@@ -156,7 +156,6 @@ class RunAnalyzerTest(unittest.TestCase):
     def test_run_analyzer_crash_and_forwarded(self):
         content = "int div(int n, int d) { return n / d }"
         (_, fwds) = RunAnalyzerTest.run_analyzer(content, True)
-        self.assertEqual('crash', fwds['error_type'])
         self.assertEqual(1, fwds['exit_code'])
         self.assertTrue(len(fwds['error_output']) > 0)
 
@@ -182,7 +181,6 @@ class ReportFailureTest(unittest.TestCase):
                 'file': filename,
                 'output_dir': tmp_dir,
                 'language': 'c',
-                'error_type': 'other_error',
                 'error_output': error_msg,
                 'exit_code': 13
             }
