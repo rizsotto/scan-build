@@ -101,7 +101,7 @@ def reconfigure_logging(verbose_level):
         fmt_string = '%(name)s: %(levelname)s: %(message)s'
     else:
         fmt_string = '%(name)s: %(levelname)s: %(funcName)s: %(message)s'
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(logging.Formatter(fmt=fmt_string))
     root.handlers = [handler]
 
@@ -121,7 +121,8 @@ def command_entry_point(function):
 
         try:
             logging.basicConfig(format='%(name)s: %(message)s',
-                                level=logging.WARNING)
+                                level=logging.WARNING,
+                                stream=sys.stdout)
             logging.getLogger().name = os.path.basename(sys.argv[0])
             return function(*args, **kwargs)
         except KeyboardInterrupt:
