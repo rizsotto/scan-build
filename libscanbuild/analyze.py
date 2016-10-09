@@ -19,7 +19,7 @@ import argparse
 import logging
 import multiprocessing
 from libscanbuild import command_entry_point, wrapper_environment, \
-    wrapper_entry_point, reconfigure_logging, tempdir, execute_and_report
+    wrapper_entry_point, reconfigure_logging, tempdir, run_build
 from libscanbuild.runner import run, logging_analyzer_output
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -74,7 +74,7 @@ def analyze_build_main(from_build_command):
                 # run build command and analyzer with compiler wrappers
                 report_dir = target_dir if need_analyzer(args.build) else None
                 environment = setup_environment(args, report_dir)
-                exit_code = execute_and_report(args.build, env=environment)
+                exit_code = run_build(args.build, env=environment)
         # cover report generation and bug counting
         number_of_bugs = document(args, target_dir)
         # do cleanup temporary files

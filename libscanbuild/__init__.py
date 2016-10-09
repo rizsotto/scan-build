@@ -54,7 +54,7 @@ def tempdir():
     return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
 
 
-def execute_and_report(command, *args, **kwargs):
+def run_build(command, *args, **kwargs):
     """ Run and report build command execution
 
     :param command: array of tokens
@@ -65,6 +65,21 @@ def execute_and_report(command, *args, **kwargs):
     exit_code = subprocess.call(command, *args, **kwargs)
     logging.debug('build finished with exit code: %d', exit_code)
     return exit_code
+
+
+def run_command(command, cwd=None):
+    """ Run a given command and report the execution.
+
+    :param command: array of tokens
+    :param cwd: the working directory where the command will be executed
+    :return: output of the command
+    """
+    directory = os.path.abspath(cwd) if cwd else os.getcwd()
+    logging.debug('exec command %s in %s', command, directory)
+    output = subprocess.check_output(command,
+                                     cwd=directory,
+                                     stderr=subprocess.STDOUT)
+    return output
 
 
 def reconfigure_logging(verbose_level):

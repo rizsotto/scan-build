@@ -13,6 +13,7 @@ import functools
 import subprocess
 import logging
 import platform
+from libscanbuild import run_command
 from libscanbuild.compilation import classify_source, split_compiler
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
@@ -137,8 +138,7 @@ def report_failure(opts):
     cwd = opts['directory']
     cmd = get_arguments([opts['clang'], '-fsyntax-only', '-E'] +
                         opts['flags'] + [opts['file'], '-o', name], cwd)
-    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
-    subprocess.call(cmd, cwd=cwd)
+    run_command(cmd, cwd=cwd)
     # write general information about the crash
     with open(name + '.info.txt', 'w') as handle:
         handle.write(opts['file'] + os.linesep)
@@ -176,9 +176,7 @@ def run_analyzer(opts, continuation=report_failure):
                             opts['direct_args'] + opts['flags'] +
                             [opts['file'], '-o', output()],
                             cwd)
-        logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
-        output = subprocess.check_output(cmd, cwd=cwd,
-                                         stderr=subprocess.STDOUT)
+        output = run_command(cmd, cwd=cwd)
         return {'error_output': output, 'exit_code': 0}
     except subprocess.CalledProcessError as ex:
         result = {'error_output': ex.output, 'exit_code': ex.returncode}

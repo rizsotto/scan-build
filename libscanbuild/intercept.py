@@ -31,9 +31,8 @@ import argparse
 import logging
 import subprocess
 from libear import build_libear, temporary_directory
-from libscanbuild import command_entry_point, wrapper_entry_point, \
-    wrapper_environment, execute_and_report, duplicate_check, tempdir, \
-    reconfigure_logging
+from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
+    wrapper_environment, run_build, duplicate_check, reconfigure_logging
 from libscanbuild.compilation import split_command
 
 if sys.platform in {'win32', 'cygwin'}:
@@ -96,7 +95,7 @@ def capture(args):
     with temporary_directory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
         environment = setup_environment(args, tmp_dir)
-        exit_code = execute_and_report(args.build, env=environment)
+        exit_code = run_build(args.build, env=environment)
         # read the intercepted exec calls
         exec_traces = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmp_dir, filename))
