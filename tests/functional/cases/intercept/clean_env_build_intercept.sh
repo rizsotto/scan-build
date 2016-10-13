@@ -1,23 +1,72 @@
 #!/usr/bin/env bash
+
 # REQUIRES: preload
-# RUN: intercept-build -vvv --cdb %t.json.result sh %s
-# RUN: cdb_diff %T/clean_env_build_intercept.sh.json %t.json.result
+# RUN: bash %s %T/clean_env_build
+# RUN: cd %T/clean_env_build; %{intercept-build} --cdb result.json env - ./run.sh
+# RUN: cd %T/clean_env_build; cdb_diff result.json expected.json
 
 set -o errexit
 set -o nounset
 set -o xtrace
 
-CC=$(which clang)
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── run.sh
+# ├── expected.json
+# └── src
+#    └── empty.c
 
-cd ${test_input_dir}
-env - ${CC} -c -o ${test_output_dir}/clean_env_main.o main.c
+clang=$(command -v ${CC})
+clangpp=$(command -v ${CXX})
 
-cat > ${test_output_dir}/clean_env_build_intercept.sh.json << EOF
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+touch "${root_dir}/src/empty.c"
+
+build_file="${root_dir}/run.sh"
+cat >> ${build_file} << EOF
+#!/usr/bin/env bash
+
+set -o nounset
+set -o xtrace
+
+${clang} -c -o ./src/empty.o -Dver=1 ./src/empty.c;
+${clangpp} -c -o ./src/empty.o -Dver=2 ./src/empty.c;
+
+cd src
+${clang} -c -o ./empty.o -Dver=3 ./empty.c;
+${clangpp} -c -o ./empty.o -Dver=4 ./empty.c;
+
+true;
+EOF
+chmod +x ${build_file}
+
+cat >> "${root_dir}/expected.json" << EOF
 [
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/clean_env_main.o main.c",
-  "file": "${test_input_dir}/main.c"
+  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
+}
+,
+{
+  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
+}
+,
+{
+  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
+}
+,
+{
+  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
 }
 ]
 EOF

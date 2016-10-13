@@ -1,59 +1,76 @@
 #!/usr/bin/env bash
-# RUN: intercept-build -vvv --override-compiler --cdb %t.json.wrapper sh %s
-# RUN: cdb_diff %t.json.wrapper %T/parallel_build.json.expected
+
+# RUN: bash %s %T/parallel_build
+# RUN: cd %T/parallel_build; %{intercept-build} --cdb wrapper.json --override-compiler ./run.sh
+# RUN: cd %T/parallel_build; cdb_diff wrapper.json expected.json
 #
 # when library preload disabled, it falls back to use compiler wrapper
 #
-# RUN: intercept-build -vvv --cdb %t.json.preload sh %s
-# RUN: cdb_diff %t.json.preload %T/parallel_build.json.expected
+# RUN: cd %T/parallel_build; %{intercept-build} --cdb preload.json ./run.sh
+# RUN: cd %T/parallel_build; cdb_diff preload.json expected.json
 
 set -o errexit
 set -o nounset
 set -o xtrace
 
-cd "${test_input_dir}"
-${CC}  -c -o ${test_output_dir}/main.o main.c &
-cd "${test_input_dir}/clean"
-${CC}  -c -o ${test_output_dir}/clean_one.o -Iinclude one.c &
-cd "${test_input_dir}"
-${CXX} -c -o ${test_output_dir}/clean_two.o -I ./clean/include clean/two.c &
-cd "${test_input_dir}/dirty"
-${CC}  -c -o ${test_output_dir}/dirty_one.o -Wall one.c &
-cd "${test_input_dir}"
-${CXX} -c -o ${test_output_dir}/dirty_two.o -Wall dirty/two.c &
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── run.sh
+# ├── expected.json
+# └── src
+#    └── empty.c
+
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+touch "${root_dir}/src/empty.c"
+
+build_file="${root_dir}/run.sh"
+cat >> ${build_file} << EOF
+#!/usr/bin/env bash
+
+set -o nounset
+set -o xtrace
+
+"\$CC" -c -o ./src/empty.o -Dver=1 ./src/empty.c &
+"\$CXX" -c -o ./src/empty.o -Dver=2 ./src/empty.c &
+
+cd src
+
+"\$CC" -c -o ./empty.o -Dver=3 ./empty.c &
+"\$CXX" -c -o ./empty.o -Dver=4 ./empty.c &
 
 wait
 
-cat > ${test_output_dir}/parallel_build.json.expected << EOF
+true;
+EOF
+chmod +x ${build_file}
+
+cat >> "${root_dir}/expected.json" << EOF
 [
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/main.o main.c",
-  "file": "${test_input_dir}/main.c"
+  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
 }
 ,
 {
-  "directory": "${test_input_dir}/clean",
-  "command": "cc -c -o ${test_output_dir}/clean_one.o -Iinclude one.c",
-  "file": "${test_input_dir}/clean/one.c"
+  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
 }
 ,
 {
-  "directory": "${test_input_dir}",
-  "command": "c++ -c -o ${test_output_dir}/clean_two.o -I ./clean/include clean/two.c",
-  "file": "${test_input_dir}/clean/two.c"
+  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
 }
 ,
 {
-  "directory": "${test_input_dir}/dirty",
-  "command": "cc -c -o ${test_output_dir}/dirty_one.o -Wall one.c",
-  "file": "${test_input_dir}/dirty/one.c"
-}
-,
-{
-  "directory": "${test_input_dir}",
-  "command": "c++ -c -o ${test_output_dir}/dirty_two.o -Wall dirty/two.c",
-  "file": "${test_input_dir}/dirty/two.c"
+  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
 }
 ]
 EOF

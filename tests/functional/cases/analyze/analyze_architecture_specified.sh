@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# RUN: %s %T/analuze_architecture_specified
-# RUN: cd %T/analuze_architecture_specified; %{scan-build} -o . --intercept-first ./run.sh | ./check.sh
-# RUN: cd %T/analuze_architecture_specified; %{scan-build} -o . --intercept-first  --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T/analuze_architecture_specified; %{scan-build} -o . --override-compiler ./run.sh | ./check.sh
+# RUN: bash %s %T/analyze_architecture_specified
+# RUN: cd %T/analyze_architecture_specified; %{scan-build} -o . --intercept-first ./run.sh | ./check.sh
+# RUN: cd %T/analyze_architecture_specified; %{scan-build} -o . --intercept-first  --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/analyze_architecture_specified; %{scan-build} -o . --override-compiler ./run.sh | ./check.sh
 
 set -o errexit
 set -o nounset
@@ -33,10 +33,11 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-"\$CC" -c "${source_file}" -o "${source_file}.o" -Dver=1
-"\$CC" -c "${source_file}" -o "${source_file}.o" -Dver=2 -arch i386
-"\$CC" -c "${source_file}" -o "${source_file}.o" -Dver=3 -arch x86_64
-"\$CC" -c "${source_file}" -o "${source_file}.o" -Dver=4 -arch ppc
+"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=1;
+"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=2 -arch i386;
+"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=3 -arch x86_64;
+"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=4 -arch ppc;
+true;
 EOF
 
 checker_file="${root_dir}/check.sh"

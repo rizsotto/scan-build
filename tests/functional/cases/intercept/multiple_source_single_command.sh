@@ -1,32 +1,63 @@
 #!/usr/bin/env bash
-# RUN: intercept-build -vvv --cdb %t.json.result sh %s
-# RUN: cdb_diff %T/multiple_source_single_command.sh.json %t.json.result
+
+# RUN: bash %s %T/multiple_source_build
+# RUN: cd %T/multiple_source_build; %{intercept-build} --cdb result.json ./run.sh
+# RUN: cd %T/multiple_source_build; cdb_diff result.json expected.json
 
 set -o errexit
 set -o nounset
 set -o xtrace
 
-cd ${test_input_dir}
-${CC} -o ${test_output_dir}/all_in_one main.c dirty/one.c dirty/two.c
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── run.sh
+# ├── expected.json
+# └── src
+#    ├── main.c
+#    ├── one.c
+#    └── two.c
 
-cat > ${test_output_dir}/multiple_source_single_command.sh.json << EOF
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+touch "${root_dir}/src/one.c"
+touch "${root_dir}/src/two.c"
+cat > "${root_dir}/src/main.c" << EOF
+int main() { return 0; }
+EOF
+
+build_file="${root_dir}/run.sh"
+cat >> ${build_file} << EOF
+#!/usr/bin/env bash
+
+set -o nounset
+set -o xtrace
+
+"\$CC" -Dver=1 ./src/one.c ./src/two.c ./src/main.c;
+
+true;
+EOF
+chmod +x ${build_file}
+
+cat >> "${root_dir}/expected.json" << EOF
 [
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/all_in_one main.c",
-  "file": "${test_input_dir}/main.c"
+  "command": "cc -c -Dver=1 ./src/one.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/one.c"
 }
 ,
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/all_in_one dirty/one.c",
-  "file": "${test_input_dir}/dirty/one.c"
+  "command": "cc -c -Dver=1 ./src/two.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/two.c"
 }
 ,
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/all_in_one dirty/two.c",
-  "file": "${test_input_dir}/dirty/two.c"
+  "command": "cc -c -Dver=1 ./src/main.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/main.c"
 }
 ]
 EOF

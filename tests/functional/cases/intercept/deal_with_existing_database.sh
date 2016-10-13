@@ -1,86 +1,118 @@
 #!/usr/bin/env bash
-# RUN: sh %s
-# this script run the whole test, not other control from lit
+
+# RUN: bash %s %T/extend_build
+# RUN: cd %T/extend_build; %{intercept-build} --cdb result.json ./run-one.sh
+# RUN: cd %T/extend_build; cdb_diff result.json one.json
+# RUN: cd %T/extend_build; %{intercept-build} --cdb result.json ./run-two.sh
+# RUN: cd %T/extend_build; cdb_diff result.json two.json
+# RUN: cd %T/extend_build; %{intercept-build} --cdb result.json --append ./run-one.sh
+# RUN: cd %T/extend_build; cdb_diff result.json sum.json
 
 set -o errexit
 set -o nounset
 set -o xtrace
 
-PREFIX="${test_output_dir}/output_handling"
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── run-one.sh
+# ├── run-two.sh
+# ├── one.json
+# ├── two.json
+# ├── sum.json
+# └── src
+#    └── empty.c
 
-cat > ${PREFIX}.compile_main.sh << EOF
-set -o errexit
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+touch "${root_dir}/src/empty.c"
+
+build_file="${root_dir}/run-one.sh"
+cat >> ${build_file} << EOF
+#!/usr/bin/env bash
+
 set -o nounset
 set -o xtrace
 
-cd "${test_input_dir}"
-\${CC} -c -o ${test_output_dir}/main.o main.c
-EOF
+"\$CC" -c -o ./src/empty.o -Dver=1 ./src/empty.c;
+"\$CXX" -c -o ./src/empty.o -Dver=2 ./src/empty.c;
 
-cat > ${PREFIX}.compile_dirty.sh << EOF
-set -o errexit
+true;
+EOF
+chmod +x ${build_file}
+
+build_file="${root_dir}/run-two.sh"
+cat >> ${build_file} << EOF
+#!/usr/bin/env bash
+
 set -o nounset
 set -o xtrace
 
-cd "${test_input_dir}/dirty"
-\${CC} -c -o ${test_output_dir}/dirty_one.o one.c
-\${CC} -c -o ${test_output_dir}/dirty_two.o two.c
-EOF
+cd src
+"\$CC" -c -o ./empty.o -Dver=3 ./empty.c;
+"\$CXX" -c -o ./empty.o -Dver=4 ./empty.c;
 
-cat > ${PREFIX}.main.json << EOF
+true;
+EOF
+chmod +x ${build_file}
+
+cat >> "${root_dir}/one.json" << EOF
 [
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/main.o main.c",
-  "file": "${test_input_dir}/main.c"
+  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
+}
+,
+{
+  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
 }
 ]
 EOF
 
-cat > ${PREFIX}.dirty.json << EOF
+cat >> "${root_dir}/two.json" << EOF
 [
 {
-  "directory": "${test_input_dir}/dirty",
-  "command": "cc -c -o ${test_output_dir}/dirty_one.o one.c",
-  "file": "${test_input_dir}/dirty/one.c"
+  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
 }
 ,
 {
-  "directory": "${test_input_dir}/dirty",
-  "command": "cc -c -o ${test_output_dir}/dirty_two.o two.c",
-  "file": "${test_input_dir}/dirty/two.c"
+  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
 }
 ]
 EOF
 
-cat > ${PREFIX}.final.json << EOF
+cat >> "${root_dir}/sum.json" << EOF
 [
 {
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/main.o main.c",
-  "file": "${test_input_dir}/main.c"
+  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
 }
 ,
 {
-  "directory": "${test_input_dir}/dirty",
-  "command": "cc -c -o ${test_output_dir}/dirty_one.o one.c",
-  "file": "${test_input_dir}/dirty/one.c"
+  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "directory": "${root_dir}",
+  "file": "${root_dir}/src/empty.c"
 }
 ,
 {
-  "directory": "${test_input_dir}/dirty",
-  "command": "cc -c -o ${test_output_dir}/dirty_two.o two.c",
-  "file": "${test_input_dir}/dirty/two.c"
+  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
+}
+,
+{
+  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "directory": "${root_dir}/src",
+  "file": "${root_dir}/src/empty.c"
 }
 ]
 EOF
-
-# preparation: create a simple compilation database
-intercept-build -vvv --cdb ${PREFIX}.json sh ${PREFIX}.compile_main.sh
-cdb_diff ${PREFIX}.main.json ${PREFIX}.json
-# overwrite the previously created compilation database
-intercept-build -vvv --cdb ${PREFIX}.json sh ${PREFIX}.compile_dirty.sh
-cdb_diff ${PREFIX}.dirty.json ${PREFIX}.json
-# append to the previously created compilation database
-intercept-build -vvv --cdb ${PREFIX}.json --append sh ${PREFIX}.compile_main.sh
-cdb_diff ${PREFIX}.final.json ${PREFIX}.json

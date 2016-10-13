@@ -1,64 +1,97 @@
 #!/usr/bin/env bash
-# RUN: intercept-build -vvv --cdb %t.json.result sh %s
-# RUN: cdb_diff %T/flags_are_filtered.sh.json %t.json.result
+
+# RUN: bash %s %T/filtered_build
+# RUN: cd %T/filtered_build; %{intercept-build} --cdb result.json ./run.sh
+# RUN: cd %T/filtered_build; cdb_diff result.json expected.json
 
 set -o errexit
 set -o nounset
 set -o xtrace
 
-# set up unique names for this test
-PREFIX=flagfiltering
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── run.sh
+# ├── expected.json
+# └── src
+#    ├── lib.c
+#    └── main.c
+
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+cat >> "${root_dir}/src/lib.c" << EOF
+int foo() { return 2; }
+EOF
+
+cat >> "${root_dir}/src/main.c" << EOF
+int main() { return 0; }
+EOF
+
+
 # set up platform specific linker options
+PREFIX="fooflag"
 if [ $(uname | grep -i "darwin") ]; then
-  LD_FLAGS="-o ${test_output_dir}/lib${PREFIX}.dylib -dynamiclib -install_name @rpath/${PREFIX}"
+  LD_FLAGS="-o lib${PREFIX}.dylib -dynamiclib -install_name @rpath/${PREFIX}"
 else
-  LD_FLAGS="-o ${test_output_dir}/lib${PREFIX}.so -shared -Wl,-soname,${PREFIX}"
+  LD_FLAGS="-o lib${PREFIX}.so -shared -Wl,-soname,${PREFIX}"
 fi
 
-cd ${test_input_dir}
+
+build_file="${root_dir}/run.sh"
+cat >> ${build_file} << EOF
+#!/usr/bin/env bash
+
+set -o nounset
+set -o xtrace
+
+# set up unique names for this test
+
+cd src
 
 # non compilation calls shall not be in the result
-${CC} -### -c main.c 2> /dev/null
-${CC} -E -o "${test_output_dir}/$$.i" main.c
-${CC} -S -o "${test_output_dir}/$$.asm" main.c
-${CC} -c -o "${test_output_dir}/$$.d" -M main.c
-${CC} -c -o "${test_output_dir}/$$.d" -MM main.c
+"\$CC" -### -c main.c 2> /dev/null
+"\$CC" -E -o "\$\$.i"       main.c
+"\$CC" -S -o "\$\$.asm"     main.c
+"\$CC" -c -o "\$\$.d"   -M  main.c
+"\$CC" -c -o "\$\$.d"   -MM main.c
 
 # preprocessor flags shall be filtered
-${CC} -c -o "${test_output_dir}/${PREFIX}_clean_one.o" -fpic -Iclean/include -MD -MT target -MF "${test_output_dir}/${PREFIX}_clean_one.d" clean/one.c
-${CC} -c -o "${test_output_dir}/${PREFIX}_clean_two.o" -fpic -Iclean/include -MMD -MQ target -MF "${test_output_dir}/${PREFIX}_clean_two.d" clean/two.c
+"\$CC" -c -o one.o -fpic -MD  -MT target -MF one.d lib.c
+"\$CC" -c -o two.o -fpic -MMD -MQ target -MF two.d lib.c
 
 # linking shall not in the result
-${CC} ${LD_FLAGS} "${test_output_dir}/${PREFIX}_clean_one.o" "${test_output_dir}/${PREFIX}_clean_two.o"
+"\$CC" ${LD_FLAGS} one.o two.o
 
 # linker flags shall be filtered
-${CC} -o "${test_output_dir}/${PREFIX}_one" "-l${PREFIX}" "-L${test_output_dir}" main.c
-${CC} -o "${test_output_dir}/${PREFIX}_two" -l ${PREFIX} -L ${test_output_dir} main.c
+"\$CC" -o "${PREFIX}_one" "-l${PREFIX}"  -L.  main.c
+"\$CC" -o "${PREFIX}_two" -l "${PREFIX}" -L . main.c
 
-cat > ${test_output_dir}/flags_are_filtered.sh.json << EOF
+true;
+EOF
+chmod +x ${build_file}
+
+cat >> "${root_dir}/expected.json" << EOF
 [
-{
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/${PREFIX}_clean_one.o -fpic -Iclean/include clean/one.c",
-  "file": "${test_input_dir}/clean/one.c"
-}
-,
-{
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/${PREFIX}_clean_two.o -fpic -Iclean/include clean/two.c",
-  "file": "${test_input_dir}/clean/two.c"
-}
-,
-{
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/${PREFIX}_one main.c",
-  "file": "${test_input_dir}/main.c"
-}
-,
-{
-  "directory": "${test_input_dir}",
-  "command": "cc -c -o ${test_output_dir}/${PREFIX}_two main.c",
-  "file": "${test_input_dir}/main.c"
-}
+    {
+        "command": "cc -c -o one.o -fpic lib.c", 
+        "directory": "${root_dir}/src", 
+        "file": "${root_dir}/src/lib.c"
+    }, 
+    {
+        "command": "cc -c -o two.o -fpic lib.c", 
+        "directory": "${root_dir}/src", 
+        "file": "${root_dir}/src/lib.c"
+    }, 
+    {
+        "command": "cc -c -o fooflag_one main.c", 
+        "directory": "${root_dir}/src", 
+        "file": "${root_dir}/src/main.c"
+    }, 
+    {
+        "command": "cc -c -o fooflag_two main.c", 
+        "directory": "${root_dir}/src", 
+        "file": "${root_dir}/src/main.c"
+    }
 ]
 EOF
