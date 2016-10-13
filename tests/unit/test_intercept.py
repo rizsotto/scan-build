@@ -9,9 +9,10 @@
 import libear
 import libscanbuild.intercept as sut
 import unittest
-import sys
-import tempfile
+import os
 import os.path
+
+IS_WINDOWS = os.getenv('windows')
 
 
 class InterceptUtilTest(unittest.TestCase):
@@ -69,8 +70,7 @@ class InterceptUtilTest(unittest.TestCase):
         self.assertEqual(os.path.join(current, 'file.c'),
                          test(os.path.join(current, 'file.c')))
 
-    @unittest.skipIf(sys.platform in {'win32', 'cygwin'},
-                     'this code is not running on windows')
+    @unittest.skipIf(IS_WINDOWS, 'this code is not running on windows')
     def test_sip(self):
         def create_status_report(filename, message):
             content = """#!/usr/bin/env sh

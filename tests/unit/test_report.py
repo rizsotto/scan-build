@@ -11,10 +11,9 @@ import libscanbuild.report as sut
 import unittest
 import os
 import os.path
-import sys
 import glob
 
-IS_WINDOWS = sys.platform in {'win32', 'cygwin'}
+IS_WINDOWS = os.getenv('windows')
 
 
 def run_bug_parse(content):

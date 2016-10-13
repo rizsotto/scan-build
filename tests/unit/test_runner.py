@@ -11,11 +11,10 @@ import libscanbuild.runner as sut
 import unittest
 import os
 import os.path
-import sys
 import glob
 import platform
 
-IS_WINDOWS = sys.platform in {'win32', 'cygwin'}
+IS_WINDOWS = os.getenv('windows')
 
 
 class FilteringFlagsTest(unittest.TestCase):
