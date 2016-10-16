@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 import libear
-from . import call_and_report
+from . import call_and_report, silent_call
 import unittest
 
 import os.path
@@ -55,6 +55,11 @@ class OutputDirectoryTest(unittest.TestCase):
 
 
 class ExitCodeTest(unittest.TestCase):
+    def test_analyze_build_noarg(self):
+        cmd = ['analyze-build']
+        exit_code = silent_call(cmd)
+        self.assertTrue(exit_code)
+
     def test_regular_does_not_set_exit_code(self):
         with libear.temporary_directory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)

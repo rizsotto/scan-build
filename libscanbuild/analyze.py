@@ -18,6 +18,7 @@ import json
 import argparse
 import logging
 import multiprocessing
+import sys
 from libscanbuild import command_entry_point, wrapper_environment, \
     wrapper_entry_point, reconfigure_logging, tempdir, execute_and_report
 from libscanbuild.runner import run, logging_analyzer_output
@@ -106,15 +107,20 @@ def run_analyzer(args, output_dir):
     }
 
     logging.debug('run analyzer against compilation database')
-    with open(args.cdb, 'r') as handle:
-        generator = (dict(cmd, **consts)
-                     for cmd in json.load(handle) if not exclude(cmd['file']))
-        # when verbose output requested execute sequentially
-        pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
-        for current in pool.imap_unordered(run, generator):
-            logging_analyzer_output(current)
-        pool.close()
-        pool.join()
+    try:
+        with open(args.cdb, 'r') as handle:
+            generator = (dict(cmd, **consts)
+                         for cmd in json.load(handle)
+                         if not exclude(cmd['file']))
+            # when verbose output requested execute sequentially
+            pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
+            for current in pool.imap_unordered(run, generator):
+                logging_analyzer_output(current)
+            pool.close()
+            pool.join()
+    except FileNotFoundError as err:
+        print(err.strerror + ': ' + args.cdb)
+        sys.exit(err.errno)
 
 
 def setup_environment(args, bin_dir, destination):
