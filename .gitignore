@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+eggs/
+.eggs/
+lib/
+lib64/
+sdist/
+*.egg-info/
+*.egg
