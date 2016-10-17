@@ -61,6 +61,11 @@ def intercept_build_main():
     reconfigure_logging(args.verbose)
     logging.debug('Parsed arguments: %s', args)
 
+    # short validation logic
+    if not args.build:
+        parser.print_help()
+        return 127  # command not found exit code
+
     return capture(args)
 
 
