@@ -20,13 +20,9 @@ set -o xtrace
 root_dir=$1
 mkdir -p "${root_dir}/src"
 
-source_file="${root_dir}/src/empty.c"
-touch "${source_file}"
+touch "${root_dir}/src/empty.c"
 
 build_file="${root_dir}/run.sh"
-touch ${build_file}
-chmod +x ${build_file}
-
 cat >> ${build_file} << EOF
 #!/usr/bin/env bash
 
@@ -39,11 +35,9 @@ set -o xtrace
 "\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=4 -arch ppc;
 true;
 EOF
+chmod +x ${build_file}
 
 checker_file="${root_dir}/check.sh"
-touch ${checker_file}
-chmod +x ${checker_file}
-
 cat >> ${checker_file} << EOF
 #!/usr/bin/env bash
 
@@ -79,3 +73,4 @@ assert_not_present "ver=4" "not supported architecture was executed"
 assert_present     "ver=8" "test assert present" || true
 assert_not_present "ver=1" "test assert not present" || true
 EOF
+chmod +x ${checker_file}

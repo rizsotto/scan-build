@@ -176,8 +176,8 @@ def run_analyzer(opts, continuation=report_failure):
                             opts['direct_args'] + opts['flags'] +
                             [opts['file'], '-o', output()],
                             cwd)
-        output = run_command(cmd, cwd=cwd)
-        return {'error_output': output, 'exit_code': 0}
+        result = run_command(cmd, cwd=cwd)
+        return {'error_output': result, 'exit_code': 0}
     except subprocess.CalledProcessError as ex:
         result = {'error_output': ex.output, 'exit_code': ex.returncode}
         if opts.get('output_failures', False):
@@ -305,5 +305,4 @@ def logging_analyzer_output(entry):
                     analyzer was not executed. """
 
     if entry and 'error_output' in entry:
-        for line in entry['error_output']:
-            logging.info(line.rstrip())
+        logging.info(entry['error_output'])
