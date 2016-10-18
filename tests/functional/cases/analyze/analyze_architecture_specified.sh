@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
 # RUN: bash %s %T/analyze_architecture_specified
-# RUN: cd %T/analyze_architecture_specified; %{scan-build} -o . --intercept-first ./run.sh | ./check.sh
-# RUN: cd %T/analyze_architecture_specified; %{scan-build} -o . --intercept-first  --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T/analyze_architecture_specified; %{scan-build} -o . --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/analyze_architecture_specified; %{analyze-build} -o . --cdb input.json |  ./check.sh
 
 set -o errexit
 set -o nounset
@@ -12,7 +10,7 @@ set -o xtrace
 # the test creates a subdirectory inside output dir.
 #
 # ${root_dir}
-# ├── run.sh
+# ├── input.json
 # ├── check.sh
 # └── src
 #    └── empty.c
@@ -22,20 +20,30 @@ mkdir -p "${root_dir}/src"
 
 touch "${root_dir}/src/empty.c"
 
-build_file="${root_dir}/run.sh"
-cat >> ${build_file} << EOF
-#!/usr/bin/env bash
-
-set -o nounset
-set -o xtrace
-
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=1;
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=2 -arch i386;
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=3 -arch x86_64;
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=4 -arch ppc;
-true;
+cat >> "${root_dir}/input.json" << EOF
+[
+  {
+    "directory": "${root_dir}",
+    "file": "${root_dir}/src/empty.c",
+    "command": "cc -c ./src/empty.c -o ./src/empty.o -Dver=1"
+  },
+  {
+    "directory": "${root_dir}",
+    "file": "${root_dir}/src/empty.c",
+    "command": "cc -c ./src/empty.c -o ./src/empty.o -Dver=2 -arch i386"
+  },
+  {
+    "directory": "${root_dir}",
+    "file": "${root_dir}/src/empty.c",
+    "command": "cc -c ./src/empty.c -o ./src/empty.o -Dver=3 -arch x86_64"
+  },
+  {
+    "directory": "${root_dir}",
+    "file": "${root_dir}/src/empty.c",
+    "command": "cc -c ./src/empty.c -o ./src/empty.o -Dver=4 -arch ppc"
+  }
+]
 EOF
-chmod +x ${build_file}
 
 checker_file="${root_dir}/check.sh"
 cat >> ${checker_file} << EOF
