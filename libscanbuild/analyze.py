@@ -107,12 +107,58 @@ def analyze_parameters(args):
     line parameters are in a named tuple.
     The keys are very similar, and some values are preprocessed. """
 
+    def prefix_with(constant, pieces):
+        """ From a sequence create another sequence where every second element
+        is from the original sequence and the odd elements are the prefix.
+
+        eg.: prefix_with(0, [1,2,3]) creates [0, 1, 0, 2, 0, 3] """
+
+        return [elem for piece in pieces for elem in [constant, piece]]
+
+    def direct_args(args):
+        """ A group of command line arguments can mapped to command
+        line arguments of the analyzer. """
+
+        result = []
+
+        if args.store_model:
+            result.append('-analyzer-store={0}'.format(args.store_model))
+        if args.constraints_model:
+            result.append('-analyzer-constraints={0}'.format(
+                args.constraints_model))
+        if args.internal_stats:
+            result.append('-analyzer-stats')
+        if args.analyze_headers:
+            result.append('-analyzer-opt-analyze-headers')
+        if args.stats:
+            result.append('-analyzer-checker=debug.Stats')
+        if args.maxloop:
+            result.extend(['-analyzer-max-loop', str(args.maxloop)])
+        if args.output_format:
+            result.append('-analyzer-output={0}'.format(args.output_format))
+        if args.analyzer_config:
+            result.append(args.analyzer_config)
+        if args.verbose >= 4:
+            result.append('-analyzer-display-progress')
+        if args.plugins:
+            result.extend(prefix_with('-load', args.plugins))
+        if args.enable_checker:
+            checkers = ','.join(args.enable_checker)
+            result.extend(['-analyzer-checker', checkers])
+        if args.disable_checker:
+            checkers = ','.join(args.disable_checker)
+            result.extend(['-analyzer-disable-checker', checkers])
+        if os.getenv('UBIVIZ'):
+            result.append('-analyzer-viz-egraph-ubigraph')
+
+        return prefix_with('-Xclang', result)
+
     return {
         'clang': args.clang,
         'output_dir': args.output,
         'output_format': args.output_format,
         'output_failures': args.output_failures,
-        'direct_args': analyzer_params(args),
+        'direct_args': direct_args(args),
         'force_debug': args.force_debug,
         'excludes': args.excludes
     }
@@ -178,53 +224,6 @@ def analyze_build_wrapper(**kwargs):
         current = run(dict(parameters, file=source))
         # display error message from the static analyzer
         logging_analyzer_output(current)
-
-
-def analyzer_params(args):
-    """ A group of command line arguments can mapped to command
-    line arguments of the analyzer. This method generates those. """
-
-    def prefix_with(constant, pieces):
-        """ From a sequence create another sequence where every second element
-        is from the original sequence and the odd elements are the prefix.
-
-        eg.: prefix_with(0, [1,2,3]) creates [0, 1, 0, 2, 0, 3] """
-
-        return [elem for piece in pieces for elem in [constant, piece]]
-
-    result = []
-
-    if args.store_model:
-        result.append('-analyzer-store={0}'.format(args.store_model))
-    if args.constraints_model:
-        result.append('-analyzer-constraints={0}'.format(
-            args.constraints_model))
-    if args.internal_stats:
-        result.append('-analyzer-stats')
-    if args.analyze_headers:
-        result.append('-analyzer-opt-analyze-headers')
-    if args.stats:
-        result.append('-analyzer-checker=debug.Stats')
-    if args.maxloop:
-        result.extend(['-analyzer-max-loop', str(args.maxloop)])
-    if args.output_format:
-        result.append('-analyzer-output={0}'.format(args.output_format))
-    if args.analyzer_config:
-        result.append(args.analyzer_config)
-    if args.verbose >= 4:
-        result.append('-analyzer-display-progress')
-    if args.plugins:
-        result.extend(prefix_with('-load', args.plugins))
-    if args.enable_checker:
-        checkers = ','.join(args.enable_checker)
-        result.extend(['-analyzer-checker', checkers])
-    if args.disable_checker:
-        checkers = ','.join(args.disable_checker)
-        result.extend(['-analyzer-disable-checker', checkers])
-    if os.getenv('UBIVIZ'):
-        result.append('-analyzer-viz-egraph-ubigraph')
-
-    return prefix_with('-Xclang', result)
 
 
 def print_active_checkers(checkers):
