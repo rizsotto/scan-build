@@ -30,6 +30,7 @@ __all__ = ['analyze_build_main', 'analyze_build_wrapper']
 
 COMPILER_WRAPPER_CC = 'analyze-cc'
 COMPILER_WRAPPER_CXX = 'analyze-c++'
+ENVIRONMENT_KEY = 'ANALYZE_BUILD'
 
 
 def scan_build():
@@ -53,11 +54,16 @@ def analyze_build_main(from_build_command):
     validate(parser, args, from_build_command)
 
     with report_directory(args.output, args.keep_empty) as target_dir:
+        # target_dir is the new output
+        args.output = target_dir
+        # exit code will be set in multiple places
         exit_code = 0
+        # cleanup function to get rid of compilation database
         cleanup = (lambda: 0)
+
         if not from_build_command:
             # run the analyzer against a compilation db
-            run_analyzer(args, target_dir)
+            run_analyzer(args)
         else:
             # run against a build command. there are cases, when analyzer run
             # is not required. but we need to set up everything for the
@@ -68,12 +74,11 @@ def analyze_build_main(from_build_command):
                 exit_code = capture(args)
                 if need_analyzer(args.build):
                     # run the analyzer against the captured commands
-                    run_analyzer(args, target_dir)
+                    run_analyzer(args)
                 cleanup = (lambda: os.unlink(args.cdb))
             else:
                 # run build command and analyzer with compiler wrappers
-                report_dir = target_dir if need_analyzer(args.build) else None
-                environment = setup_environment(args, report_dir)
+                environment = setup_environment(args)
                 exit_code = run_build(args.build, env=environment)
         # cover report generation and bug counting
         number_of_bugs = document(args, target_dir)
@@ -96,39 +101,43 @@ def need_analyzer(args):
     return len(args) and not re.search('configure|autogen', args[0])
 
 
-def run_analyzer(args, output_dir):
-    """ Runs the analyzer against the given compilation database. """
+def analyze_parameters(args):
+    """ Mapping between the command line parameters and the analyzer run
+    method. The run method works with a plain dictionary, while the command
+    line parameters are in a named tuple.
+    The keys are very similar, and some values are preprocessed. """
 
-    def exclude(filename):
-        """ Return true when any excluded directory prefix the filename. """
-        return any(re.match(r'^' + directory, filename)
-                   for directory in args.excludes)
-
-    consts = {
+    return {
         'clang': args.clang,
-        'output_dir': output_dir,
+        'output_dir': args.output,
         'output_format': args.output_format,
         'output_failures': args.output_failures,
         'direct_args': analyzer_params(args),
-        'force_debug': args.force_debug
+        'force_debug': args.force_debug,
+        'excludes': args.excludes
     }
+
+
+def run_analyzer(args):
+    """ Runs the analyzer against the given compilation database. """
 
     logging.debug('run analyzer against compilation database')
     with open(args.cdb, 'r') as handle:
-        generator = (dict(cmd, **consts)
-                     for cmd in json.load(handle) if not exclude(cmd['file']))
+        consts = analyze_parameters(args)
+        entries = (dict(cmd, **consts) for cmd in json.load(handle))
         # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
-        for current in pool.imap_unordered(run, generator):
+        for current in pool.imap_unordered(run, entries):
             logging_analyzer_output(current)
         pool.close()
         pool.join()
 
 
-def setup_environment(args, destination):
+def setup_environment(args):
     """ Set up environment for build command to interpose compiler wrapper. """
 
     environment = dict(os.environ)
+    # to run compiler wrappers
     environment.update(
         wrapper_environment(
             c_wrapper=COMPILER_WRAPPER_CC,
@@ -136,15 +145,12 @@ def setup_environment(args, destination):
             c_compiler=args.cc,
             cxx_compiler=args.cxx,
             verbose=args.verbose))
-    # request analyzer run when destination directory is not None
-    environment.update({
-        'ANALYZE_BUILD_CLANG': args.clang,
-        'ANALYZE_BUILD_REPORT_DIR': destination,
-        'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
-        'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
-        'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args)),
-        'ANALYZE_BUILD_FORCE_DEBUG': 'yes' if args.force_debug else ''
-    } if destination else {})
+    # pass the relevant parameters to run the analyzer with condition.
+    # the presence of the environment value will control the run.
+    if need_analyzer(args.build):
+        environment.update({
+            ENVIRONMENT_KEY: json.dumps(analyze_parameters(args))
+        })
     return environment
 
 
@@ -154,25 +160,19 @@ def analyze_build_wrapper(**kwargs):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 
     # don't run analyzer when compilation fails. or when it's not requested.
-    if kwargs['result'] or not os.getenv('ANALYZE_BUILD_CLANG'):
+    if kwargs['result'] or not os.getenv(ENVIRONMENT_KEY):
         return
     # don't run analyzer when the command is not a compilation
     # (can be preprocessing or a linking only execution of the compiler)
     compilation = split_command(kwargs['command'])
     if compilation is None:
         return
-    # collect the needed parameters from environment, crash when missing
-    env = os.environ.copy()
-    parameters = {
-        'clang': env['ANALYZE_BUILD_CLANG'],
-        'output_dir': env['ANALYZE_BUILD_REPORT_DIR'],
-        'output_format': env['ANALYZE_BUILD_REPORT_FORMAT'],
-        'output_failures': env.get('ANALYZE_BUILD_REPORT_FAILURES', False),
-        'direct_args': env.get('ANALYZE_BUILD_PARAMETERS', '').split(' '),
-        'force_debug': env.get('ANALYZE_BUILD_FORCE_DEBUG', False),
+    # collect the needed parameters from environment
+    parameters = json.loads(os.environ[ENVIRONMENT_KEY])
+    parameters.update({
         'directory': os.getcwd(),
         'command': [kwargs['compiler'], '-c'] + compilation.flags
-    }
+    })
     # call static analyzer against the compilation
     for source in compilation.files:
         current = run(dict(parameters, file=source))
@@ -258,18 +258,20 @@ def validate(parser, args, from_build_command):
     """ Validation done by the parser itself, but semantic check still
     needs to be done. This method is doing that. """
 
-    # Make plugins always a list. (It might be None when not specified.)
-    args.plugins = args.plugins if args.plugins else []
-
     if args.help_checkers_verbose:
         print_checkers(get_checkers(args.clang, args.plugins))
         parser.exit()
     elif args.help_checkers:
         print_active_checkers(get_checkers(args.clang, args.plugins))
         parser.exit()
-
-    if from_build_command and not args.build:
+    elif from_build_command and not args.build:
         parser.error('missing build command')
+
+    # Make plugins always a list. (It might be None when not specified.)
+    args.plugins = args.plugins if args.plugins else []
+    # Make exclude directory list unique and absolute
+    uniq_excludes = set(os.path.abspath(entry) for entry in args.excludes)
+    args.excludes = list(uniq_excludes)
 
 
 def create_parser(from_build_command):
@@ -444,9 +446,7 @@ def create_parser(from_build_command):
         default=[],
         help="""Do not run static analyzer against files found in this
                 directory. (You can specify this option multiple times.)
-                Could be useful when project contains 3rd party libraries.
-                The directory path shall be absolute path as file names in
-                the compilation database.""")
+                Could be useful when project contains 3rd party libraries.""")
     advanced.add_argument(
         '--force-analyze-debug-code',
         dest='force_debug',

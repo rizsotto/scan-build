@@ -30,9 +30,7 @@ set -o nounset
 set -o xtrace
 
 "\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=1;
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=2;
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=3;
-"\$CC" -c ./src/empty.c -o ./src/empty.o -Dver=4;
+"\$CC" -c "${root_dir}/src/empty.c" -o ./src/empty.o -Dver=2;
 true;
 EOF
 chmod +x ${build_file}
@@ -56,7 +54,5 @@ assert_present() {
 
 assert_present "ver=1"
 assert_present "ver=2"
-assert_present "ver=3"
-assert_present "ver=4"
 EOF
 chmod +x ${checker_file}

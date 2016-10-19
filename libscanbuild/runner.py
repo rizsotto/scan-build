@@ -72,6 +72,7 @@ def require(required):
           'file',  # entry from compilation database
           'clang',  # clang executable name (and path)
           'direct_args',  # arguments from command line
+          'excludes',  # list of directories
           'force_debug',  # kill non debug macros
           'output_dir',  # where generated report files shall go
           'output_format',  # it's 'plist' or 'html' or both
@@ -95,7 +96,7 @@ def run(opts):
         logging.debug("Run analyzer against '%s'", command)
         opts.update(classify_parameters(command))
 
-        return arch_check(opts)
+        return exclude(opts)
     except Exception:
         logging.error("Problem occured during analyzis.", exc_info=1)
         return None
@@ -252,6 +253,24 @@ def arch_check(opts, continuation=language_check):
             return None
     else:
         logging.debug('analysis, on default arch')
+        return continuation(opts)
+
+
+@require(['file', 'excludes'])
+def exclude(opts, continuation=arch_check):
+    """ Analysis might be skipped, when one of the requested excluded
+    directory contains the file. """
+
+    def contains(directory, file):
+        # When a directory contains a file, then the relative path to the
+        # file from that directory does not start with a parent dir prefix.
+        relative = os.path.relpath(file, directory).split(os.sep)
+        return len(relative) and relative[0] != os.pardir
+
+    if any(contains(dir, opts['file']) for dir in opts['excludes']):
+        logging.debug('skip analysis, file requested to exclude')
+        return None
+    else:
         return continuation(opts)
 
 
