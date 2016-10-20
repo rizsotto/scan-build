@@ -15,6 +15,13 @@ set -o xtrace
 # the test creates a subdirectory inside output dir.
 #
 # ${root_dir}
+# ├── check.sh
+# ├── run.sh
+# └── src
+#     ├── empty.c
+#     └── ignore
+#         └── empty.c
+
 
 root_dir=$1
 mkdir -p "${root_dir}/src/ignore"
