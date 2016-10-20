@@ -47,7 +47,7 @@ runs=\$(grep "exec command" | sort | uniq)
 
 assert_present() {
     local pattern="\$1";
-    if [ \$(echo "\$runs" | grep "\$pattern" | wc -l) -eq 0 ]; then
+    if [ \$(echo "\$runs" | grep -- "\$pattern" | wc -l) -eq 0 ]; then
         false;
     fi
 }

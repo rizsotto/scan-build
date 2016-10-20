@@ -58,7 +58,7 @@ assert_present() {
     local pattern="\$1";
     local message="\$2";
 
-    if [ \$(echo "\$runs" | grep "\$pattern" | wc -l) -eq 0 ]; then
+    if [ \$(echo "\$runs" | grep -- "\$pattern" | wc -l) -eq 0 ]; then
         echo "\$message" && false;
     fi
 }
@@ -67,7 +67,7 @@ assert_not_present() {
     local pattern="\$1";
     local message="\$2";
 
-    if [ \$(echo "\$runs" | grep "\$pattern" | wc -l) -gt 0 ]; then
+    if [ \$(echo "\$runs" | grep -- "\$pattern" | wc -l) -gt 0 ]; then
         echo "\$message" && false;
     fi
 }
