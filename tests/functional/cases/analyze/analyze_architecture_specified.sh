@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/analyze_architecture_specified
-# RUN: cd %T/analyze_architecture_specified; %{analyze-build} -o . --cdb input.json |  ./check.sh
+# RUN: bash %s %T/architecture_specified
+# RUN: cd %T/architecture_specified; %{analyze-build} -o . --cdb input.json | ./check.sh
 
 set -o errexit
 set -o nounset

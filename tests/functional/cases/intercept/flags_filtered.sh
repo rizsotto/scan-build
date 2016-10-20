@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/filtered_build
-# RUN: cd %T/filtered_build; %{intercept-build} --cdb result.json ./run.sh
-# RUN: cd %T/filtered_build; cdb_diff result.json expected.json
+# RUN: bash %s %T/flags_filtered
+# RUN: cd %T/flags_filtered; %{intercept-build} --cdb result.json ./run.sh
+# RUN: cd %T/flags_filtered; cdb_diff result.json expected.json
 
 set -o errexit
 set -o nounset
@@ -74,23 +74,23 @@ chmod +x ${build_file}
 cat >> "${root_dir}/expected.json" << EOF
 [
     {
-        "command": "cc -c -o one.o -fpic lib.c", 
-        "directory": "${root_dir}/src", 
+        "command": "cc -c -o one.o -fpic lib.c",
+        "directory": "${root_dir}/src",
         "file": "${root_dir}/src/lib.c"
-    }, 
+    },
     {
-        "command": "cc -c -o two.o -fpic lib.c", 
-        "directory": "${root_dir}/src", 
+        "command": "cc -c -o two.o -fpic lib.c",
+        "directory": "${root_dir}/src",
         "file": "${root_dir}/src/lib.c"
-    }, 
+    },
     {
-        "command": "cc -c -o fooflag_one main.c", 
-        "directory": "${root_dir}/src", 
+        "command": "cc -c -o fooflag_one main.c",
+        "directory": "${root_dir}/src",
         "file": "${root_dir}/src/main.c"
-    }, 
+    },
     {
-        "command": "cc -c -o fooflag_two main.c", 
-        "directory": "${root_dir}/src", 
+        "command": "cc -c -o fooflag_two main.c",
+        "directory": "${root_dir}/src",
         "file": "${root_dir}/src/main.c"
     }
 ]

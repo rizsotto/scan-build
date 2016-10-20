@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/scan_build_runs_analyzer
-# RUN: cd %T/scan_build_runs_analyzer; %{scan-build} -o . --intercept-first ./run.sh | ./check.sh
-# RUN: cd %T/scan_build_runs_analyzer; %{scan-build} -o . --intercept-first  --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T/scan_build_runs_analyzer; %{scan-build} -o . --override-compiler ./run.sh | ./check.sh
+# RUN: bash %s %T/runs_analyzer
+# RUN: cd %T/runs_analyzer; %{scan-build} -o . --intercept-first ./run.sh | ./check.sh
+# RUN: cd %T/runs_analyzer; %{scan-build} -o . --intercept-first  --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/runs_analyzer; %{scan-build} -o . --override-compiler ./run.sh | ./check.sh
 
 set -o errexit
 set -o nounset

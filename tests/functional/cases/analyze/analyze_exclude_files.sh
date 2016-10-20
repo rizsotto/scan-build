@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/analyze_exclude_files
-# RUN: cd %T/analyze_exclude_files; %{scan-build} -o . --exclude src/ignore --intercept-first ./run.sh | ./check.sh
-# RUN: cd %T/analyze_exclude_files; %{scan-build} -o . --exclude src/ignore --intercept-first  --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T/analyze_exclude_files; %{scan-build} -o . --exclude src/ignore --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T/analyze_exclude_files; %{scan-build} -o . --exclude %T/analyze_exclude_files/src/ignore --intercept-first ./run.sh | ./check.sh
-# RUN: cd %T/analyze_exclude_files; %{scan-build} -o . --exclude %T/analyze_exclude_files/src/ignore --intercept-first  --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T/analyze_exclude_files; %{scan-build} -o . --exclude %T/analyze_exclude_files/src/ignore --override-compiler ./run.sh | ./check.sh
+# RUN: bash %s %T/exclude_files
+# RUN: cd %T/exclude_files; %{scan-build} -o . --exclude src/ignore --intercept-first ./run.sh | ./check.sh
+# RUN: cd %T/exclude_files; %{scan-build} -o . --exclude src/ignore --intercept-first  --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/exclude_files; %{scan-build} -o . --exclude src/ignore --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/exclude_files; %{scan-build} -o . --exclude %T/exclude_files/src/ignore --intercept-first ./run.sh | ./check.sh
+# RUN: cd %T/exclude_files; %{scan-build} -o . --exclude %T/exclude_files/src/ignore --intercept-first  --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/exclude_files; %{scan-build} -o . --exclude %T/exclude_files/src/ignore --override-compiler ./run.sh | ./check.sh
 
 set -o errexit
 set -o nounset
