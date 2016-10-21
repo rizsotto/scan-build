@@ -15,8 +15,6 @@ setup(
     entry_points={
         'console_scripts': [
             'cdb_diff = tools.diff:main',
-            'cdb_run = tools.run:main',
-            'cdb_substitute = tools.substitute:main',
             'cdb_expect = tools.expect:main'
         ]
     }
