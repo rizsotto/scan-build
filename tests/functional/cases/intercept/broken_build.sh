@@ -24,9 +24,7 @@ set -o xtrace
 root_dir=$1
 mkdir -p "${root_dir}/src"
 
-cat >> "${root_dir}/src/broken.c" << EOF
-int test() { ;
-EOF
+cp "${test_input_dir}/compile_error.c" "${root_dir}/src/broken.c"
 
 build_file="${root_dir}/run.sh"
 cat >> ${build_file} << EOF

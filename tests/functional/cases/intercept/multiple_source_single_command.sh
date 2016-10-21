@@ -23,9 +23,7 @@ mkdir -p "${root_dir}/src"
 
 touch "${root_dir}/src/one.c"
 touch "${root_dir}/src/two.c"
-cat > "${root_dir}/src/main.c" << EOF
-int main() { return 0; }
-EOF
+cp "${test_input_dir}/main.c" "${root_dir}/src/main.c"
 
 build_file="${root_dir}/run.sh"
 cat >> ${build_file} << EOF
