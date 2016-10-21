@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/disable_checkers
-# RUN: cd %T/disable_checkers; %{analyze-build} -o . --status-bugs --disable-checker core.NullDereference --cdb input.json
+# XFAIL: *
+# RUN: bash %s %T/exit_code_failed_shows_bugs
+# RUN: cd %T/exit_code_failed_shows_bugs; %{analyze-build} -o . --status-bugs --cdb input.json
 
 set -o errexit
 set -o nounset

@@ -20,14 +20,11 @@ mkdir -p "${root_dir}/src"
 
 cat >> "${root_dir}/src/broken.c" << EOF
 #if NDEBUG
-void bad_guy(int * i) { ; }
 #else
-void bad_guy(int * i) { *i = 9; }
+EOF
+cat >> "${root_dir}/src/broken.c" < "${test_input_dir}/div_zero.c"
+cat >> "${root_dir}/src/broken.c" << EOF
 #endif
-void test() {
-    int * ptr = 0;
-    bad_guy(ptr);
-}
 EOF
 
 build_file="${root_dir}/run.sh"
