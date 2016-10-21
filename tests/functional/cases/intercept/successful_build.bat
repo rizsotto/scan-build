@@ -1,40 +1,53 @@
-: RUN: intercept-build -vvv --override-compiler --cdb %t.json.wrapper %s
-: RUN: cdb_diff %t.json.wrapper %T\successful_build.json.expected
+: RUN: %s %T\successful_build
+: RUN: cd %T\successful_build; intercept-build -vvv --override-compiler --cdb wrapper.json run.bat
+: RUN: cd %T\successful_build; cdb_diff wrapper.json expected.json
 
-set output="%test_output_dir%\successful_build.json.expected"
+set root_dir=%1
+
+mkdir "%root_dir%"
+mkdir "%root_dir%\src"
+
+copy /y nul "%root_dir%\src\empty.c"
+
+echo ^
+%%CC%% -c -o src\empty.o -Dver=1 src\empty.c ^
+
+^
+
+%%CXX%% -c -o src\empty.o -Dver=2 src\empty.c ^
+
+^
+
+cd src ^
+
+^
+
+%%CC%% -c -o empty.o -Dver=3 empty.c ^
+
+^
+
+%%CXX%% -c -o empty.o -Dver=4 empty.c ^
+
+> "%root_dir%\run.bat"
+
+set output="%root_dir%\expected.json"
 del /f %output%
 
-cd "%test_input_dir%"
-%CC%  -c -o "%test_output_dir%\main.o" main.c
+cd "%root_dir%"
 cdb_expect ^
     --cdb %output% ^
-    --command "cc -c -o %test_output_dir%\main.o main.c" ^
-    --file "%test_input_dir%\main.c"
-
-cd "%test_input_dir%\clean"
-%CC%  -c -o "%test_output_dir%\clean_one.o" -Iinclude one.c
+    --command "cc -c -o src\empty.o -Dver=1 src\empty.c" ^
+    --file "%root_dir%\src\empty.c"
 cdb_expect ^
     --cdb %output% ^
-    --command "cc -c -o %test_output_dir%\clean_one.o -Iinclude one.c" ^
-    --file "%test_input_dir%\clean\one.c"
-
-cd "%test_input_dir%"
-%CXX% -c -o "%test_output_dir%\clean_two.o" -I .\clean\include clean\two.c
+    --command "c++ -c -o src\empty.o -Dver=2 src\empty.c" ^
+    --file "%root_dir%\src\empty.c"
+cd src
 cdb_expect ^
     --cdb %output% ^
-    --command "c++ -c -o %test_output_dir%\clean_two.o -I .\clean\include clean\two.c" ^
-    --file "%test_input_dir%\clean\two.c"
-
-cd "%test_input_dir%\dirty"
-%CC%  -c -o "%test_output_dir%\dirty_one.o" -Wall one.c
+    --command "cc -c -o empty.o -Dver=3 empty.c" ^
+    --file "%root_dir%\src\empty.c"
 cdb_expect ^
     --cdb %output% ^
-    --command "cc -c -o %test_output_dir%\dirty_one.o -Wall one.c" ^
-    --file "%test_input_dir%\dirty\one.c"
-
-cd "%test_input_dir%"
-%CXX% -c -o "%test_output_dir%\dirty_two.o" -Wall dirty\two.c
-cdb_expect ^
-    --cdb %output% ^
-    --command "c++ -c -o %test_output_dir%\dirty_two.o -Wall dirty\two.c" ^
-    --file "%test_input_dir%\dirty\two.c"
+    --command "c++ -c -o empty.o -Dver=4 empty.c" ^
+    --file "%root_dir%\src\empty.c"
