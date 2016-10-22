@@ -7,3 +7,5 @@ v1.0, 2016-01-13 -- Merged version to Clang repo
 v1.1, 2016-03-08 -- Windows support and cleanup on parameter handling
 
 v1.2, 2016-08-21 -- Bugfixes
+
+v1.3, 2016-10-22 -- Port test framework to LLVM's lit
