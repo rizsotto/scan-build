@@ -186,6 +186,8 @@ def setup_environment(args):
         environment.update({
             ENVIRONMENT_KEY: json.dumps(analyze_parameters(args))
         })
+    else:
+        logging.debug('wrapper should not run analyzer')
     return environment
 
 
