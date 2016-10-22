@@ -45,15 +45,14 @@ Portability
 
 Should be working on UNIX operating systems.
 
-- It has been tested on FreeBSD, GNU/Linux and OS X.
-- Prepared to work on windows, but need help to make it.
+- It has been tested on FreeBSD, GNU/Linux, OS X and Windows.
 
 
 Prerequisites
 -------------
 
 1. **clang compiler**, to compile the sources and have the static analyzer.
-2. **python** interpreter (version 2.7, 3.2, 3.3, 3.4, 3.5).
+2. **python** interpreter (version 2.7, 3.3, 3.4, 3.5).
 
 
 How to use
