@@ -102,7 +102,6 @@ def assemble_cover(output_dir, prefix, args, fragments):
 
     import getpass
     import socket
-    import datetime
 
     if args.html_title is None:
         args.html_title = os.path.basename(prefix) + ' - analyzer results'

@@ -5,8 +5,6 @@
 # License. See LICENSE.TXT for details.
 """ This module implements basic cmd escaping/unescaping methods. """
 
-import shlex
-
 __all__ = ['encode', 'decode']
 
 

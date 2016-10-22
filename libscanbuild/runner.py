@@ -161,7 +161,7 @@ def run_analyzer(opts, continuation=report_failure):
     output of the analysis and returns with it. If failure reports are
     requested, it calls the continuation to generate it. """
 
-    def output():
+    def target():
         """ Creates output file name for reports. """
         if opts['output_format'] in {'plist', 'plist-html'}:
             (handle, name) = tempfile.mkstemp(prefix='report-',
@@ -175,10 +175,10 @@ def run_analyzer(opts, continuation=report_failure):
         cwd = opts['directory']
         cmd = get_arguments([opts['clang'], '--analyze'] +
                             opts['direct_args'] + opts['flags'] +
-                            [opts['file'], '-o', output()],
+                            [opts['file'], '-o', target()],
                             cwd)
-        result = run_command(cmd, cwd=cwd)
-        return {'error_output': result, 'exit_code': 0}
+        output = run_command(cmd, cwd=cwd)
+        return {'error_output': output, 'exit_code': 0}
     except subprocess.CalledProcessError as ex:
         result = {'error_output': ex.output, 'exit_code': ex.returncode}
         if opts.get('output_failures', False):
@@ -261,10 +261,10 @@ def exclude(opts, continuation=arch_check):
     """ Analysis might be skipped, when one of the requested excluded
     directory contains the file. """
 
-    def contains(directory, file):
+    def contains(directory, entry):
         # When a directory contains a file, then the relative path to the
         # file from that directory does not start with a parent dir prefix.
-        relative = os.path.relpath(file, directory).split(os.sep)
+        relative = os.path.relpath(entry, directory).split(os.sep)
         return len(relative) and relative[0] != os.pardir
 
     if any(contains(dir, opts['file']) for dir in opts['excludes']):
