@@ -27,13 +27,13 @@ import re
 import itertools
 import json
 import glob
-import argparse
 import logging
 import subprocess
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, duplicate_check, reconfigure_logging
+    wrapper_environment, run_build, duplicate_check
 from libscanbuild.compilation import split_command
+from libscanbuild.arguments import intercept
 
 if sys.platform in {'win32', 'cygwin'}:
     from libscanbuild.wincmd import encode, decode
@@ -55,17 +55,7 @@ WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 def intercept_build_main():
     """ Entry point for 'intercept-build' command. """
 
-    parser = create_parser()
-    args = parser.parse_args()
-
-    reconfigure_logging(args.verbose)
-    logging.debug('Parsed arguments: %s', args)
-
-    # short validation logic
-    if not args.build:
-        parser.print_help()
-        return 127  # command not found exit code
-
+    args = intercept()
     return capture(args)
 
 
@@ -283,69 +273,3 @@ def entry_hash(entry):
     command = ' '.join(decode(entry['command'])[1:])
 
     return '<>'.join([filename, directory, command])
-
-
-def create_parser():
-    """ Command line argument parser factory method. """
-
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from '%(prog)s'. A second and third
-                flag increases verbosity.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        '--append',
-        action='store_true',
-        help="""Append new entries to existing compilation database.""")
-    group.add_argument(
-        '--disable-filter', '-n',
-        dest='raw_entries',
-        action='store_true',
-        help="""Intercepted child process creation calls (exec calls) are all
-                logged to the output. The output is not a compilation database.
-                This flag is for debug purposes.""")
-
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
-        '--override-compiler',
-        action='store_true',
-        help="""Always resort to the compiler wrapper even when better
-                intercept methods are available.""")
-    advanced.add_argument(
-        '--use-cc',
-        metavar='<path>',
-        dest='cc',
-        default=os.getenv('CC', 'cc'),
-        help="""When '%(prog)s' analyzes a project by interposing a compiler
-                wrapper, which executes a real compiler for compilation and
-                do other tasks (record the compiler invocation). Because of
-                this interposing, '%(prog)s' does not know what compiler your
-                project normally uses. Instead, it simply overrides the CC
-                environment variable, and guesses your default compiler.
-
-                If you need '%(prog)s' to use a specific compiler for
-                *compilation* then you can use this option to specify a path
-                to that compiler.""")
-    advanced.add_argument(
-        '--use-c++',
-        metavar='<path>',
-        dest='cxx',
-        default=os.getenv('CXX', 'c++'),
-        help="""This is the same as "--use-cc" but for C++ code.""")
-
-    parser.add_argument(
-        dest='build',
-        nargs=argparse.REMAINDER,
-        help="""Command to run.""")
-
-    return parser
