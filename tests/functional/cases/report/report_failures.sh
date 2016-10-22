@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 
 # RUN: bash %s %T/report_failures
-# RUN: cd %T/report_failures; %{analyze-build} --output . --keep-empty --cdb input.json | bash ./check_exists.sh
-# RUN: cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --cdb input.json | bash ./check_not_exists.sh
+# RUN: cd %T/report_failures; %{analyze-build} --output . --keep-empty --cdb input.json | ./check_exists.sh
+# RUN: cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --cdb input.json | ./check_not_exists.sh
 #
-# RUN: cd %T/report_failures; %{analyze-build} --output . --keep-empty --plist-html --cdb input.json | bash ./check_exists.sh
-# RUN: cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --plist-html --cdb input.json | bash ./check_not_exists.sh
+# RUN: cd %T/report_failures; %{analyze-build} --output . --keep-empty --plist-html --cdb input.json | ./check_exists.sh
+# RUN: cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --plist-html --cdb input.json | ./check_not_exists.sh
 #
-# these does not pass on travis-ci, although it does pass on arch/fedora
-# cd %T/report_failures; %{analyze-build} --output . --keep-empty --plist --cdb input.json | bash ./check_exists.sh
-# cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --plist --cdb input.json | bash ./check_not_exists.sh
+# RUN: cd %T/report_failures; %{analyze-build} --output . --keep-empty --plist --cdb input.json | ./check_exists.sh
+# RUN: cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --plist --cdb input.json | ./check_not_exists.sh
 
 set -o errexit
 set -o nounset
@@ -39,7 +38,10 @@ cat >> "${root_dir}/input.json" << EOF
 ]
 EOF
 
-cat >> "${root_dir}/check_exists.sh" << EOF
+check_one="${root_dir}/check_exists.sh"
+cat >> "${check_one}" << EOF
+#!/usr/bin/env bash
+
 set -o errexit
 set -o nounset
 set -o xtrace
@@ -57,8 +59,12 @@ else
     fi
 fi
 EOF
+chmod +x "${check_one}"
 
-cat >> "${root_dir}/check_not_exists.sh" << EOF
+check_two="${root_dir}/check_not_exists.sh"
+cat >> "${check_two}" << EOF
+#!/usr/bin/env bash
+
 set -o errexit
 set -o nounset
 set -o xtrace
@@ -76,3 +82,4 @@ else
     fi
 fi
 EOF
+chmod +x "${check_two}"
