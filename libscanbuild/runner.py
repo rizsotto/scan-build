@@ -150,7 +150,7 @@ def report_failure(opts):
         handle.close()
     # write the captured output too
     with open(name + '.stderr.txt', 'w') as handle:
-        handle.writelines(opts['error_output'])
+        handle.write(opts['error_output'])
         handle.close()
 
 
@@ -324,4 +324,4 @@ def logging_analyzer_output(entry):
                     analyzer was not executed. """
 
     if entry and 'error_output' in entry:
-        logging.info(entry['error_output'])
+        logging.info('\n{0}'.format(entry['error_output']))
