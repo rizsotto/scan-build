@@ -119,13 +119,11 @@ def setup_environment(args, destination):
     environment.update({'INTERCEPT_BUILD_TARGET_DIR': destination})
 
     if use_wrapper:
-        environment.update(
-            wrapper_environment(
-                c_wrapper=COMPILER_WRAPPER_CC,
-                cxx_wrapper=COMPILER_WRAPPER_CXX,
-                c_compiler=args.cc,
-                cxx_compiler=args.cxx,
-                verbose=args.verbose))
+        environment.update(wrapper_environment(args))
+        environment.update({
+            'CC': COMPILER_WRAPPER_CC,
+            'CXX': COMPILER_WRAPPER_CXX,
+        })
     else:
         intercept_library = build_libear(args.cc, destination)
         if sys.platform == 'darwin':

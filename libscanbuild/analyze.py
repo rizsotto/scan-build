@@ -17,8 +17,8 @@ import os.path
 import json
 import logging
 import multiprocessing
-from libscanbuild import command_entry_point, wrapper_environment, \
-    wrapper_entry_point, run_build
+from libscanbuild import command_entry_point, wrapper_entry_point, \
+    wrapper_environment, run_build
 from libscanbuild.runner import run, logging_analyzer_output
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
@@ -173,13 +173,11 @@ def setup_environment(args):
 
     environment = dict(os.environ)
     # to run compiler wrappers
-    environment.update(
-        wrapper_environment(
-            c_wrapper=COMPILER_WRAPPER_CC,
-            cxx_wrapper=COMPILER_WRAPPER_CXX,
-            c_compiler=args.cc,
-            cxx_compiler=args.cxx,
-            verbose=args.verbose))
+    environment.update(wrapper_environment(args))
+    environment.update({
+        'CC': COMPILER_WRAPPER_CC,
+        'CXX': COMPILER_WRAPPER_CXX
+    })
     # pass the relevant parameters to run the analyzer with condition.
     # the presence of the environment value will control the run.
     if need_analyzer(args.build):

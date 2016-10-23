@@ -9,14 +9,13 @@ import os
 import os.path
 import sys
 import re
+import json
 import logging
 import functools
 import subprocess
 from libscanbuild.shell import decode
 
-WRAPPER_CC = 'INTERCEPT_BUILD_CC'
-WRAPPER_CXX = 'INTERCEPT_BUILD_CXX'
-WRAPPER_VERBOSE = 'INTERCEPT_BUILD_VERBOSE'
+ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
 
 
 def duplicate_check(hash_function):
@@ -162,13 +161,15 @@ def wrapper_entry_point(function):
     def wrapper():
         """ It executes the compilation and calls the wrapped method. """
 
+        # get relevant parameters from environment
+        parameters = json.loads(os.environ[ENVIRONMENT_KEY])
         # set logging level when needed
-        verbose = int(os.getenv(WRAPPER_VERBOSE, '0'))
+        verbose = parameters['verbose']
         reconfigure_logging(verbose)
         # find out what is the real compiler
         wrapper_command = os.path.basename(sys.argv[0])
         is_cxx = re.match(r'(.+)c\+\+(.*)', wrapper_command)
-        compiler = os.getenv(WRAPPER_CXX) if is_cxx else os.getenv(WRAPPER_CC)
+        compiler = parameters['cxx'] if is_cxx else parameters['cc']
         # execute compilation with the real compiler
         command = decode(compiler) + sys.argv[1:]
         logging.debug('compilation: %s', command)
@@ -185,14 +186,13 @@ def wrapper_entry_point(function):
     return wrapper
 
 
-def wrapper_environment(c_wrapper, cxx_wrapper, c_compiler, cxx_compiler,
-                        verbose):
-    """ Set up environment for build command to interpose compiler wrapper. """
+def wrapper_environment(args):
+    """ Set up environment for interpose compiler wrapper."""
 
     return {
-        'CC': c_wrapper,
-        'CXX': cxx_wrapper,
-        WRAPPER_CC: c_compiler,
-        WRAPPER_CXX: cxx_compiler,
-        WRAPPER_VERBOSE: str(verbose)
+        ENVIRONMENT_KEY: json.dumps({
+            'verbose': args.verbose,
+            'cc': args.cc,
+            'cxx': args.cxx
+        })
     }
