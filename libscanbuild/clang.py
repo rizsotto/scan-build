@@ -25,7 +25,7 @@ def get_version(clang):
     :return:        the version string printed to stderr """
 
     output = run_command([clang, '-v'])
-    return output.decode('utf-8').splitlines()[0]
+    return output.splitlines()[0]
 
 
 def get_arguments(command, cwd):
@@ -41,7 +41,7 @@ def get_arguments(command, cwd):
     output = run_command(cmd, cwd=cwd)
     # The relevant information is in the last line of the output.
     # Don't check if finding last line fails, would throw exception anyway.
-    last_line = output.decode('utf-8').splitlines()[-1]
+    last_line = output.splitlines()[-1]
     if re.search(r'clang(.*): error:', last_line):
         raise Exception(last_line)
     return decode(last_line)
@@ -139,8 +139,7 @@ def get_checkers(clang, plugins):
     load = [elem for plugin in plugins for elem in ['-load', plugin]]
     cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']
 
-    output = run_command(cmd)
-    lines = output.decode('utf-8').splitlines()
+    lines = run_command(cmd).splitlines()
 
     is_active_checker = is_active(get_active_checkers(clang, plugins))
 

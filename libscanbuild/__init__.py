@@ -73,12 +73,20 @@ def run_command(command, cwd=None):
     :param cwd: the working directory where the command will be executed
     :return: output of the command
     """
-    directory = os.path.abspath(cwd) if cwd else os.getcwd()
-    logging.debug('exec command %s in %s', command, directory)
-    output = subprocess.check_output(command,
-                                     cwd=directory,
-                                     stderr=subprocess.STDOUT)
-    return output
+    def decode_when_needed(result):
+        """ check_output returns bytes or string depend on python version """
+        return result.decode('utf-8') if isinstance(result, bytes) else result
+
+    try:
+        directory = os.path.abspath(cwd) if cwd else os.getcwd()
+        logging.debug('exec command %s in %s', command, directory)
+        output = subprocess.check_output(command,
+                                         cwd=directory,
+                                         stderr=subprocess.STDOUT)
+        return decode_when_needed(output)
+    except subprocess.CalledProcessError as ex:
+        ex.output = decode_when_needed(ex.output)
+        raise ex
 
 
 def reconfigure_logging(verbose_level):
