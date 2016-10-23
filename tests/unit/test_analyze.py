@@ -7,7 +7,7 @@
 # RUN: %{python} %s
 
 import libear
-import libscanbuild.runner as sut
+import libscanbuild.analyze as sut
 import unittest
 import os
 import os.path
