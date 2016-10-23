@@ -91,6 +91,9 @@ def analyze_validate(parser, args, from_build_command):
     # Make exclude directory list unique and absolute
     uniq_excludes = set(os.path.abspath(entry) for entry in args.excludes)
     args.excludes = list(uniq_excludes)
+    # add cdb parameter invisibly to make intercept.capture working
+    if from_build_command:
+        args.cdb = 'compile_commands.json'
 
 
 def intercept_parser():
@@ -142,7 +145,8 @@ def analyze_parser(from_build_command):
             Generally speaking it has better coverage on build commands.
             With '--override-compiler' it use compiler wrapper, but does
             not run the analyzer till the build is finished.""")
-    parser_add_cdb(parser)
+    else:
+        parser_add_cdb(parser)
 
     parser.add_argument(
         '--status-bugs',
