@@ -12,35 +12,56 @@ import unittest
 
 class CompilerTest(unittest.TestCase):
 
+    def assert_c_compiler(self, command):
+        value = sut.split_compiler(command)
+        self.assertIsNotNone(value)
+        self.assertEqual(value[0], 'c')
+
+    def assert_cxx_compiler(self, command):
+        value = sut.split_compiler(command)
+        self.assertIsNotNone(value)
+        self.assertEqual(value[0], 'c++')
+
     def test_is_compiler_call(self):
-        self.assertIsNotNone(sut.split_compiler(['clang']))
-        self.assertIsNotNone(sut.split_compiler(['clang-3.6']))
-        self.assertIsNotNone(sut.split_compiler(['clang++']))
-        self.assertIsNotNone(sut.split_compiler(['clang++-3.5.1']))
-        self.assertIsNotNone(sut.split_compiler(['cc']))
-        self.assertIsNotNone(sut.split_compiler(['CC']))
-        self.assertIsNotNone(sut.split_compiler(['c++']))
-        self.assertIsNotNone(sut.split_compiler(['cxx']))
-        self.assertIsNotNone(sut.split_compiler(['gcc']))
-        self.assertIsNotNone(sut.split_compiler(['g++']))
-        self.assertIsNotNone(sut.split_compiler(['icc']))
-        self.assertIsNotNone(sut.split_compiler(['icpc']))
-        self.assertIsNotNone(sut.split_compiler(['xlc']))
-        self.assertIsNotNone(sut.split_compiler(['xlc++']))
-        self.assertIsNotNone(sut.split_compiler(['xlC']))
-        self.assertIsNotNone(sut.split_compiler(['gxlc']))
-        self.assertIsNotNone(sut.split_compiler(['gxlc++']))
-        self.assertIsNotNone(sut.split_compiler(['/usr/local/bin/gcc']))
-        self.assertIsNotNone(sut.split_compiler(['/usr/local/bin/g++']))
-        self.assertIsNotNone(sut.split_compiler(['/usr/local/bin/clang']))
+        self.assert_c_compiler(['cc'])
+        self.assert_cxx_compiler(['CC'])
+        self.assert_cxx_compiler(['c++'])
+        self.assert_cxx_compiler(['cxx'])
+        # clangs
+        self.assert_c_compiler(['clang'])
+        self.assert_c_compiler(['clang-3.6'])
+        self.assert_cxx_compiler(['clang++'])
+        self.assert_cxx_compiler(['clang++-3.5.1'])
+        # gcc family
+        self.assert_c_compiler(['gcc'])
+        self.assert_cxx_compiler(['g++'])
+        # intel compiler
+        self.assert_c_compiler(['icc'])
+        self.assert_cxx_compiler(['icpc'])
+        # aix compiler
+        self.assert_c_compiler(['xlc'])
+        self.assert_cxx_compiler(['xlc++'])
+        self.assert_cxx_compiler(['xlC'])
+        self.assert_c_compiler(['gxlc'])
+        self.assert_cxx_compiler(['gxlc++'])
+        # open mpi
+        self.assert_c_compiler(['mpicc'])
+        self.assert_cxx_compiler(['mpiCC'])
+        self.assert_cxx_compiler(['mpicxx'])
+        self.assert_cxx_compiler(['mpic++'])
+        # compilers with path
+        self.assert_c_compiler(['/usr/local/bin/gcc'])
+        self.assert_cxx_compiler(['/usr/local/bin/g++'])
+        self.assert_c_compiler(['/usr/local/bin/clang'])
         self.assertIsNotNone(
             sut.split_compiler(['armv7_neno-linux-gnueabi-g++']))
-        self.assertIsNotNone(sut.split_compiler(['distcc']))
-        self.assertIsNotNone(sut.split_compiler(['distcc', 'cc']))
-        self.assertIsNotNone(sut.split_compiler(['distcc', 'c++']))
-        self.assertIsNotNone(sut.split_compiler(['ccache']))
-        self.assertIsNotNone(sut.split_compiler(['ccache', 'cc']))
-        self.assertIsNotNone(sut.split_compiler(['ccache', 'c++']))
+        # compiler wrappers
+        self.assert_c_compiler(['distcc'])
+        self.assert_c_compiler(['distcc', 'cc'])
+        self.assert_cxx_compiler(['distcc', 'c++'])
+        self.assert_c_compiler(['ccache'])
+        self.assert_c_compiler(['ccache', 'cc'])
+        self.assert_cxx_compiler(['ccache', 'c++'])
 
         self.assertIsNone(sut.split_compiler([]))
         self.assertIsNone(sut.split_compiler(['']))

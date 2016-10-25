@@ -49,22 +49,23 @@ IGNORED_FLAGS = {
 }
 
 # Known C/C++ compiler wrapper name patterns
-COMPILER_WRAPPER_PATTERN = re.compile(r'^(distcc|ccache)$')
+COMPILER_PATTERN_WRAPPER = re.compile(r'^(distcc|ccache)$')
 
-# Known C/C++ compiler executable name patterns
-COMPILER_PATTERNS = frozenset([
-    re.compile(r'^(cc|c\+\+|cxx|CC)$'),
-    re.compile(r'^([^-]*-)*[mg](cc|\+\+)(-\d+(\.\d+){0,2})?$'),
-    re.compile(r'^([^-]*-)*clang(\+\+)?(-\d+(\.\d+){0,2})?$'),
-    re.compile(r'^llvm-g(cc|\+\+)$'),
-    re.compile(r'^i(cc|cpc)$'),
-    re.compile(r'^(g|)xl(c|C|c\+\+)$'),
+# Known C compiler executable name patterns
+COMPILER_PATTERNS_CC = frozenset([
+    re.compile(r'^(|i|mpi)cc$'),
+    re.compile(r'^([^-]*-)*[mg]cc(-\d+(\.\d+){0,2})?$'),
+    re.compile(r'^([^-]*-)*clang(-\d+(\.\d+){0,2})?$'),
+    re.compile(r'^(g|)xlc$'),
 ])
 
 # Known C++ compiler executable name patterns
-COMPILER_CPP_PATTERNS = frozenset([
-    re.compile(r'^(.+)(\+\+)(-.+|)$'),  # C++ compilers usually ends with '++'
-    re.compile(r'^(icpc|xlC|cxx|CC)$'),
+COMPILER_PATTERNS_CXX = frozenset([
+    re.compile(r'^(c\+\+|cxx|CC)$'),
+    re.compile(r'^([^-]*-)*[mg]\+\+(-\d+(\.\d+){0,2})?$'),
+    re.compile(r'^([^-]*-)*clang\+\+(-\d+(\.\d+){0,2})?$'),
+    re.compile(r'^(icpc|mpiCC|mpicxx|mpic\+\+)$'),
+    re.compile(r'^(g|)xl(C|c\+\+)$'),
 ])
 
 
@@ -153,15 +154,14 @@ def split_compiler(command):
                     (compiler_language, rest of the command) tuple if the
                     command is a compilation. """
 
-    def is_wrapper(candidate):
-        return True if COMPILER_WRAPPER_PATTERN.match(candidate) else False
+    def is_wrapper(cmd):
+        return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False
 
-    def is_compiler(candidate):
-        return any(pattern.match(candidate) for pattern in COMPILER_PATTERNS)
+    def is_c_compiler(cmd):
+        return any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
 
-    def is_cplusplus(candidate):
-        return any(pattern.match(candidate)
-                   for pattern in COMPILER_CPP_PATTERNS)
+    def is_cxx_compiler(cmd):
+        return any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CXX)
 
     if command:  # not empty list will allow to index '0' and '1:'
         executable = os.path.basename(command[0])
@@ -173,7 +173,8 @@ def split_compiler(command):
             result = split_compiler(parameters)
             return ('c', parameters) if result is None else result
         # and 'compiler' 'parameters' is valid.
-        elif is_compiler(executable):
-            language = 'c++' if is_cplusplus(executable) else 'c'
-            return language, parameters
+        elif is_c_compiler(executable):
+            return 'c', parameters
+        elif is_cxx_compiler(executable):
+            return 'c++', parameters
     return None
