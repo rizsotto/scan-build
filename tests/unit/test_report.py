@@ -198,20 +198,5 @@ class GetPrefixFromCompilationDatabaseTest(unittest.TestCase):
             sut.commonprefix(['z:\\tmp\\a.c']), 'z:\\tmp')
 
 
-class ReportDirectoryTest(unittest.TestCase):
-
-    # Test that successive report directory names ascend in lexicographic
-    # order. This is required so that report directories from two runs of
-    # scan-build can be easily matched up to compare results.
-    @unittest.skipIf(IS_WINDOWS, 'windows has low resolution timer')
-    def test_directory_name_comparison(self):
-        with libear.temporary_directory() as tmp_dir, \
-             sut.report_directory(tmp_dir, False) as report_dir1, \
-             sut.report_directory(tmp_dir, False) as report_dir2, \
-             sut.report_directory(tmp_dir, False) as report_dir3:
-            self.assertLess(report_dir1, report_dir2)
-            self.assertLess(report_dir2, report_dir3)
-
-
 if __name__ == '__main__':
     unittest.main()

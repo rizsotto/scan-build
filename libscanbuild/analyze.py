@@ -21,11 +21,14 @@ import tempfile
 import functools
 import subprocess
 import platform
+import contextlib
+import datetime
+
 from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command
 from libscanbuild.arguments import scan, analyze
 from libscanbuild.intercept import capture
-from libscanbuild.report import report_directory, document
+from libscanbuild.report import document
 from libscanbuild.compilation import split_command, classify_source, \
     split_compiler
 from libscanbuild.clang import get_version, get_arguments
@@ -40,11 +43,11 @@ ENVIRONMENT_KEY = 'ANALYZE_BUILD'
 
 @command_entry_point
 def scan_build():
+    """ Entry point for scan-build command. """
 
     args = scan()
-    with report_directory(args.output, args.keep_empty) as target_dir:
-        # target_dir is the new output
-        args.output = target_dir
+    # will re-assign the report directory as new output
+    with report_directory(args.output, args.keep_empty) as args.output:
         # run against a build command. there are cases, when analyzer run
         # is not required. but we need to set up everything for the
         # wrappers, because 'configure' needs to capture the CC/CXX values
@@ -60,7 +63,7 @@ def scan_build():
             environment = setup_environment(args)
             exit_code = run_build(args.build, env=environment)
         # cover report generation and bug counting
-        number_of_bugs = document(args, target_dir)
+        number_of_bugs = document(args)
         # do cleanup temporary files
         if args.intercept_first:
             os.unlink(args.cdb)
@@ -70,15 +73,15 @@ def scan_build():
 
 @command_entry_point
 def analyze_build():
+    """ Entry point for analyze-build command. """
 
     args = analyze()
-    with report_directory(args.output, args.keep_empty) as target_dir:
-        # target_dir is the new output
-        args.output = target_dir
+    # will re-assign the report directory as new output
+    with report_directory(args.output, args.keep_empty) as args.output:
         # run the analyzer against a compilation db
         run_analyzer_against_cdb(args)
         # cover report generation and bug counting
-        number_of_bugs = document(args, target_dir)
+        number_of_bugs = document(args)
         # set exit status as it was requested
         return number_of_bugs if args.status_bugs else 0
 
@@ -221,6 +224,39 @@ def analyze_build_wrapper(**kwargs):
         # display error message from the static analyzer
         if current and 'error_output' in current:
             logging.info('\n%s', current['error_output'])
+
+
+@contextlib.contextmanager
+def report_directory(hint, keep):
+    """ Responsible for the report directory.
+
+    hint -- could specify the parent directory of the output directory.
+    keep -- a boolean value to keep or delete the empty report directory. """
+
+    stamp_format = 'scan-build-%Y-%m-%d-%H-%M-%S-%f-'
+    stamp = datetime.datetime.now().strftime(stamp_format)
+    parent_dir = os.path.abspath(hint)
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
+    name = tempfile.mkdtemp(prefix=stamp, dir=parent_dir)
+
+    logging.info('Report directory created: %s', name)
+
+    try:
+        yield name
+    finally:
+        if os.listdir(name):
+            msg = "Run 'scan-view %s' to examine bug reports."
+            keep = True
+        else:
+            if keep:
+                msg = "Report directory '%s' contains no report, but kept."
+            else:
+                msg = "Removing directory '%s' because it contains no report."
+        logging.warning(msg, name)
+
+        if not keep:
+            os.rmdir(name)
 
 
 def require(required):

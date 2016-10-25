@@ -13,62 +13,27 @@ import os
 import os.path
 import sys
 import shutil
-import tempfile
 import itertools
 import plistlib
 import glob
 import json
 import logging
-import contextlib
 import datetime
 from libscanbuild import duplicate_check
 from libscanbuild.clang import get_version
 
-__all__ = ['report_directory', 'document']
+__all__ = ['document']
 
 
-@contextlib.contextmanager
-def report_directory(hint, keep):
-    """ Responsible for the report directory.
-
-    hint -- could specify the parent directory of the output directory.
-    keep -- a boolean value to keep or delete the empty report directory. """
-
-    stamp_format = 'scan-build-%Y-%m-%d-%H-%M-%S-%f-'
-    stamp = datetime.datetime.now().strftime(stamp_format)
-    parent_dir = os.path.abspath(hint)
-    if not os.path.exists(parent_dir):
-        os.makedirs(parent_dir)
-    name = tempfile.mkdtemp(prefix=stamp, dir=parent_dir)
-
-    logging.info('Report directory created: %s', name)
-
-    try:
-        yield name
-    finally:
-        if os.listdir(name):
-            msg = "Run 'scan-view %s' to examine bug reports."
-            keep = True
-        else:
-            if keep:
-                msg = "Report directory '%s' contains no report, but kept."
-            else:
-                msg = "Removing directory '%s' because it contains no report."
-        logging.warning(msg, name)
-
-        if not keep:
-            os.rmdir(name)
-
-
-def document(args, output_dir):
+def document(args):
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html_reports_available = args.output_format in {'html', 'plist-html'}
 
     logging.debug('count crashes and bugs')
-    crash_count = sum(1 for _ in read_crashes(output_dir))
+    crash_count = sum(1 for _ in read_crashes(args.output))
     bug_counter = create_counters()
-    for bug in read_bugs(output_dir, html_reports_available):
+    for bug in read_bugs(args.output, html_reports_available):
         bug_counter(bug)
     result = crash_count + bug_counter.total
 
@@ -82,22 +47,22 @@ def document(args, output_dir):
         fragments = []
         try:
             if bug_counter.total:
-                fragments.append(bug_summary(output_dir, bug_counter))
-                fragments.append(bug_report(output_dir, prefix))
+                fragments.append(bug_summary(args.output, bug_counter))
+                fragments.append(bug_report(args.output, prefix))
             if crash_count:
-                fragments.append(crash_report(output_dir, prefix))
-            assemble_cover(output_dir, prefix, args, fragments)
+                fragments.append(crash_report(args.output, prefix))
+            assemble_cover(args, prefix, fragments)
             # copy additional files to the report
-            copy_resource_files(output_dir)
+            copy_resource_files(args.output)
             if use_cdb:
-                shutil.copy(args.cdb, output_dir)
+                shutil.copy(args.cdb, args.output)
         finally:
             for fragment in fragments:
                 os.remove(fragment)
     return result
 
 
-def assemble_cover(output_dir, prefix, args, fragments):
+def assemble_cover(args, prefix, fragments):
     """ Put together the fragments into a final report. """
 
     import getpass
@@ -106,7 +71,7 @@ def assemble_cover(output_dir, prefix, args, fragments):
     if args.html_title is None:
         args.html_title = os.path.basename(prefix) + ' - analyzer results'
 
-    with open(os.path.join(output_dir, 'index.html'), 'w') as handle:
+    with open(os.path.join(args.output, 'index.html'), 'w') as handle:
         indent = 0
         handle.write(reindent("""
         |<!DOCTYPE html>
