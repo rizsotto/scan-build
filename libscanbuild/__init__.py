@@ -83,9 +83,9 @@ def run_command(command, cwd=None):
         output = subprocess.check_output(command,
                                          cwd=directory,
                                          stderr=subprocess.STDOUT)
-        return decode_when_needed(output)
+        return decode_when_needed(output).splitlines()
     except subprocess.CalledProcessError as ex:
-        ex.output = decode_when_needed(ex.output)
+        ex.output = decode_when_needed(ex.output).splitlines()
         raise ex
 
 

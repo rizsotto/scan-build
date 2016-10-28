@@ -172,8 +172,7 @@ def run_analyzer_against_cdb(args):
         # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
         for current in pool.imap_unordered(run, entries):
-            if current and 'error_output' in current:
-                logging.info('\n%s', current['error_output'])
+            logging_analyzer_output(current)
         pool.close()
         pool.join()
 
@@ -221,9 +220,7 @@ def analyze_build_wrapper(**kwargs):
     # call static analyzer against the compilation
     for source in compilation.files:
         current = run(dict(parameters, file=source))
-        # display error message from the static analyzer
-        if current and 'error_output' in current:
-            logging.info('\n%s', current['error_output'])
+        logging_analyzer_output(current)
 
 
 @contextlib.contextmanager
@@ -313,6 +310,14 @@ def run(opts):
     except Exception:
         logging.error("Problem occured during analyzis.", exc_info=1)
         return None
+
+
+def logging_analyzer_output(opts):
+    """ Display error message from analyzer. """
+
+    if opts and 'error_output' in opts:
+        for line in opts['error_output']:
+            logging.info(line)
 
 
 @require(['clang', 'directory', 'flags', 'file', 'output_dir', 'language',
