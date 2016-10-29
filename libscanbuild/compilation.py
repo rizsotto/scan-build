@@ -69,6 +69,31 @@ COMPILER_PATTERNS_CXX = frozenset([
 ])
 
 
+def entries(command, directory, cc, cxx):
+    """ Generator method for compilation entries. From a single compiler
+    calls it can generate zero or more entries. """
+
+    result = collections.namedtuple('CompilationDbEntry',
+                                    ['directory', 'arguments', 'source'])
+    result.directory = os.path.normpath(directory)
+
+    def abspath(cwd, name):
+        """ Create normalized absolute path from input filename. """
+        fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
+        return os.path.normpath(fullname)
+
+    # TODO: pass cc and cxx for split command
+    compilation = split_command(command)
+    if compilation:
+        for source in compilation.files:
+            # TODO: check source file availability
+            # TODO: use relative path for source file
+            compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
+            result.source = abspath(result.directory, source)
+            result.arguments = [compiler, '-c'] + compilation.flags + [source]
+            yield result
+
+
 def split_command(command):
     """ Returns a value when the command is a compilation, None otherwise.
 

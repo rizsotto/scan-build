@@ -32,7 +32,7 @@ import subprocess
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, duplicate_check
-from libscanbuild.compilation import split_command
+from libscanbuild.compilation import entries
 from libscanbuild.arguments import intercept
 
 if sys.platform in {'win32', 'cygwin'}:
@@ -74,7 +74,7 @@ def capture(args):
         # create entries from the current run
         current = itertools.chain.from_iterable(
             # creates a sequence of entry generators from an exec,
-            format_entry(command) for command in commands)
+            format_entry(command, args.cc, args.cxx) for command in commands)
         # read entries from previous run
         if 'append' in args and args.append and os.path.isfile(args.cdb):
             with open(args.cdb) as handle:
@@ -214,26 +214,16 @@ def parse_exec_trace(filename):
             }
 
 
-def format_entry(exec_trace):
+def format_entry(trace, cc, cxx):
     """ Generate the desired fields for compilation database entries. """
 
-    def abspath(cwd, name):
-        """ Create normalized absolute path from input filename. """
-        fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
-        return os.path.normpath(fullname)
-
-    logging.debug('format this command: %s', exec_trace['command'])
-    compilation = split_command(exec_trace['command'])
-    if compilation:
-        for source in compilation.files:
-            compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
-            command = [compiler, '-c'] + compilation.flags + [source]
-            logging.debug('formatted as: %s', encode(command))
-            yield {
-                'directory': exec_trace['directory'],
-                'command': encode(command),
-                'file': abspath(exec_trace['directory'], source)
-            }
+    logging.debug('format this command: %s', trace['command'])
+    for entry in entries(trace['command'], trace['directory'], cc, cxx):
+        yield {
+            'directory': entry.directory,
+            'command': encode(entry.arguments),
+            'file': entry.source
+        }
 
 
 def is_preload_disabled(platform):

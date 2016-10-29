@@ -29,7 +29,7 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import scan, analyze
 from libscanbuild.intercept import capture
 from libscanbuild.report import document
-from libscanbuild.compilation import split_command, classify_source
+from libscanbuild.compilation import entries, split_command, classify_source
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
 
@@ -205,21 +205,14 @@ def analyze_build_wrapper(**kwargs):
     # don't run analyzer when compilation fails. or when it's not requested.
     if kwargs['result'] or not os.getenv(ENVIRONMENT_KEY):
         return
-    # don't run analyzer when the command is not a compilation
-    # (can be preprocessing or a linking only execution of the compiler)
-    compilation = split_command(kwargs['command'])
-    if compilation is None:
-        return
     # collect the needed parameters from environment
     parameters = json.loads(os.environ[ENVIRONMENT_KEY])
-    parameters.update({
-        'directory': os.getcwd(),
-        'command': kwargs['command']
-    })
-    # call static analyzer against the compilation
-    for source in compilation.files:
-        current = run(dict(parameters, file=source))
-        logging_analyzer_output(current)
+    # don't run analyzer when the command is not a compilation
+    cwd = os.getcwd()
+    for entry in entries(kwargs['command'], cwd, kwargs['cc'], kwargs['cxx']):
+        current = dict(parameters, directory=entry.directory,
+                       file=entry.source, command=entry.arguments)
+        logging_analyzer_output(run(current))
 
 
 @contextlib.contextmanager

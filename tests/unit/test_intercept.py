@@ -49,7 +49,7 @@ class InterceptUtilTest(unittest.TestCase):
     def test_format_entry_filters_action(self):
         def test(command):
             trace = {'command': command, 'directory': '/opt/src/project'}
-            return list(sut.format_entry(trace))
+            return list(sut.format_entry(trace, 'cc', 'c++'))
 
         self.assertTrue(test(['cc', '-c', 'file.c', '-o', 'file.o']))
         self.assertFalse(test(['cc', '-E', 'file.c']))
@@ -62,7 +62,7 @@ class InterceptUtilTest(unittest.TestCase):
 
         def test(filename):
             trace = {'directory': current, 'command': ['cc', '-c', filename]}
-            return list(sut.format_entry(trace))[0]['file']
+            return list(sut.format_entry(trace, 'cc', 'c++'))[0]['file']
 
         self.assertEqual(os.path.join(current, 'file.c'), test('file.c'))
         self.assertEqual(os.path.join(current, 'file.c'), test('./file.c'))
