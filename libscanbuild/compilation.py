@@ -9,7 +9,7 @@ import re
 import os
 import collections
 
-__all__ = ['split_command', 'split_compiler', 'classify_source']
+__all__ = ['split_command', 'classify_source']
 
 # Ignored compiler options map for compilation database creation.
 # The map is used in `split_command` method. (Which does ignore and classify

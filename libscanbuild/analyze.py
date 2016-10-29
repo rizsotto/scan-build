@@ -29,8 +29,7 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import scan, analyze
 from libscanbuild.intercept import capture
 from libscanbuild.report import document
-from libscanbuild.compilation import split_command, classify_source, \
-    split_compiler
+from libscanbuild.compilation import split_command, classify_source
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
 
@@ -215,7 +214,7 @@ def analyze_build_wrapper(**kwargs):
     parameters = json.loads(os.environ[ENVIRONMENT_KEY])
     parameters.update({
         'directory': os.getcwd(),
-        'command': [kwargs['compiler'], '-c'] + compilation.flags
+        'command': kwargs['command']
     })
     # call static analyzer against the compilation
     for source in compilation.files:
@@ -522,19 +521,20 @@ def classify_parameters(command):
     """ Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing. """
 
-    # this should never be None
-    compiler, arguments = split_compiler(command)
+    # split should never be None
+    # split.files should have only one entry
+    split = split_command(command)
 
     # the result of the method
     result = {
         'flags': [],  # the filtered compiler flags
         'arch_list': [],  # list of architecture flags
         'language': None,  # compilation language, None, if not specified
-        'compiler': compiler  # 'c' or 'c++'
+        'compiler': split.compiler  # 'c' or 'c++'
     }
 
     # iterate on the compile options
-    args = iter(arguments)
+    args = iter(split.flags)
     for arg in args:
         # take arch flags into a separate basket
         if arg == '-arch':
@@ -542,9 +542,6 @@ def classify_parameters(command):
         # take language
         elif arg == '-x':
             result['language'] = next(args)
-        # parameters which looks source file are not flags
-        elif re.match(r'^[^-].+', arg) and classify_source(arg):
-            pass
         # ignore some flags
         elif arg in IGNORED_FLAGS:
             count = IGNORED_FLAGS[arg]
