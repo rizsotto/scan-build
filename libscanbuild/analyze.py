@@ -258,9 +258,7 @@ def require(required):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
             for key in required:
-                if key not in args[0]:
-                    raise KeyError('{0} not passed to {1}'.format(
-                        key, function.__name__))
+                assert(key in args[0])
 
             return function(*args, **kwargs)
 
@@ -514,9 +512,9 @@ def classify_parameters(command):
     """ Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing. """
 
-    # split should never be None
-    # split.files should have only one entry
     split = split_command(command)
+    assert(split is not None)
+    assert(len(split.files) == 1)
 
     # the result of the method
     result = {

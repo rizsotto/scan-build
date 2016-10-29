@@ -310,10 +310,10 @@ class RequireDecoratorTest(unittest.TestCase):
         self.assertEqual(method_without_expecteds({'that': 3}), 0)
 
     def test_method_with_expecteds(self):
-        self.assertRaises(KeyError, method_with_expecteds, dict())
-        self.assertRaises(KeyError, method_with_expecteds, {})
-        self.assertRaises(KeyError, method_with_expecteds, {'this': 2})
-        self.assertRaises(KeyError, method_with_expecteds, {'that': 3})
+        self.assertRaises(AssertionError, method_with_expecteds, dict())
+        self.assertRaises(AssertionError, method_with_expecteds, {})
+        self.assertRaises(AssertionError, method_with_expecteds, {'this': 2})
+        self.assertRaises(AssertionError, method_with_expecteds, {'that': 3})
         self.assertEqual(method_with_expecteds({'this': 0, 'that': 3}), 0)
 
     def test_method_exception_not_caught(self):
