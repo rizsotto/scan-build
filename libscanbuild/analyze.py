@@ -151,6 +151,9 @@ def analyze_parameters(args):
         return prefix_with('-Xclang', result)
 
     return {
+        # analyze-build has no --use-cc or --use-c++ parameters
+        'cc': args.cc if 'cc' in args else '',
+        'cxx': args.cxx if 'cxx' in args else '',
         'clang': args.clang,
         'output_dir': args.output,
         'output_format': args.output_format,
@@ -167,10 +170,10 @@ def run_analyzer_against_cdb(args):
     logging.debug('run analyzer against compilation database')
     with open(args.cdb, 'r') as handle:
         consts = analyze_parameters(args)
-        entries = (dict(cmd, **consts) for cmd in json.load(handle))
+        compilations = (dict(cmd, **consts) for cmd in json.load(handle))
         # when verbose output requested execute sequentially
         pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
-        for current in pool.imap_unordered(run, entries):
+        for current in pool.imap_unordered(run, compilations):
             logging_analyzer_output(current)
         pool.close()
         pool.join()
@@ -207,9 +210,11 @@ def analyze_build_wrapper(**kwargs):
         return
     # collect the needed parameters from environment
     parameters = json.loads(os.environ[ENVIRONMENT_KEY])
-    # don't run analyzer when the command is not a compilation
-    cwd = os.getcwd()
-    for entry in entries(kwargs['command'], cwd, kwargs['cc'], kwargs['cxx']):
+    cc = parameters['cc']
+    cxx = parameters['cxx']
+    # don't run analyzer when the command is not a compilation.
+    # (filtering non compilations is done by the entries generator.)
+    for entry in entries(kwargs['command'], os.getcwd(), cc, cxx):
         current = dict(parameters, directory=entry.directory,
                        file=entry.source, command=entry.arguments)
         logging_analyzer_output(run(current))
@@ -270,6 +275,8 @@ def require(required):
 @require(['command',  # entry from compilation database
           'directory',  # entry from compilation database
           'file',  # entry from compilation database
+          'cc',  # C compiler executable name (and path)
+          'cxx',  # C++ compiler executable name (and path)
           'clang',  # clang executable name (and path)
           'direct_args',  # arguments from command line
           'excludes',  # list of directories
@@ -294,7 +301,9 @@ def run(opts):
         command = opts.pop('command')
         command = command if isinstance(command, list) else decode(command)
         logging.debug("Run analyzer against '%s'", command)
-        opts.update(classify_parameters(command))
+        cc = opts.pop('cc')
+        cxx = opts.pop('cxx')
+        opts.update(classify_parameters(command, cc, cxx))
 
         return exclude(opts)
     except Exception:
@@ -508,11 +517,11 @@ IGNORED_FLAGS = {
 }
 
 
-def classify_parameters(command):
+def classify_parameters(command, cc, cxx):
     """ Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing. """
 
-    split = split_command(command)
+    split = split_command(command, cc, cxx)
     assert(split is not None)
     assert(len(split.files) == 1)
 

@@ -12,50 +12,62 @@ import unittest
 
 class CompilerTest(unittest.TestCase):
 
-    def assert_c_compiler(self, command):
-        value = sut.split_compiler(command)
+    def assert_c_compiler(self, command, cc='nope', cxx='nope++'):
+        value = sut.split_compiler(command, cc, cxx)
         self.assertIsNotNone(value)
         self.assertEqual(value[0], 'c')
 
-    def assert_cxx_compiler(self, command):
-        value = sut.split_compiler(command)
+    def assert_cxx_compiler(self, command, cc='nope', cxx='nope++'):
+        value = sut.split_compiler(command, cc, cxx)
         self.assertIsNotNone(value)
         self.assertEqual(value[0], 'c++')
 
-    def test_is_compiler_call(self):
+    def assert_not_compiler(self, command):
+        value = sut.split_compiler(command, 'nope', 'nope')
+        self.assertIsNone(value)
+
+    def test_compiler_call(self):
         self.assert_c_compiler(['cc'])
         self.assert_cxx_compiler(['CC'])
         self.assert_cxx_compiler(['c++'])
         self.assert_cxx_compiler(['cxx'])
-        # clangs
+
+    def test_clang_compiler_call(self):
         self.assert_c_compiler(['clang'])
         self.assert_c_compiler(['clang-3.6'])
         self.assert_cxx_compiler(['clang++'])
         self.assert_cxx_compiler(['clang++-3.5.1'])
-        # gcc family
+
+    def test_gcc_compiler_call(self):
         self.assert_c_compiler(['gcc'])
         self.assert_cxx_compiler(['g++'])
-        # intel compiler
+
+    def test_intel_compiler_call(self):
         self.assert_c_compiler(['icc'])
         self.assert_cxx_compiler(['icpc'])
-        # aix compiler
+
+    def test_aix_compiler_call(self):
         self.assert_c_compiler(['xlc'])
         self.assert_cxx_compiler(['xlc++'])
         self.assert_cxx_compiler(['xlC'])
         self.assert_c_compiler(['gxlc'])
         self.assert_cxx_compiler(['gxlc++'])
-        # open mpi
+
+    def test_open_mpi_compiler_call(self):
         self.assert_c_compiler(['mpicc'])
         self.assert_cxx_compiler(['mpiCC'])
         self.assert_cxx_compiler(['mpicxx'])
         self.assert_cxx_compiler(['mpic++'])
-        # compilers with path
+
+    def test_compiler_call_with_path(self):
         self.assert_c_compiler(['/usr/local/bin/gcc'])
         self.assert_cxx_compiler(['/usr/local/bin/g++'])
         self.assert_c_compiler(['/usr/local/bin/clang'])
-        self.assertIsNotNone(
-            sut.split_compiler(['armv7_neno-linux-gnueabi-g++']))
-        # compiler wrappers
+
+    def test_cross_compiler_call(self):
+        self.assert_cxx_compiler(['armv7_neno-linux-gnueabi-g++'])
+
+    def test_compiler_wrapper_call(self):
         self.assert_c_compiler(['distcc'])
         self.assert_c_compiler(['distcc', 'cc'])
         self.assert_cxx_compiler(['distcc', 'c++'])
@@ -63,96 +75,93 @@ class CompilerTest(unittest.TestCase):
         self.assert_c_compiler(['ccache', 'cc'])
         self.assert_cxx_compiler(['ccache', 'c++'])
 
-        self.assertIsNone(sut.split_compiler([]))
-        self.assertIsNone(sut.split_compiler(['']))
-        self.assertIsNone(sut.split_compiler(['ld']))
-        self.assertIsNone(sut.split_compiler(['as']))
-        self.assertIsNone(sut.split_compiler(['/usr/local/bin/compiler']))
+    def test_non_compiler_call(self):
+        self.assert_not_compiler([])
+        self.assert_not_compiler([''])
+        self.assert_not_compiler(['ld'])
+        self.assert_not_compiler(['as'])
+        self.assert_not_compiler(['/usr/local/bin/compiler'])
 
+    def test_specific_compiler_call(self):
+        self.assert_c_compiler(['nope'], cc='nope')
+        self.assert_c_compiler(['./nope'], cc='nope')
+        self.assert_c_compiler(['/path/nope'], cc='nope')
+        self.assert_cxx_compiler(['nope++'], cxx='nope++')
+        self.assert_cxx_compiler(['./nope++'], cxx='nope++')
+        self.assert_cxx_compiler(['/path/nope++'], cxx='nope++')
+
+    def assert_arguments_equal(self, expected, command):
+        value = sut.split_compiler(command, 'nope', 'nope')
+        self.assertIsNotNone(value)
+        self.assertEqual(expected, value[1])
+
+    def test_argument_split(self):
         arguments = ['-c', 'file.c']
-        self.assertEquals(('c', arguments),
-                          sut.split_compiler(['distcc'] + arguments))
-        self.assertEquals(('c', arguments),
-                          sut.split_compiler(['distcc', 'cc'] + arguments))
-        self.assertEquals(('c++', arguments),
-                          sut.split_compiler(['distcc', 'c++'] + arguments))
-        self.assertEquals(('c', arguments),
-                          sut.split_compiler(['ccache'] + arguments))
-        self.assertEquals(('c', arguments),
-                          sut.split_compiler(['ccache', 'cc'] + arguments))
-        self.assertEquals(('c++', arguments),
-                          sut.split_compiler(['ccache', 'c++'] + arguments))
+        self.assert_arguments_equal(arguments, ['distcc'] + arguments)
+        self.assert_arguments_equal(arguments, ['distcc', 'cc'] + arguments)
+        self.assert_arguments_equal(arguments, ['distcc', 'c++'] + arguments)
+        self.assert_arguments_equal(arguments, ['ccache'] + arguments)
+        self.assert_arguments_equal(arguments, ['ccache', 'cc'] + arguments)
+        self.assert_arguments_equal(arguments, ['ccache', 'c++'] + arguments)
 
 
 class SplitTest(unittest.TestCase):
 
-    def test_detect_cxx_from_compiler_name(self):
-        def test(cmd):
-            result = sut.split_command([cmd, '-c', 'src.c'])
-            self.assertIsNotNone(result, "wrong input for test")
-            return result.compiler == 'c++'
+    def assert_compilation(self, command):
+        result = sut.split_command(command, 'nope', 'nope')
+        self.assertIsNotNone(result)
 
-        self.assertFalse(test('cc'))
-        self.assertFalse(test('gcc'))
-        self.assertFalse(test('icc'))
-        self.assertFalse(test('xlc'))
-        self.assertFalse(test('gxlc'))
-        self.assertFalse(test('clang'))
-
-        self.assertTrue(test('c++'))
-        self.assertTrue(test('g++'))
-        self.assertTrue(test('g++-5.3.1'))
-        self.assertTrue(test('clang++'))
-        self.assertTrue(test('clang++-3.7.1'))
-        self.assertTrue(test('icpc'))
-        self.assertTrue(test('xlC'))
-        self.assertTrue(test('xlc++'))
-        self.assertTrue(test('gxlc++'))
-        self.assertTrue(test('cxx'))
-        self.assertTrue(test('CC'))
-        self.assertTrue(test('armv7_neno-linux-gnueabi-g++'))
+    def assert_non_compilation(self, command):
+        result = sut.split_command(command, 'nope', 'nope')
+        self.assertIsNone(result)
 
     def test_action(self):
-        self.assertIsNotNone(sut.split_command(['clang', 'source.c']))
-        self.assertIsNotNone(sut.split_command(['clang', '-c', 'source.c']))
-        self.assertIsNotNone(sut.split_command(['clang', '-c', 'source.c',
-                                                '-MF', 'a.d']))
+        self.assert_compilation(['clang', 'source.c'])
+        self.assert_compilation(['clang', '-c', 'source.c'])
+        self.assert_compilation(['clang', '-c', 'source.c', '-MF', 'a.d'])
 
-        self.assertIsNone(sut.split_command(['clang', '-E', 'source.c']))
-        self.assertIsNone(sut.split_command(['clang', '-c', '-E', 'source.c']))
-        self.assertIsNone(sut.split_command(['clang', '-c', '-M', 'source.c']))
-        self.assertIsNone(
-            sut.split_command(['clang', '-c', '-MM', 'source.c']))
+        self.assert_non_compilation(['clang', '-E', 'source.c'])
+        self.assert_non_compilation(['clang', '-c', '-E', 'source.c'])
+        self.assert_non_compilation(['clang', '-c', '-M', 'source.c'])
+        self.assert_non_compilation(['clang', '-c', '-MM', 'source.c'])
+
+    def assert_source_files(self, expected, command):
+        result = sut.split_command(command, 'nope', 'nope')
+        self.assertIsNotNone(result)
+        self.assertEqual(expected, result.files)
 
     def test_source_file(self):
-        def test(expected, cmd):
-            self.assertEqual(expected, sut.split_command(cmd).files)
+        self.assert_source_files(['src.c'], ['clang', 'src.c'])
+        self.assert_source_files(['src.c'], ['clang', '-c', 'src.c'])
+        self.assert_source_files(['src.C'], ['clang', '-x', 'c', 'src.C'])
+        self.assert_source_files(['src.cpp'], ['clang++', '-c', 'src.cpp'])
+        self.assert_source_files(['s1.c', 's2.c'],
+                                 ['clang', '-c', 's1.c', 's2.c'])
+        self.assert_source_files(['s1.c', 's2.c'],
+                                 ['cc', 's1.c', 's2.c', '-ldp', '-o', 'a.out'])
+        self.assert_source_files(['src.c'],
+                                 ['clang', '-c', '-I', './include', 'src.c'])
+        self.assert_source_files(['src.c'],
+                                 ['clang', '-c', '-I', '/opt/inc', 'src.c'])
+        self.assert_source_files(['src.c'],
+                                 ['clang', '-c', '-Dconfig=file.c', 'src.c'])
 
-        test(['src.c'], ['clang', 'src.c'])
-        test(['src.c'], ['clang', '-c', 'src.c'])
-        test(['src.C'], ['clang', '-x', 'c', 'src.C'])
-        test(['src.cpp'], ['clang++', '-c', 'src.cpp'])
-        test(['s1.c', 's2.c'], ['clang', '-c', 's1.c', 's2.c'])
-        test(['s1.c', 's2.c'], ['cc', 's1.c', 's2.c', '-ldep', '-o', 'a.out'])
-        test(['src.c'], ['clang', '-c', '-I', './include', 'src.c'])
-        test(['src.c'], ['clang', '-c', '-I', '/opt/me/include', 'src.c'])
-        test(['src.c'], ['clang', '-c', '-D', 'config=file.c', 'src.c'])
+        self.assert_non_compilation(['cc', 'this.o', 'that.o', '-o', 'a.out'])
+        self.assert_non_compilation(['cc', 'this.o', '-lthat', '-o', 'a.out'])
 
-        self.assertIsNone(
-            sut.split_command(['cc', 'this.o', 'that.o', '-o', 'a.out']))
-        self.assertIsNone(
-            sut.split_command(['cc', 'this.o', '-lthat', '-o', 'a.out']))
+    def assert_flags(self, expected, flags):
+        command = ['clang', '-c', 'src.c'] + flags
+        result = sut.split_command(command, 'nope', 'nope')
+        self.assertIsNotNone(result)
+        self.assertEqual(expected, result.flags)
 
     def test_filter_flags(self):
-        def test(expected, flags):
-            command = ['clang', '-c', 'src.c'] + flags
-            self.assertEqual(expected, sut.split_command(command).flags)
 
         def same(expected):
-            test(expected, expected)
+            self.assert_flags(expected, expected)
 
         def filtered(flags):
-            test([], flags)
+            self.assert_flags([], flags)
 
         same([])
         same(['-I', '/opt/me/include', '-DNDEBUG', '-ULIMITS'])
@@ -169,19 +178,39 @@ class SplitTest(unittest.TestCase):
 
 class SourceClassifierTest(unittest.TestCase):
 
+    def assert_non_source(self, filename):
+        result = sut.classify_source(filename)
+        self.assertIsNone(result)
+
+    def assert_c_source(self, filename, force):
+        result = sut.classify_source(filename, force)
+        self.assertEqual('c', result)
+
+    def assert_cxx_source(self, filename, force):
+        result = sut.classify_source(filename, force)
+        self.assertEqual('c++', result)
+
     def test_sources(self):
-        self.assertIsNone(sut.classify_source('file.o'))
-        self.assertIsNone(sut.classify_source('file.exe'))
-        self.assertIsNone(sut.classify_source('/path/file.o'))
-        self.assertIsNone(sut.classify_source('clang'))
+        self.assert_non_source('file.o')
+        self.assert_non_source('file.exe')
+        self.assert_non_source('/path/file.o')
+        self.assert_non_source('clang')
 
-        self.assertEqual('c', sut.classify_source('file.c'))
-        self.assertEqual('c', sut.classify_source('./file.c'))
-        self.assertEqual('c', sut.classify_source('/path/file.c'))
-        self.assertEqual('c++', sut.classify_source('file.c', False))
-        self.assertEqual('c++', sut.classify_source('./file.c', False))
-        self.assertEqual('c++', sut.classify_source('/path/file.c', False))
+        self.assert_c_source('file.c', True)
+        self.assert_cxx_source('file.c', False)
 
+        self.assert_cxx_source('file.cxx', True)
+        self.assert_cxx_source('file.cxx', False)
+        self.assert_cxx_source('file.c++', True)
+        self.assert_cxx_source('file.c++', False)
+        self.assert_cxx_source('file.cpp', True)
+        self.assert_cxx_source('file.cpp', False)
+
+        self.assert_c_source('/path/file.c', True)
+        self.assert_c_source('./path/file.c', True)
+        self.assert_c_source('../path/file.c', True)
+        self.assert_c_source('/file.c', True)
+        self.assert_c_source('./file.c', True)
 
 if __name__ == '__main__':
     unittest.main()

@@ -22,7 +22,7 @@ class FilteringFlagsTest(unittest.TestCase):
     def test_language_captured(self):
         def test(flags):
             cmd = ['clang', '-c', 'source.c'] + flags
-            opts = sut.classify_parameters(cmd)
+            opts = sut.classify_parameters(cmd, 'nope', 'nope')
             return opts['language']
 
         self.assertEqual(None, test([]))
@@ -32,7 +32,7 @@ class FilteringFlagsTest(unittest.TestCase):
     def test_arch(self):
         def test(flags):
             cmd = ['clang', '-c', 'source.c'] + flags
-            opts = sut.classify_parameters(cmd)
+            opts = sut.classify_parameters(cmd, 'nope', 'nope')
             return opts['arch_list']
 
         self.assertEqual([], test([]))
@@ -42,7 +42,7 @@ class FilteringFlagsTest(unittest.TestCase):
 
     def assertFlagsChanged(self, expected, flags):
         cmd = ['clang', '-c', 'source.c'] + flags
-        opts = sut.classify_parameters(cmd)
+        opts = sut.classify_parameters(cmd, 'nope', 'nope')
         self.assertEqual(expected, opts['flags'])
 
     def assertFlagsUnchanged(self, flags):

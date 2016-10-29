@@ -185,8 +185,7 @@ def wrapper_entry_point(function):
         logging.debug('compilation exit code: %d', result)
         # call the wrapped method and ignore it's return value ...
         try:
-            function(compiler=compiler, command=command, result=result,
-                     cc=parameters['cc'], cxx=parameters['cxx'])
+            function(compiler=compiler, command=command, result=result)
         except:
             logging.exception('Compiler wrapper failed complete.')
         # ... return the real compiler exit code instead.

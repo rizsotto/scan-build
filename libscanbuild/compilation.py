@@ -82,8 +82,7 @@ def entries(command, directory, cc, cxx):
         fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
         return os.path.normpath(fullname)
 
-    # TODO: pass cc and cxx for split command
-    compilation = split_command(command)
+    compilation = split_command(command, cc, cxx)
     if compilation:
         for source in compilation.files:
             # TODO: check source file availability
@@ -94,7 +93,7 @@ def entries(command, directory, cc, cxx):
             yield result
 
 
-def split_command(command):
+def split_command(command, cc, cxx):
     """ Returns a value when the command is a compilation, None otherwise.
 
     The value on success is a named tuple with the following attributes:
@@ -104,7 +103,7 @@ def split_command(command):
         compiler: string value of 'c' or 'c++' """
 
     # quit right now, if the program was not a C/C++ compiler
-    compiler_and_arguments = split_compiler(command)
+    compiler_and_arguments = split_compiler(command, cc, cxx)
     if compiler_and_arguments is None:
         return None
 
@@ -171,7 +170,7 @@ def classify_source(filename, c_compiler=True):
     return mapping.get(extension)
 
 
-def split_compiler(command):
+def split_compiler(command, cc, cxx):
     """ A predicate to decide the command is a compiler call or not.
 
     :param command: the command to classify
@@ -183,10 +182,12 @@ def split_compiler(command):
         return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False
 
     def is_c_compiler(cmd):
-        return any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
+        return True if os.path.basename(cc) == cmd else \
+            any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
 
     def is_cxx_compiler(cmd):
-        return any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CXX)
+        return True if os.path.basename(cxx) == cmd else \
+            any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CXX)
 
     if command:  # not empty list will allow to index '0' and '1:'
         executable = os.path.basename(command[0])
@@ -195,7 +196,7 @@ def split_compiler(command):
         # 'wrapper' 'compiler' 'parameters' are valid.
         # plus, a wrapper can wrap wrapper too.
         if is_wrapper(executable):
-            result = split_compiler(parameters)
+            result = split_compiler(parameters, cc, cxx)
             return ('c', parameters) if result is None else result
         # and 'compiler' 'parameters' is valid.
         elif is_c_compiler(executable):

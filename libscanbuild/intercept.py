@@ -254,10 +254,7 @@ def entry_hash(entry):
     filename = entry['file'][::-1]
     # For faster lookup in set directory is reverted
     directory = entry['directory'][::-1]
-    # On OS X the 'cc' and 'c++' compilers are wrappers for
-    # 'clang' therefore both call would be logged. To avoid
-    # this the hash does not contain the first word of the
-    # command.
-    command = ' '.join(decode(entry['command'])[1:])
+    # For faster hash method the command field is not escaped
+    command = ' '.join(entry['command'])
 
     return '<>'.join([filename, directory, command])
