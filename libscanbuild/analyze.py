@@ -29,7 +29,8 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import scan, analyze
 from libscanbuild.intercept import capture
 from libscanbuild.report import document
-from libscanbuild.compilation import entries, split_command, classify_source
+from libscanbuild.compilation import compilation, split_command, \
+    classify_source
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
 
@@ -151,9 +152,8 @@ def analyze_parameters(args):
         return prefix_with('-Xclang', result)
 
     return {
-        # analyze-build has no --use-cc or --use-c++ parameters
-        'cc': args.cc if 'cc' in args else '',
-        'cxx': args.cxx if 'cxx' in args else '',
+        'cc': args.cc,
+        'cxx': args.cxx,
         'clang': args.clang,
         'output_dir': args.output,
         'output_format': args.output_format,
@@ -213,8 +213,8 @@ def analyze_build_wrapper(**kwargs):
     cc = parameters['cc']
     cxx = parameters['cxx']
     # don't run analyzer when the command is not a compilation.
-    # (filtering non compilations is done by the entries generator.)
-    for entry in entries(kwargs['command'], os.getcwd(), cc, cxx):
+    # (filtering non compilations is done by the generator.)
+    for entry in compilation(kwargs['command'], os.getcwd(), cc, cxx):
         current = dict(parameters, directory=entry.directory,
                        file=entry.source, command=entry.arguments)
         logging_analyzer_output(run(current))

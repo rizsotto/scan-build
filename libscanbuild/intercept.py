@@ -26,19 +26,18 @@ import os.path
 import re
 import itertools
 import json
-import glob
 import logging
-import subprocess
+import collections
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, duplicate_check
-from libscanbuild.compilation import entries
+    wrapper_environment, run_build, run_command, duplicate_check
+from libscanbuild.compilation import compilation
 from libscanbuild.arguments import intercept
 
 if sys.platform in {'win32', 'cygwin'}:
-    from libscanbuild.wincmd import encode, decode
+    from libscanbuild.wincmd import encode
 else:
-    from libscanbuild.shell import encode, decode
+    from libscanbuild.shell import encode
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
 
@@ -48,7 +47,11 @@ US = chr(0x1f)
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
+TRACE_FILE_EXTENSION = '.cmd'  # same as in ear.c
 WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
+
+Execution = collections.namedtuple(
+    'Execution', ['pid', 'ppid', 'function', 'directory', 'command'])
 
 
 @command_entry_point
@@ -60,58 +63,84 @@ def intercept_build_main():
 
 
 def capture(args):
-    """ The entry point of build command interception. """
+    """ Implementation of compilation database generation.
 
-    def post_processing(commands):
-        """ To make a compilation database, it needs to filter out commands
-        which are not compiler calls. Needs to find the source file name
-        from the arguments. And do shell escaping on the command.
-
-        To support incremental builds, it is desired to read elements from
-        an existing compilation database from a previous run. These elements
-        shall be merged with the new elements. """
-
-        # create entries from the current run
-        current = itertools.chain.from_iterable(
-            # creates a sequence of entry generators from an exec,
-            format_entry(command, args.cc, args.cxx) for command in commands)
-        # read entries from previous run
-        if 'append' in args and args.append and os.path.isfile(args.cdb):
-            with open(args.cdb) as handle:
-                previous = iter(json.load(handle))
-        else:
-            previous = iter([])
-        # filter out duplicate entries from both
-        duplicate = duplicate_check(entry_hash)
-        return (entry
-                for entry in itertools.chain(previous, current)
-                if os.path.exists(entry['file']) and not duplicate(entry))
+    :param args:    the parsed and validated command line arguments
+    :return:        the exit status of build process. """
 
     with temporary_directory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
         environment = setup_environment(args, tmp_dir)
         exit_code = run_build(args.build, env=environment)
         # read the intercepted exec calls
-        exec_traces = itertools.chain.from_iterable(
-            parse_exec_trace(os.path.join(tmp_dir, filename))
-            for filename in sorted(glob.iglob(os.path.join(tmp_dir, '*.cmd'))))
+        exec_calls = exec_calls_from(exec_trace_files(tmp_dir))
         # do post processing only if that was requested
         if 'raw_entries' not in args or not args.raw_entries:
-            entries = post_processing(exec_traces)
+            entries = post_processing(exec_calls, args)
         else:
-            entries = exec_traces
-        # dump the compilation database
+            entries = exec_calls
+        # dump the final json file
         with open(args.cdb, 'w+') as handle:
+            # list constructor will exhaust the entries generator
             json.dump(list(entries), handle, sort_keys=True, indent=4)
         return exit_code
+
+
+def post_processing(exec_calls, args):
+    """ Build processes involves many command executions, but not all of
+    those are compilations. It involves filtering and formatting of entries.
+
+    :param exec_calls:  iterator of executions
+    :param args:        command line arguments
+    :return: stream of formatted compilation database entries """
+
+    # create entries from the current run
+    current = compilations(exec_calls, args.cc, args.cxx)
+    # To support incremental builds, it is desired to read elements from
+    # an existing compilation database from a previous run. These elements
+    # shall be merged with the new elements.
+    if 'append' in args and args.append and os.path.isfile(args.cdb):
+        with open(args.cdb) as handle:
+            previous = iter(json.load(handle))
+    else:
+        previous = iter([])
+    # filter out duplicate entries from both
+    duplicate = duplicate_check(entry_hash)
+    return (entry for entry in itertools.chain(previous, current)
+            if os.path.isfile(entry['file']) and not duplicate(entry))
+
+
+def compilations(exec_calls, cc, cxx):
+    """ Needs to filter out commands which are not compiler calls. And those
+    compiler calls shall be compilation (not pre-processing or linking) calls.
+    Plus needs to find the source file name from the arguments. And do some
+    formatting on the final entries.
+
+    :param exec_calls:  iterator of executions
+    :param cc:          user specified C compiler name
+    :param cxx:         user specified C++ compiler name
+    :return: stream of formatted compilation database entries """
+
+    for call in exec_calls:
+        for entry in compilation(call.command, call.directory, cc, cxx):
+            yield {
+                'directory': entry.directory,
+                'command': encode(entry.arguments),
+                'file': entry.source
+            }
 
 
 def setup_environment(args, destination):
     """ Sets up the environment for the build command.
 
-    It sets the required environment variables and execute the given command.
-    The exec calls will be logged by the 'libear' preloaded library or by the
-    'wrapper' programs. """
+    In order to capture the sub-commands (executed by the build process),
+    it needs to prepare the environment. It's either the compiler wrappers
+    shall be announce as compiler or the intercepting library shall be
+    announced for the dynamic linker.
+
+    :param args:        command line arguments
+    :param destination: directory path for the execution trace files
+    :return: a prepared set of environment variables. """
 
     use_wrapper = args.override_compiler or is_preload_disabled(sys.platform)
 
@@ -153,41 +182,43 @@ def intercept_build_wrapper(**kwargs):
         return
     # append the current execution info to the pid file
     try:
-        # because compiler wrappers might cause duplicate entries. (only the
-        # compiler name would differ in the command line.) we want to show
-        # the first one always. to do so, we use the PID as file name to
-        # collect the execution reports. (compiler wrappers usually don't
-        # fork new process, so PID will be the same.) and later when
-        # processing the reports, throw away the duplicated entries when the
-        # command is the same (but the compiler name is different).
-        target_file = os.path.join(target_dir, str(os.getpid()) + '.cmd')
+        target_file_name = str(os.getpid()) + TRACE_FILE_EXTENSION
+        target_file = os.path.join(target_dir, target_file_name)
         logging.debug('writing execution report to: %s', target_file)
-        write_exec_trace(target_file, pid=os.getpid(), ppid=os.getpid(),
-                         directory=os.getcwd(), command=kwargs['command'])
+        write_exec_trace(
+            target_file,
+            Execution(
+                pid=os.getpid(),
+                ppid=os.getpid(),
+                function='wrapper',
+                directory=os.getcwd(),
+                command=kwargs['command']))
     except IOError:
         logging.warning(message_prefix, 'io problem')
 
 
-def write_exec_trace(filename, **kwargs):
+def write_exec_trace(filename, entry):
     """ Write execution report file.
 
-    This method shall be sync with the execution report writer in `libear`
+    This method shall be sync with the execution report writer in interception
     library. The file format is very simple and easy to implement in both
     programming language (C and python). The main focus of the format to be
     human readable and easy to reconstruct the different types from it.
 
     Integers are converted to string. String lists are concatenated with
     special characters. Fields are separated with special characters. (Field
-    names are not given, the position identifies the field.) """
+    names are not given, the position identifies the field.)
+
+    :param filename:    path to the output execution trace file,
+    :param entry:       the Execution object to append to that file. """
 
     # create the payload first
-    command = US.join(kwargs['command']) + US
+    command = US.join(entry.command) + US
+    pid = str(entry.pid)
+    ppid = str(entry.ppid)
     content = RS.join([
-        str(kwargs['pid']),
-        str(kwargs['ppid']),
-        'wrapper',
-        kwargs['directory'],
-        command]) + GS
+        pid, ppid, entry.function, entry.directory, command
+    ]) + GS
     # write it into the target file
     with open(filename, 'ab') as handler:
         handler.write(content.encode('utf-8'))
@@ -197,33 +228,47 @@ def parse_exec_trace(filename):
     """ Parse execution report file.
 
     Given filename points to a file which contains the basic report
-    generated by the interception library or wrapper command. A single
-    report file _might_ contain multiple process creation info. """
+    generated by the interception library or compiler wrapper. A single
+    report file _might_ contain multiple process creation info.
+
+    :param filename: path to an execution trace file to read from,
+    :return: stream of Execution objects. """
 
     logging.debug('parse exec trace file: %s', filename)
     with open(filename, 'r') as handler:
         content = handler.read()
         for group in filter(bool, content.split(GS)):
             records = group.split(RS)
-            yield {
-                'pid': int(records[0]),
-                'ppid': int(records[1]),
-                'function': records[2],
-                'directory': records[3],
-                'command': records[4].split(US)[:-1]
-            }
+            yield Execution(
+                pid=int(records[0]),
+                ppid=int(records[1]),
+                function=records[2],
+                directory=records[3],
+                command=records[4].split(US)[:-1])
 
 
-def format_entry(trace, cc, cxx):
-    """ Generate the desired fields for compilation database entries. """
+def exec_trace_files(directory):
+    """ Generates exec trace file names.
 
-    logging.debug('format this command: %s', trace['command'])
-    for entry in entries(trace['command'], trace['directory'], cc, cxx):
-        yield {
-            'directory': entry.directory,
-            'command': encode(entry.arguments),
-            'file': entry.source
-        }
+    :param directory:   path to directory which contains the trace files.
+    :return:            a generator of file names (absolute path). """
+
+    for root, _, files in os.walk(directory):
+        for candidate in files:
+            __, extension = os.path.splitext(candidate)
+            if extension == TRACE_FILE_EXTENSION:
+                yield os.path.join(root, candidate)
+
+
+def exec_calls_from(trace_files):
+    """ Generator of execution objects from execution trace files.
+
+    :param trace_files: iterator of file names which can contains exec trace
+    :return:            a generator of parsed exec traces. """
+
+    for trace_file in trace_files:
+        for exec_call in parse_exec_trace(trace_file):
+            yield exec_call
 
 
 def is_preload_disabled(platform):
@@ -231,7 +276,10 @@ def is_preload_disabled(platform):
     so this should be detected. You can detect whether SIP is enabled on
     Darwin by checking whether (1) there is a binary called 'csrutil' in
     the path and, if so, (2) whether the output of executing 'csrutil status'
-    contains 'System Integrity Protection status: enabled'. """
+    contains 'System Integrity Protection status: enabled'.
+
+    :param platform: name of the platform (returned by sys.platform),
+    :return: True if library preload will fail by the dynamic linker. """
 
     if platform in WRAPPER_ONLY_PLATFORMS:
         return True
@@ -239,8 +287,7 @@ def is_preload_disabled(platform):
         command = ['csrutil', 'status']
         pattern = re.compile(r'System Integrity Protection status:\s+enabled')
         try:
-            lines = subprocess.check_output(command).decode('utf-8')
-            return any((pattern.match(line) for line in lines.splitlines()))
+            return any(pattern.match(line) for line in run_command(command))
         except:
             return False
     else:
@@ -248,7 +295,10 @@ def is_preload_disabled(platform):
 
 
 def entry_hash(entry):
-    """ Implement unique hash method for compilation database entries. """
+    """ Implement unique hash method for compilation database entries.
+
+    :param entry:   a compilation database entry,
+    :return:        a string value. """
 
     # For faster lookup in set filename is reverted
     filename = entry['file'][::-1]

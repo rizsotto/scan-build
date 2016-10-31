@@ -68,39 +68,47 @@ COMPILER_PATTERNS_CXX = frozenset([
     re.compile(r'^(g|)xl(C|c\+\+)$'),
 ])
 
+CompilationCommand = collections.namedtuple(
+    'CompilationCommand', ['compiler', 'flags', 'files'])
+CompilationDbEntry = collections.namedtuple(
+    'CompilationDbEntry', ['directory', 'arguments', 'source'])
 
-def entries(command, directory, cc, cxx):
-    """ Generator method for compilation entries. From a single compiler
-    calls it can generate zero or more entries. """
 
-    result = collections.namedtuple('CompilationDbEntry',
-                                    ['directory', 'arguments', 'source'])
-    result.directory = os.path.normpath(directory)
+def compilation(command, directory, cc, cxx):
+    """ Generator method for compilation database entries.
+    From a single compiler calls it can generate zero or more entries.
+
+    :param command:     executed command
+    :param directory:   working directory where the command was executed
+    :param cc:          user specified C compiler name
+    :param cxx:         user specified C++ compiler name
+    :return: stream of CompilationDbEntry objects """
 
     def abspath(cwd, name):
         """ Create normalized absolute path from input filename. """
+
         fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
         return os.path.normpath(fullname)
 
-    compilation = split_command(command, cc, cxx)
-    if compilation:
-        for source in compilation.files:
+    candidate = split_command(command, cc, cxx)
+    if candidate:
+        for source in candidate.files:
             # TODO: check source file availability
             # TODO: use relative path for source file
-            compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
-            result.source = abspath(result.directory, source)
-            result.arguments = [compiler, '-c'] + compilation.flags + [source]
-            yield result
+            compiler = 'c++' if candidate.compiler == 'c++' else 'cc'
+            yield CompilationDbEntry(
+                directory=os.path.normpath(directory),
+                source=abspath(directory, source),
+                arguments=[compiler, '-c'] + candidate.flags + [source])
 
 
 def split_command(command, cc, cxx):
     """ Returns a value when the command is a compilation, None otherwise.
 
-    The value on success is a named tuple with the following attributes:
-
-        files:    list of source files
-        flags:    list of compile options
-        compiler: string value of 'c' or 'c++' """
+    :param command:     the command to classify
+    :param cc:          user specified C compiler name
+    :param cxx:         user specified C++ compiler name
+    :return: stream of CompilationCommand objects """
 
     # quit right now, if the program was not a C/C++ compiler
     compiler_and_arguments = split_compiler(command, cc, cxx)
@@ -108,11 +116,8 @@ def split_command(command, cc, cxx):
         return None
 
     # the result of this method
-    result = collections.namedtuple('Compilation',
-                                    ['compiler', 'flags', 'files'])
-    result.compiler = compiler_and_arguments[0]
-    result.flags = []
-    result.files = []
+    result = CompilationCommand(
+        compiler=compiler_and_arguments[0], flags=[], files=[])
     # iterate on the compile options
     args = iter(compiler_and_arguments[1])
     for arg in args:
@@ -145,7 +150,7 @@ def classify_source(filename, c_compiler=True):
 
     :param filename:    the source file name
     :param c_compiler:  indicate that the compiler is a C compiler,
-    :return:            the language from file name extension. """
+    :return: the language from file name extension. """
 
     mapping = {
         '.c': 'c' if c_compiler else 'c++',
@@ -173,10 +178,11 @@ def classify_source(filename, c_compiler=True):
 def split_compiler(command, cc, cxx):
     """ A predicate to decide the command is a compiler call or not.
 
-    :param command: the command to classify
-    :return:        None if the command is not a compilation
-                    (compiler_language, rest of the command) tuple if the
-                    command is a compilation. """
+    :param command:     the command to classify
+    :param cc:          user specified C compiler name
+    :param cxx:         user specified C++ compiler name
+    :return: None if the command is not a compilation, or a tuple
+            (compiler_language, rest of the command) otherwise """
 
     def is_wrapper(cmd):
         return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False

@@ -18,57 +18,31 @@ IS_WINDOWS = os.getenv('windows')
 class InterceptUtilTest(unittest.TestCase):
 
     def test_read_write_exec_trace(self):
-        input_one = {
-            'pid': 123,
-            'ppid': 121,
-            'function': 'wrapper',  # it's a constant in the parse method
-            'directory': '/path/to/here',
-            'command': ['cc', '-c', 'this.c']
-        }
-        input_two = {
-            'pid': 124,
-            'ppid': 121,
-            'function': 'wrapper',  # it's a constant in the parse method
-            'directory': '/path/to/here',
-            'command': ['cc', '-c', 'that.c']
-        }
+        input_one = sut.Execution(
+            pid=123,
+            ppid=121,
+            function='something',
+            directory='/path/to/here',
+            command=['cc', '-c', 'this.c'])
+        input_two = sut.Execution(
+            pid=123,
+            ppid=121,
+            function='something',
+            directory='/path/to/here',
+            command=['cc', '-c', 'that.c'])
         # test with a single exec report
         with libear.temporary_directory() as tmp_dir:
             temp_file = os.path.join(tmp_dir, 'single_report.cmd')
-            sut.write_exec_trace(temp_file, **input_one)
+            sut.write_exec_trace(temp_file, input_one)
             result = sut.parse_exec_trace(temp_file)
             self.assertEqual([input_one], list(result))
         # test with multiple exec report
         with libear.temporary_directory() as tmp_dir:
             temp_file = os.path.join(tmp_dir, 'multiple_report.cmd')
-            sut.write_exec_trace(temp_file, **input_one)
-            sut.write_exec_trace(temp_file, **input_two)
+            sut.write_exec_trace(temp_file, input_one)
+            sut.write_exec_trace(temp_file, input_two)
             result = sut.parse_exec_trace(temp_file)
             self.assertEqual([input_one, input_two], list(result))
-
-    def test_format_entry_filters_action(self):
-        def test(command):
-            trace = {'command': command, 'directory': '/opt/src/project'}
-            return list(sut.format_entry(trace, 'cc', 'c++'))
-
-        self.assertTrue(test(['cc', '-c', 'file.c', '-o', 'file.o']))
-        self.assertFalse(test(['cc', '-E', 'file.c']))
-        self.assertFalse(test(['cc', '-MM', 'file.c']))
-        self.assertFalse(test(['cc', 'this.o', 'that.o', '-o', 'a.out']))
-
-    def test_format_entry_normalize_filename(self):
-        parent = os.path.join(os.sep, 'home', 'me')
-        current = os.path.join(parent, 'project')
-
-        def test(filename):
-            trace = {'directory': current, 'command': ['cc', '-c', filename]}
-            return list(sut.format_entry(trace, 'cc', 'c++'))[0]['file']
-
-        self.assertEqual(os.path.join(current, 'file.c'), test('file.c'))
-        self.assertEqual(os.path.join(current, 'file.c'), test('./file.c'))
-        self.assertEqual(os.path.join(parent, 'file.c'), test('../file.c'))
-        self.assertEqual(os.path.join(current, 'file.c'),
-                         test(os.path.join(current, 'file.c')))
 
     @unittest.skipIf(IS_WINDOWS, 'this code is not running on windows')
     def test_sip(self):

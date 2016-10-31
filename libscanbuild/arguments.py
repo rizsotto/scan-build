@@ -91,9 +91,19 @@ def analyze_validate(parser, args, from_build_command):
     # Make exclude directory list unique and absolute
     uniq_excludes = set(os.path.abspath(entry) for entry in args.excludes)
     args.excludes = list(uniq_excludes)
-    # add cdb parameter invisibly to make intercept.capture working
+
+    # because shared codes for all tools, some common used methods are
+    # expecting some argument to be present. so, instead of query the args
+    # object about the presence of the flag, we fake it here. to make those
+    # methods more readable. (it's an arguable choice, took it only for those
+    #  which have good default value.)
     if from_build_command:
+        # add cdb parameter invisibly to make intercept.capture working
         args.cdb = 'compile_commands.json'
+    else:
+        # same hack for compiler specification (does not matter what value)
+        args.cc = 'cc'
+        args.cxx = 'c++'
 
 
 def intercept_parser():
