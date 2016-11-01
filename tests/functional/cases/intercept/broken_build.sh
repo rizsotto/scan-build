@@ -33,12 +33,12 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-"\$CC" -c -o ./src/broken.o -Dver=1 ./src/broken.c;
-"\$CXX" -c -o ./src/broken.o -Dver=2 ./src/broken.c;
+"\$CC" -c -o src/broken.o -Dver=1 src/broken.c;
+"\$CXX" -c -o src/broken.o -Dver=2 src/broken.c;
 
 cd src
-"\$CC" -c -o ./broken.o -Dver=3 ./broken.c;
-"\$CXX" -c -o ./broken.o -Dver=4 ./broken.c;
+"\$CC" -c -o broken.o -Dver=3 broken.c;
+"\$CXX" -c -o broken.o -Dver=4 broken.c;
 
 true;
 EOF
@@ -47,27 +47,27 @@ chmod +x ${build_file}
 cat >> "${root_dir}/expected.json" << EOF
 [
 {
-  "command": "cc -c -o ./src/broken.o -Dver=1 ./src/broken.c",
+  "command": "cc -c -o src/broken.o -Dver=1 src/broken.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/broken.c"
+  "file": "src/broken.c"
 }
 ,
 {
-  "command": "c++ -c -o ./src/broken.o -Dver=2 ./src/broken.c",
+  "command": "c++ -c -o src/broken.o -Dver=2 src/broken.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/broken.c"
+  "file": "src/broken.c"
 }
 ,
 {
-  "command": "cc -c -o ./broken.o -Dver=3 ./broken.c",
+  "command": "cc -c -o broken.o -Dver=3 broken.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/broken.c"
+  "file": "broken.c"
 }
 ,
 {
-  "command": "c++ -c -o ./broken.o -Dver=4 ./broken.c",
+  "command": "c++ -c -o broken.o -Dver=4 broken.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/broken.c"
+  "file": "broken.c"
 }
 ]
 EOF

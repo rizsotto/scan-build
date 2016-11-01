@@ -32,12 +32,12 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-${clang} -c -o ./src/empty.o -Dver=1 ./src/empty.c;
-${clangpp} -c -o ./src/empty.o -Dver=2 ./src/empty.c;
+${clang} -c -o src/empty.o -Dver=1 src/empty.c;
+${clangpp} -c -o src/empty.o -Dver=2 src/empty.c;
 
 cd src
-${clang} -c -o ./empty.o -Dver=3 ./empty.c;
-${clangpp} -c -o ./empty.o -Dver=4 ./empty.c;
+${clang} -c -o empty.o -Dver=3 empty.c;
+${clangpp} -c -o empty.o -Dver=4 empty.c;
 
 true;
 EOF
@@ -46,27 +46,27 @@ chmod +x ${build_file}
 cat >> "${root_dir}/expected.json" << EOF
 [
 {
-  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "command": "cc -c -o src/empty.o -Dver=1 src/empty.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/empty.c"
+  "file": "src/empty.c"
 }
 ,
 {
-  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "command": "c++ -c -o src/empty.o -Dver=2 src/empty.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/empty.c"
+  "file": "src/empty.c"
 }
 ,
 {
-  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "command": "cc -c -o empty.o -Dver=3 empty.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/empty.c"
+  "file": "empty.c"
 }
 ,
 {
-  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "command": "c++ -c -o empty.o -Dver=4 empty.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/empty.c"
+  "file": "empty.c"
 }
 ]
 EOF

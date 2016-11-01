@@ -68,7 +68,7 @@ void expected_out(const char *file) {
     fprintf(fd, "{\n");
     fprintf(fd, "  \"directory\": \"%s\",\n", cwd);
     fprintf(fd, "  \"command\": \"cc -c %s\",\n", file);
-    fprintf(fd, "  \"file\": \"%s/%s\"\n", cwd, file);
+    fprintf(fd, "  \"file\": \"%s\"\n", file);
     fprintf(fd, "}\n");
 }
 

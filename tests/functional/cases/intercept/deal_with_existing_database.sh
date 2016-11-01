@@ -35,8 +35,8 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-"\$CC" -c -o ./src/empty.o -Dver=1 ./src/empty.c;
-"\$CXX" -c -o ./src/empty.o -Dver=2 ./src/empty.c;
+"\$CC" -c -o src/empty.o -Dver=1 src/empty.c;
+"\$CXX" -c -o src/empty.o -Dver=2 src/empty.c;
 
 true;
 EOF
@@ -50,8 +50,8 @@ set -o nounset
 set -o xtrace
 
 cd src
-"\$CC" -c -o ./empty.o -Dver=3 ./empty.c;
-"\$CXX" -c -o ./empty.o -Dver=4 ./empty.c;
+"\$CC" -c -o empty.o -Dver=3 empty.c;
+"\$CXX" -c -o empty.o -Dver=4 empty.c;
 
 true;
 EOF
@@ -60,15 +60,15 @@ chmod +x ${build_file}
 cat >> "${root_dir}/one.json" << EOF
 [
 {
-  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "command": "cc -c -o src/empty.o -Dver=1 src/empty.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/empty.c"
+  "file": "src/empty.c"
 }
 ,
 {
-  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "command": "c++ -c -o src/empty.o -Dver=2 src/empty.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/empty.c"
+  "file": "src/empty.c"
 }
 ]
 EOF
@@ -76,15 +76,15 @@ EOF
 cat >> "${root_dir}/two.json" << EOF
 [
 {
-  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "command": "cc -c -o empty.o -Dver=3 empty.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/empty.c"
+  "file": "empty.c"
 }
 ,
 {
-  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "command": "c++ -c -o empty.o -Dver=4 empty.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/empty.c"
+  "file": "empty.c"
 }
 ]
 EOF
@@ -92,27 +92,27 @@ EOF
 cat >> "${root_dir}/sum.json" << EOF
 [
 {
-  "command": "cc -c -o ./src/empty.o -Dver=1 ./src/empty.c",
+  "command": "cc -c -o src/empty.o -Dver=1 src/empty.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/empty.c"
+  "file": "src/empty.c"
 }
 ,
 {
-  "command": "c++ -c -o ./src/empty.o -Dver=2 ./src/empty.c",
+  "command": "c++ -c -o src/empty.o -Dver=2 src/empty.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/empty.c"
+  "file": "src/empty.c"
 }
 ,
 {
-  "command": "cc -c -o ./empty.o -Dver=3 ./empty.c",
+  "command": "cc -c -o empty.o -Dver=3 empty.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/empty.c"
+  "file": "empty.c"
 }
 ,
 {
-  "command": "c++ -c -o ./empty.o -Dver=4 ./empty.c",
+  "command": "c++ -c -o empty.o -Dver=4 empty.c",
   "directory": "${root_dir}/src",
-  "file": "${root_dir}/src/empty.c"
+  "file": "empty.c"
 }
 ]
 EOF

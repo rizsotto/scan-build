@@ -8,6 +8,7 @@
 import re
 import os
 import collections
+import logging
 
 __all__ = ['split_command', 'classify_source']
 
@@ -84,22 +85,23 @@ def compilation(command, directory, cc, cxx):
     :param cxx:         user specified C++ compiler name
     :return: stream of CompilationDbEntry objects """
 
-    def abspath(cwd, name):
-        """ Create normalized absolute path from input filename. """
-
-        fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
-        return os.path.normpath(fullname)
-
     candidate = split_command(command, cc, cxx)
-    if candidate:
-        for source in candidate.files:
-            # TODO: check source file availability
-            # TODO: use relative path for source file
-            compiler = 'c++' if candidate.compiler == 'c++' else 'cc'
+    # normalize directory path and get the source file list
+    directory = os.path.normpath(directory)
+    sources = [source for source in candidate.files] if candidate else []
+    for source in sources:
+        compiler = 'c++' if candidate.compiler == 'c++' else 'cc'
+        source = os.path.normpath(source)
+        absolute = os.path.normpath(os.path.join(directory, source)) \
+            if not os.path.isabs(source) else source
+        if os.path.isfile(absolute):
+            relative = os.path.relpath(absolute, directory)
             yield CompilationDbEntry(
-                directory=os.path.normpath(directory),
-                source=abspath(directory, source),
-                arguments=[compiler, '-c'] + candidate.flags + [source])
+                directory=directory,
+                source=relative,
+                arguments=[compiler, '-c'] + candidate.flags + [relative])
+        else:
+            logging.debug('source file is missing: %s', absolute)
 
 
 def split_command(command, cc, cxx):
@@ -110,6 +112,7 @@ def split_command(command, cc, cxx):
     :param cxx:         user specified C++ compiler name
     :return: stream of CompilationCommand objects """
 
+    logging.debug('input was: %s', command)
     # quit right now, if the program was not a C/C++ compiler
     compiler_and_arguments = split_compiler(command, cc, cxx)
     if compiler_and_arguments is None:
@@ -140,6 +143,7 @@ def split_command(command, cc, cxx):
         # and consider everything else as compile option.
         else:
             result.flags.append(arg)
+    logging.debug('output is: %s', result)
     # do extra check on number of source files
     return result if result.files else None
 
@@ -188,11 +192,11 @@ def split_compiler(command, cc, cxx):
         return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False
 
     def is_c_compiler(cmd):
-        return True if os.path.basename(cc) == cmd else \
+        return os.path.basename(cc) == cmd or \
             any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
 
     def is_cxx_compiler(cmd):
-        return True if os.path.basename(cxx) == cmd else \
+        return os.path.basename(cxx) == cmd or \
             any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CXX)
 
     if command:  # not empty list will allow to index '0' and '1:'

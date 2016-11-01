@@ -32,7 +32,7 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-"\$CC" -Dver=1 ./src/one.c ./src/two.c ./src/main.c;
+"\$CC" -Dver=1 src/one.c src/two.c src/main.c;
 
 true;
 EOF
@@ -41,21 +41,21 @@ chmod +x ${build_file}
 cat >> "${root_dir}/expected.json" << EOF
 [
 {
-  "command": "cc -c -Dver=1 ./src/one.c",
+  "command": "cc -c -Dver=1 src/one.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/one.c"
+  "file": "src/one.c"
 }
 ,
 {
-  "command": "cc -c -Dver=1 ./src/two.c",
+  "command": "cc -c -Dver=1 src/two.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/two.c"
+  "file": "src/two.c"
 }
 ,
 {
-  "command": "cc -c -Dver=1 ./src/main.c",
+  "command": "cc -c -Dver=1 src/main.c",
   "directory": "${root_dir}",
-  "file": "${root_dir}/src/main.c"
+  "file": "src/main.c"
 }
 ]
 EOF

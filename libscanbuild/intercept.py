@@ -101,13 +101,14 @@ def post_processing(exec_calls, args):
     # shall be merged with the new elements.
     if 'append' in args and args.append and os.path.isfile(args.cdb):
         with open(args.cdb) as handle:
+            # TODO: filter out non existing files
             previous = iter(json.load(handle))
     else:
         previous = iter([])
     # filter out duplicate entries from both
     duplicate = duplicate_check(entry_hash)
     return (entry for entry in itertools.chain(previous, current)
-            if os.path.isfile(entry['file']) and not duplicate(entry))
+            if not duplicate(entry))
 
 
 def compilations(exec_calls, cc, cxx):
@@ -234,7 +235,7 @@ def parse_exec_trace(filename):
     :param filename: path to an execution trace file to read from,
     :return: stream of Execution objects. """
 
-    logging.debug('parse exec trace file: %s', filename)
+    logging.debug(filename)
     with open(filename, 'r') as handler:
         content = handler.read()
         for group in filter(bool, content.split(GS)):
@@ -305,6 +306,6 @@ def entry_hash(entry):
     # For faster lookup in set directory is reverted
     directory = entry['directory'][::-1]
     # For faster hash method the command field is not escaped
-    command = ' '.join(entry['command'])
+    command = '='.join(entry['command'])
 
-    return '<>'.join([filename, directory, command])
+    return '-'.join([filename, directory, command])
