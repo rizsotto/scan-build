@@ -7,14 +7,13 @@
 
 import argparse
 import json
+import shlex
+import os.path
 
 
 def diff(lhs, rhs):
-    def create_hash(entry):
-        return entry['file'][::-1] + entry['command'] + entry['directory']
-
-    left = {create_hash(entry): entry for entry in lhs}
-    right = {create_hash(entry): entry for entry in rhs}
+    left = {smooth(entry): entry for entry in lhs}
+    right = {smooth(entry): entry for entry in rhs}
     result = []
     for key in left.keys():
         if key not in right:
@@ -23,6 +22,15 @@ def diff(lhs, rhs):
         if key not in left:
             result.append('< {}'.format(right[key]))
     return result
+
+
+def smooth(entry):
+    directory = os.path.normpath(entry['directory'])
+    source = entry['file'] if os.path.isabs(entry['file']) else \
+        os.path.normpath(os.path.join(directory, entry['file']))
+    arguments = shlex.split(entry['command']) if 'command' in entry else \
+        entry['arguments']
+    return '-'.join([source[::-1]] + arguments)
 
 
 def main():
