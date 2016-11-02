@@ -124,14 +124,6 @@ def intercept_parser():
         Duplicate entries are detected and not present in the final output.
         The output is not continuously updated, it's done when the build
         command finished. """)
-    group.add_argument(
-        '--disable-filter',
-        '-n',
-        dest='raw_entries',
-        action='store_true',
-        help="""All intercepted child process execution are written in the
-        output file. The file is still a JSON file, but is not a compilation
-        database. This flag is for debug purposes.""")
 
     parser.add_argument(
         dest='build', nargs=argparse.REMAINDER, help="""Command to run.""")

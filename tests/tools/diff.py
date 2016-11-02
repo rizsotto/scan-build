@@ -14,21 +14,19 @@ import os.path
 def diff(lhs, rhs):
     left = {smooth(entry): entry for entry in lhs}
     right = {smooth(entry): entry for entry in rhs}
-    result = []
     for key in left.keys():
         if key not in right:
-            result.append('> {}'.format(left[key]))
+            yield '> {}'.format(left[key])
     for key in right.keys():
         if key not in left:
-            result.append('< {}'.format(right[key]))
-    return result
+            yield '< {}'.format(right[key])
 
 
 def smooth(entry):
     directory = os.path.normpath(entry['directory'])
     source = entry['file'] if os.path.isabs(entry['file']) else \
         os.path.normpath(os.path.join(directory, entry['file']))
-    arguments = shlex.split(entry['command']) if 'command' in entry else \
+    arguments = entry['command'].split() if 'command' in entry else \
         entry['arguments']
     return '-'.join([source[::-1]] + arguments)
 
@@ -43,7 +41,8 @@ def main():
     lhs = json.load(args.left)
     rhs = json.load(args.right)
     # run the diff and print the result
-    results = diff(lhs, rhs)
-    for result in results:
+    count = 0
+    for result in diff(lhs, rhs):
         print(result)
-    return len(results)
+        count += 1
+    return count

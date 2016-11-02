@@ -25,19 +25,13 @@ import os
 import os.path
 import re
 import itertools
-import json
 import logging
 import collections
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, run_command, duplicate_check
-from libscanbuild.compilation import compilation
+    wrapper_environment, run_build, run_command
+from libscanbuild.compilation import compilation, CompilationDatabase
 from libscanbuild.arguments import intercept
-
-if sys.platform in {'win32', 'cygwin'}:
-    from libscanbuild.wincmd import encode
-else:
-    from libscanbuild.shell import encode
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
 
@@ -72,50 +66,26 @@ def capture(args):
         # run the build command
         environment = setup_environment(args, tmp_dir)
         exit_code = run_build(args.build, env=environment)
+        # To support incremental builds, it is desired to read elements from
+        # an existing compilation database from a previous run.
+        if 'append' in args and args.append and os.path.isfile(args.cdb):
+            previous = CompilationDatabase.load(args.cdb)
+        else:
+            previous = iter([])
         # read the intercepted exec calls
         exec_calls = exec_calls_from(exec_trace_files(tmp_dir))
-        # do post processing only if that was requested
-        if 'raw_entries' not in args or not args.raw_entries:
-            entries = post_processing(exec_calls, args)
-        else:
-            entries = exec_calls
-        # dump the final json file
-        with open(args.cdb, 'w+') as handle:
-            # list constructor will exhaust the entries generator
-            json.dump(list(entries), handle, sort_keys=True, indent=4)
+        current = compilations(exec_calls, args.cc, args.cxx)
+        # merge compilation from previous and current run
+        entries = iter(set(itertools.chain(previous, current)))
+        # and dump the unique elements into the output file
+        CompilationDatabase.save(args.cdb, entries)
         return exit_code
-
-
-def post_processing(exec_calls, args):
-    """ Build processes involves many command executions, but not all of
-    those are compilations. It involves filtering and formatting of entries.
-
-    :param exec_calls:  iterator of executions
-    :param args:        command line arguments
-    :return: stream of formatted compilation database entries """
-
-    # create entries from the current run
-    current = compilations(exec_calls, args.cc, args.cxx)
-    # To support incremental builds, it is desired to read elements from
-    # an existing compilation database from a previous run. These elements
-    # shall be merged with the new elements.
-    if 'append' in args and args.append and os.path.isfile(args.cdb):
-        with open(args.cdb) as handle:
-            # TODO: filter out non existing files
-            previous = iter(json.load(handle))
-    else:
-        previous = iter([])
-    # filter out duplicate entries from both
-    duplicate = duplicate_check(entry_hash)
-    return (entry for entry in itertools.chain(previous, current)
-            if not duplicate(entry))
 
 
 def compilations(exec_calls, cc, cxx):
     """ Needs to filter out commands which are not compiler calls. And those
     compiler calls shall be compilation (not pre-processing or linking) calls.
-    Plus needs to find the source file name from the arguments. And do some
-    formatting on the final entries.
+    Plus needs to find the source file name from the arguments.
 
     :param exec_calls:  iterator of executions
     :param cc:          user specified C compiler name
@@ -124,11 +94,7 @@ def compilations(exec_calls, cc, cxx):
 
     for call in exec_calls:
         for entry in compilation(call.command, call.directory, cc, cxx):
-            yield {
-                'directory': entry.directory,
-                'command': encode(entry.arguments),
-                'file': entry.source
-            }
+            yield entry
 
 
 def setup_environment(args, destination):
@@ -217,11 +183,11 @@ def write_exec_trace(filename, entry):
     command = US.join(entry.command) + US
     pid = str(entry.pid)
     ppid = str(entry.ppid)
-    content = RS.join([
-        pid, ppid, entry.function, entry.directory, command
-    ]) + GS
+    content = RS.join([pid, ppid, entry.function, entry.directory, command
+                       ]) + GS
     # write it into the target file
     with open(filename, 'ab') as handler:
+        # FIXME why convert it to string?
         handler.write(content.encode('utf-8'))
 
 
@@ -293,19 +259,3 @@ def is_preload_disabled(platform):
             return False
     else:
         return False
-
-
-def entry_hash(entry):
-    """ Implement unique hash method for compilation database entries.
-
-    :param entry:   a compilation database entry,
-    :return:        a string value. """
-
-    # For faster lookup in set filename is reverted
-    filename = entry['file'][::-1]
-    # For faster lookup in set directory is reverted
-    directory = entry['directory'][::-1]
-    # For faster hash method the command field is not escaped
-    command = '='.join(entry['command'])
-
-    return '-'.join([filename, directory, command])

@@ -92,7 +92,7 @@ class ParseFileTest(unittest.TestCase):
                 'clang': 'clang',
                 'directory': os.getcwd(),
                 'flags': [],
-                'file': filename,
+                'source': filename,
                 'output_dir': tmp_dir,
                 'language': 'c',
                 'error_output': 'some output',

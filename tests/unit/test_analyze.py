@@ -17,33 +17,49 @@ import platform
 IS_WINDOWS = os.getenv('windows')
 
 
+class Spy(object):
+    def __init__(self):
+        self.arg = None
+        self.success = 0
+
+    def call(self, params):
+        self.arg = params
+        return self.success
+
+
 class FilteringFlagsTest(unittest.TestCase):
 
-    def test_language_captured(self):
-        def test(flags):
-            cmd = ['clang', '-c', 'source.c'] + flags
-            opts = sut.classify_parameters(cmd, 'nope', 'nope')
-            return opts['language']
+    @staticmethod
+    def classify_parameters(flags):
+        spy = Spy()
+        opts = {'flags': flags}
+        sut.classify_parameters(opts, spy.call)
+        return spy.arg
 
-        self.assertEqual(None, test([]))
-        self.assertEqual('c', test(['-x', 'c']))
-        self.assertEqual('cpp', test(['-x', 'cpp']))
+    def assertLanguage(self, expected, flags):
+        self.assertEqual(
+            expected,
+            FilteringFlagsTest.classify_parameters(flags)['language'])
+
+    def test_language_captured(self):
+        self.assertLanguage(None, [])
+        self.assertLanguage('c', ['-x', 'c'])
+        self.assertLanguage('cpp', ['-x', 'cpp'])
+
+    def assertArch(self, expected, flags):
+        self.assertEqual(
+            expected,
+            FilteringFlagsTest.classify_parameters(flags)['arch_list'])
 
     def test_arch(self):
-        def test(flags):
-            cmd = ['clang', '-c', 'source.c'] + flags
-            opts = sut.classify_parameters(cmd, 'nope', 'nope')
-            return opts['arch_list']
-
-        self.assertEqual([], test([]))
-        self.assertEqual(['mips'], test(['-arch', 'mips']))
-        self.assertEqual(['mips', 'i386'],
-                         test(['-arch', 'mips', '-arch', 'i386']))
+        self.assertArch([], [])
+        self.assertArch(['mips'], ['-arch', 'mips'])
+        self.assertArch(['mips', 'i386'], ['-arch', 'mips', '-arch', 'i386'])
 
     def assertFlagsChanged(self, expected, flags):
-        cmd = ['clang', '-c', 'source.c'] + flags
-        opts = sut.classify_parameters(cmd, 'nope', 'nope')
-        self.assertEqual(expected, opts['flags'])
+        self.assertEqual(
+            expected,
+            FilteringFlagsTest.classify_parameters(flags)['flags'])
 
     def assertFlagsUnchanged(self, flags):
         self.assertFlagsChanged(flags, flags)
@@ -107,16 +123,6 @@ class FilteringFlagsTest(unittest.TestCase):
         self.assertFlagsFiltered(['-sectorder', 'a', 'b', 'c'])
 
 
-class Spy(object):
-    def __init__(self):
-        self.arg = None
-        self.success = 0
-
-    def call(self, params):
-        self.arg = params
-        return self.success
-
-
 class RunAnalyzerTest(unittest.TestCase):
 
     @staticmethod
@@ -131,7 +137,7 @@ class RunAnalyzerTest(unittest.TestCase):
                 'directory': os.getcwd(),
                 'flags': [],
                 'direct_args': [],
-                'file': filename,
+                'source': filename,
                 'output_dir': tmpdir,
                 'output_format': 'plist',
                 'output_failures': failures_report
@@ -177,7 +183,7 @@ class ReportFailureTest(unittest.TestCase):
                 'clang': 'clang',
                 'directory': os.getcwd(),
                 'flags': [],
-                'file': filename,
+                'source': filename,
                 'output_dir': tmp_dir,
                 'language': 'c',
                 'error_output': error_msg,
@@ -220,7 +226,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language_fall_through(self):
         def language(expected, input):
             spy = Spy()
-            input.update({'compiler': 'c', 'file': 'test.c'})
+            input.update({'compiler': 'c', 'source': 'test.c'})
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
             self.assertEqual(expected, spy.arg['language'])
 
@@ -232,7 +238,7 @@ class AnalyzerTest(unittest.TestCase):
         input = {
             'compiler': 'c',
             'flags': [],
-            'file': 'test.java',
+            'source': 'test.java',
             'language': 'java'
         }
         self.assertIsNone(sut.language_check(input, spy.call))
@@ -241,7 +247,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language_sets_flags(self):
         def flags(expected, input):
             spy = Spy()
-            input.update({'compiler': 'c', 'file': 'test.c'})
+            input.update({'compiler': 'c', 'source': 'test.c'})
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
             self.assertEqual(expected, spy.arg['flags'])
 
@@ -255,13 +261,13 @@ class AnalyzerTest(unittest.TestCase):
             self.assertEqual(spy.success, sut.language_check(input, spy.call))
             self.assertEqual(expected, spy.arg['language'])
 
-        language('c',   {'file': 'file.c',   'compiler': 'c'})
-        language('c++', {'file': 'file.c',   'compiler': 'c++'})
-        language('c++', {'file': 'file.cxx', 'compiler': 'c'})
-        language('c++', {'file': 'file.cxx', 'compiler': 'c++'})
-        language('c++', {'file': 'file.cpp', 'compiler': 'c++'})
-        language('c-cpp-output',   {'file': 'file.i', 'compiler': 'c'})
-        language('c++-cpp-output', {'file': 'file.i', 'compiler': 'c++'})
+        language('c',   {'source': 'file.c',   'compiler': 'c'})
+        language('c++', {'source': 'file.c',   'compiler': 'c++'})
+        language('c++', {'source': 'file.cxx', 'compiler': 'c'})
+        language('c++', {'source': 'file.cxx', 'compiler': 'c++'})
+        language('c++', {'source': 'file.cpp', 'compiler': 'c++'})
+        language('c-cpp-output',   {'source': 'file.i', 'compiler': 'c'})
+        language('c++-cpp-output', {'source': 'file.i', 'compiler': 'c++'})
 
     def test_arch_loop_sets_flags(self):
         def flags(archs):

@@ -29,10 +29,9 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import scan, analyze
 from libscanbuild.intercept import capture
 from libscanbuild.report import document
-from libscanbuild.compilation import compilation, split_command, \
-    classify_source
+from libscanbuild.compilation import compilation, classify_source, \
+    CompilationDatabase
 from libscanbuild.clang import get_version, get_arguments
-from libscanbuild.shell import decode
 
 __all__ = ['scan_build', 'analyze_build', 'analyze_build_wrapper']
 
@@ -168,15 +167,15 @@ def run_analyzer_against_cdb(args):
     """ Runs the analyzer against the given compilation database. """
 
     logging.debug('run analyzer against compilation database')
-    with open(args.cdb, 'r') as handle:
-        consts = analyze_parameters(args)
-        compilations = (dict(cmd, **consts) for cmd in json.load(handle))
-        # when verbose output requested execute sequentially
-        pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
-        for current in pool.imap_unordered(run, compilations):
-            logging_analyzer_output(current)
-        pool.close()
-        pool.join()
+    consts = analyze_parameters(args)
+    entries = CompilationDatabase.load(args.cdb)
+    parameters = (dict(entry.to_analyzer(), **consts) for entry in entries)
+    # when verbose output requested execute sequentially
+    pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
+    for current in pool.imap_unordered(run, parameters):
+        logging_analyzer_output(current)
+    pool.close()
+    pool.join()
 
 
 def setup_environment(args):
@@ -215,8 +214,7 @@ def analyze_build_wrapper(**kwargs):
     # don't run analyzer when the command is not a compilation.
     # (filtering non compilations is done by the generator.)
     for entry in compilation(kwargs['command'], os.getcwd(), cc, cxx):
-        current = dict(parameters, directory=entry.directory,
-                       file=entry.source, command=entry.arguments)
+        current = dict(entry.to_analyzer(), **parameters)
         logging_analyzer_output(run(current))
 
 
@@ -263,7 +261,7 @@ def require(required):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
             for key in required:
-                assert(key in args[0])
+                assert key in args[0], '{} is missing'.format(key)
 
             return function(*args, **kwargs)
 
@@ -272,11 +270,10 @@ def require(required):
     return decorator
 
 
-@require(['command',  # entry from compilation database
-          'directory',  # entry from compilation database
-          'file',  # entry from compilation database
-          'cc',  # C compiler executable name (and path)
-          'cxx',  # C++ compiler executable name (and path)
+@require(['flags',  # entry from compilation
+          'compiler',  # entry from compilation
+          'directory',  # entry from compilation
+          'source',  # entry from compilation
           'clang',  # clang executable name (and path)
           'direct_args',  # arguments from command line
           'excludes',  # list of directories
@@ -298,13 +295,8 @@ def run(opts):
     caller and the called method.) """
 
     try:
-        command = opts.pop('command')
-        command = command if isinstance(command, list) else decode(command)
+        command = [opts['compiler'], '-c'] + opts['flags'] + [opts['source']]
         logging.debug("Run analyzer against '%s'", command)
-        cc = opts.pop('cc')
-        cxx = opts.pop('cxx')
-        opts.update(classify_parameters(command, cc, cxx))
-
         return exclude(opts)
     except Exception:
         logging.error("Problem occured during analyzis.", exc_info=1)
@@ -319,7 +311,7 @@ def logging_analyzer_output(opts):
             logging.info(line)
 
 
-@require(['clang', 'directory', 'flags', 'file', 'output_dir', 'language',
+@require(['clang', 'directory', 'flags', 'source', 'output_dir', 'language',
           'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
@@ -354,12 +346,13 @@ def report_failure(opts):
     os.close(handle)
     # Execute Clang again, but run the syntax check only.
     cwd = opts['directory']
-    cmd = get_arguments([opts['clang'], '-fsyntax-only', '-E'] +
-                        opts['flags'] + [opts['file'], '-o', name], cwd)
+    cmd = get_arguments(
+        [opts['clang'], '-fsyntax-only', '-E'
+         ] + opts['flags'] + [opts['source'], '-o', name], cwd)
     run_command(cmd, cwd=cwd)
     # write general information about the crash
     with open(name + '.info.txt', 'w') as handle:
-        handle.write(opts['file'] + os.linesep)
+        handle.write(opts['source'] + os.linesep)
         handle.write(error.title().replace('_', ' ') + os.linesep)
         handle.write(' '.join(cmd) + os.linesep)
         handle.write(' '.join(platform.uname()) + os.linesep)
@@ -371,7 +364,7 @@ def report_failure(opts):
         handle.close()
 
 
-@require(['clang', 'directory', 'flags', 'direct_args', 'file', 'output_dir',
+@require(['clang', 'directory', 'flags', 'direct_args', 'source', 'output_dir',
           'output_format'])
 def run_analyzer(opts, continuation=report_failure):
     """ It assembles the analysis command line and executes it. Capture the
@@ -392,7 +385,7 @@ def run_analyzer(opts, continuation=report_failure):
         cwd = opts['directory']
         cmd = get_arguments([opts['clang'], '--analyze'] +
                             opts['direct_args'] + opts['flags'] +
-                            [opts['file'], '-o', target()],
+                            [opts['source'], '-o', target()],
                             cwd)
         output = run_command(cmd, cwd=cwd)
         return {'error_output': output, 'exit_code': 0}
@@ -415,7 +408,7 @@ def filter_debug_flags(opts, continuation=run_analyzer):
     return continuation(opts)
 
 
-@require(['language', 'compiler', 'file', 'flags'])
+@require(['language', 'compiler', 'source', 'flags'])
 def language_check(opts, continuation=filter_debug_flags):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
@@ -430,7 +423,7 @@ def language_check(opts, continuation=filter_debug_flags):
     compiler = opts.pop('compiler')
     # ... or find out from source file extension
     if language is None and compiler is not None:
-        language = classify_source(opts['file'], compiler == 'c')
+        language = classify_source(opts['source'], compiler == 'c')
 
     if language is None:
         logging.debug('skip analysis, language not known')
@@ -472,25 +465,6 @@ def arch_check(opts, continuation=language_check):
         logging.debug('analysis, on default arch')
         return continuation(opts)
 
-
-@require(['file', 'excludes'])
-def exclude(opts, continuation=arch_check):
-    """ Analysis might be skipped, when one of the requested excluded
-    directory contains the file. """
-
-    def contains(directory, entry):
-        # When a directory contains a file, then the relative path to the
-        # file from that directory does not start with a parent dir prefix.
-        relative = os.path.relpath(entry, directory).split(os.sep)
-        return len(relative) and relative[0] != os.pardir
-
-    if any(contains(dir, opts['file']) for dir in opts['excludes']):
-        logging.debug('skip analysis, file requested to exclude')
-        return None
-    else:
-        return continuation(opts)
-
-
 # To have good results from static analyzer certain compiler options shall be
 # omitted. The compiler flag filtering only affects the static analyzer run.
 #
@@ -517,24 +491,20 @@ IGNORED_FLAGS = {
 }
 
 
-def classify_parameters(command, cc, cxx):
+@require(['flags'])
+def classify_parameters(opts, continuation=arch_check):
     """ Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing. """
-
-    split = split_command(command, cc, cxx)
-    assert(split is not None)
-    assert(len(split.files) == 1)
 
     # the result of the method
     result = {
         'flags': [],  # the filtered compiler flags
         'arch_list': [],  # list of architecture flags
         'language': None,  # compilation language, None, if not specified
-        'compiler': split.compiler  # 'c' or 'c++'
     }
 
     # iterate on the compile options
-    args = iter(split.flags)
+    args = iter(opts['flags'])
     for arg in args:
         # take arch flags into a separate basket
         if arg == '-arch':
@@ -555,4 +525,23 @@ def classify_parameters(command, cc, cxx):
         else:
             result['flags'].append(arg)
 
-    return result
+    opts.update(result)
+    return continuation(opts)
+
+
+@require(['source', 'excludes'])
+def exclude(opts, continuation=classify_parameters):
+    """ Analysis might be skipped, when one of the requested excluded
+    directory contains the file. """
+
+    def contains(directory, entry):
+        # When a directory contains a file, then the relative path to the
+        # file from that directory does not start with a parent dir prefix.
+        relative = os.path.relpath(entry, directory).split(os.sep)
+        return len(relative) and relative[0] != os.pardir
+
+    if any(contains(dir, opts['source']) for dir in opts['excludes']):
+        logging.debug('skip analysis, file requested to exclude')
+        return None
+    else:
+        return continuation(opts)

@@ -9,8 +9,10 @@ import re
 import os
 import collections
 import logging
+import json
 
-__all__ = ['split_command', 'classify_source']
+__all__ = ['split_command', 'classify_source', 'Compilation',
+           'CompilationDatabase']
 
 # Ignored compiler options map for compilation database creation.
 # The map is used in `split_command` method. (Which does ignore and classify
@@ -69,10 +71,72 @@ COMPILER_PATTERNS_CXX = frozenset([
     re.compile(r'^(g|)xl(C|c\+\+)$'),
 ])
 
-CompilationCommand = collections.namedtuple(
-    'CompilationCommand', ['compiler', 'flags', 'files'])
-CompilationDbEntry = collections.namedtuple(
-    'CompilationDbEntry', ['directory', 'arguments', 'source'])
+CompilationCommand = collections.namedtuple('CompilationCommand',
+                                            ['compiler', 'flags', 'files'])
+
+
+class Compilation:
+    def __init__(self, compiler, flags, source, directory):
+        self.compiler = compiler
+        self.flags = flags
+        self.directory = os.path.normpath(directory)
+        self.source = source if os.path.isabs(source) else \
+            os.path.normpath(os.path.join(self.directory, source))
+
+    def _hash_str(self):
+        return ':'.join([
+            self.source[::-1],  # for faster lookup it's reverted
+            self.directory[::-1],  # for faster lookup it's reverted
+            ' '.join(self.flags),  # just concat, don't escape it
+            self.compiler
+        ])
+
+    def __hash__(self):
+        return hash(self._hash_str())
+
+    def __eq__(self, other):
+        return isinstance(other, Compilation) and \
+               self._hash_str() == other._hash_str()
+
+    def is_accessible(self):
+        return os.path.isfile(self.source)
+
+    def to_analyzer(self):
+        return dict((key, value) for key, value in vars(self).items())
+
+    def to_db(self):
+        relative = os.path.relpath(self.source, self.directory)
+        compiler = 'cc' if self.compiler == 'c' else 'c++'
+        return {
+            'file': relative,
+            'arguments': [compiler, '-c'] + self.flags + [relative],
+            'directory': self.directory
+        }
+
+    @staticmethod
+    def from_db(entry):
+        command = entry['command'].split() if 'command' in entry else \
+            entry['arguments']
+        entries = list(compilation(command, entry['directory'], 'cc', 'c++'))
+        assert len(entries) == 1
+        return entries[0]
+
+
+class CompilationDatabase:
+    @staticmethod
+    def save(filename, iterator):
+        entries = (entry.to_db() for entry in iterator)
+        with open(filename, 'w+') as handle:
+            # list constructor will exhaust the entries generator
+            json.dump(list(entries), handle, sort_keys=True, indent=4)
+
+    @staticmethod
+    def load(filename):
+        with open(filename, 'r') as handle:
+            for entry in json.load(handle):
+                result = Compilation.from_db(entry)
+                if result.is_accessible():
+                    yield result
 
 
 def compilation(command, directory, cc, cxx):
@@ -86,22 +150,14 @@ def compilation(command, directory, cc, cxx):
     :return: stream of CompilationDbEntry objects """
 
     candidate = split_command(command, cc, cxx)
-    # normalize directory path and get the source file list
-    directory = os.path.normpath(directory)
     sources = [source for source in candidate.files] if candidate else []
     for source in sources:
-        compiler = 'c++' if candidate.compiler == 'c++' else 'cc'
-        source = os.path.normpath(source)
-        absolute = os.path.normpath(os.path.join(directory, source)) \
-            if not os.path.isabs(source) else source
-        if os.path.isfile(absolute):
-            relative = os.path.relpath(absolute, directory)
-            yield CompilationDbEntry(
-                directory=directory,
-                source=relative,
-                arguments=[compiler, '-c'] + candidate.flags + [relative])
-        else:
-            logging.debug('source file is missing: %s', absolute)
+        result = Compilation(directory=directory,
+                             source=source,
+                             compiler=candidate.compiler,
+                             flags=candidate.flags)
+        if result.is_accessible():
+            yield result
 
 
 def split_command(command, cc, cxx):
@@ -119,8 +175,9 @@ def split_command(command, cc, cxx):
         return None
 
     # the result of this method
-    result = CompilationCommand(
-        compiler=compiler_and_arguments[0], flags=[], files=[])
+    result = CompilationCommand(compiler=compiler_and_arguments[0],
+                                flags=[],
+                                files=[])
     # iterate on the compile options
     args = iter(compiler_and_arguments[1])
     for arg in args:
