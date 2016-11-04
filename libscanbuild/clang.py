@@ -9,8 +9,7 @@ Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper. """
 
 import re
-from libscanbuild import run_command
-from libscanbuild.shell import decode
+from libscanbuild import shell_split, run_command
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
 
@@ -45,7 +44,7 @@ def get_arguments(command, cwd):
     last_line = output[-1]
     if re.search(r'clang(.*): error:', last_line):
         raise Exception(last_line)
-    return decode(last_line)
+    return shell_split(last_line)
 
 
 def get_active_checkers(clang, plugins):

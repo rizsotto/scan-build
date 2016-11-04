@@ -10,6 +10,7 @@ import os
 import collections
 import logging
 import json
+from libscanbuild import shell_split
 
 __all__ = ['split_command', 'classify_source', 'Compilation',
            'CompilationDatabase']
@@ -115,7 +116,7 @@ class Compilation:
 
     @staticmethod
     def from_db(entry):
-        command = entry['command'].split() if 'command' in entry else \
+        command = shell_split(entry['command']) if 'command' in entry else \
             entry['arguments']
         entries = list(compilation(command, entry['directory'], 'cc', 'c++'))
         assert len(entries) == 1

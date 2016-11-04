@@ -5,17 +5,30 @@
 # License. See LICENSE.TXT for details.
 """ This module is a collection of methods commonly used in this project. """
 
-import os
-import os.path
-import sys
-import re
+import functools
 import json
 import logging
-import functools
+import os
+import os.path
+import re
+import shlex
 import subprocess
-from libscanbuild.shell import decode
+import sys
 
 ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
+
+
+def shell_split(string):
+    """ Takes a command string and returns as a list. """
+
+    def unescape(arg):
+        """ Gets rid of the escaping characters. """
+
+        if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] == '"':
+            return re.sub(r'\\(["\\])', r'\1', arg[1:-1])
+        return re.sub(r'\\([\\ $%&\(\)\[\]\{\}\*|<>@?!])', r'\1', arg)
+
+    return [unescape(token) for token in shlex.split(string)]
 
 
 def tempdir():
@@ -150,7 +163,7 @@ def wrapper_entry_point(function):
         is_cxx = re.match(r'(.+)c\+\+(.*)', wrapper_command)
         compiler = parameters['cxx'] if is_cxx else parameters['cc']
         # execute compilation with the real compiler
-        command = decode(compiler) + sys.argv[1:]
+        command = shell_split(compiler) + sys.argv[1:]
         logging.debug('compilation: %s', command)
         result = subprocess.call(command)
         logging.debug('compilation exit code: %d', result)
