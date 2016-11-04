@@ -19,7 +19,6 @@ import glob
 import json
 import logging
 import datetime
-from libscanbuild import duplicate_check
 from libscanbuild.clang import get_version
 
 __all__ = ['document']
@@ -361,6 +360,35 @@ def category_type_name(bug):
         return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
 
     return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
+
+
+def duplicate_check(hash_function):
+    """ Workaround to detect duplicate dictionary values.
+
+    Python `dict` type has no `hash` method, which is required by the `set`
+    type to store elements.
+
+    This solution still not store the `dict` as value in a `set`. Instead
+    it calculate a `string` hash and store that. Therefore it can only say
+    that hash is already taken or not.
+
+    This method is a factory method, which returns a predicate. """
+
+    def predicate(entry):
+        """ The predicate which calculates and stores the hash of the given
+        entries. The entry type has to work with the given hash function.
+
+        :param entry: the questioned entry,
+        :return: true/false depends the hash value is already seen or not.
+        """
+        entry_hash = hash_function(entry)
+        if entry_hash not in state:
+            state.add(entry_hash)
+            return False
+        return True
+
+    state = set()
+    return predicate
 
 
 def create_counters():
