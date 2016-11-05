@@ -26,11 +26,10 @@ import os.path
 import re
 import itertools
 import logging
-import collections
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, run_command
-from libscanbuild.compilation import compilation, CompilationDatabase
+    wrapper_environment, run_build, run_command, Execution
+from libscanbuild.compilation import Compilation, CompilationDatabase
 from libscanbuild.arguments import intercept
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
@@ -43,9 +42,6 @@ COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
 TRACE_FILE_EXTENSION = '.cmd'  # same as in ear.c
 WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
-
-Execution = collections.namedtuple(
-    'Execution', ['pid', 'ppid', 'function', 'directory', 'command'])
 
 
 @command_entry_point
@@ -93,7 +89,7 @@ def compilations(exec_calls, cc, cxx):
     :return: stream of formatted compilation database entries """
 
     for call in exec_calls:
-        for entry in compilation(call.command, call.directory, cc, cxx):
+        for entry in Compilation.from_call(call, cc, cxx):
             yield entry
 
 
@@ -152,14 +148,7 @@ def intercept_build_wrapper(**kwargs):
         target_file_name = str(os.getpid()) + TRACE_FILE_EXTENSION
         target_file = os.path.join(target_dir, target_file_name)
         logging.debug('writing execution report to: %s', target_file)
-        write_exec_trace(
-            target_file,
-            Execution(
-                pid=os.getpid(),
-                ppid=os.getpid(),
-                function='wrapper',
-                directory=os.getcwd(),
-                command=kwargs['command']))
+        write_exec_trace(target_file, kwargs['execution'])
     except IOError:
         logging.warning(message_prefix, 'io problem')
 

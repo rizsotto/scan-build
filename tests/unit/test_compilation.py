@@ -13,17 +13,17 @@ import unittest
 class CompilerTest(unittest.TestCase):
 
     def assert_c_compiler(self, command, cc='nope', cxx='nope++'):
-        value = sut.split_compiler(command, cc, cxx)
+        value = sut.Compilation._split_compiler(command, cc, cxx)
         self.assertIsNotNone(value)
         self.assertEqual(value[0], 'c')
 
     def assert_cxx_compiler(self, command, cc='nope', cxx='nope++'):
-        value = sut.split_compiler(command, cc, cxx)
+        value = sut.Compilation._split_compiler(command, cc, cxx)
         self.assertIsNotNone(value)
         self.assertEqual(value[0], 'c++')
 
     def assert_not_compiler(self, command):
-        value = sut.split_compiler(command, 'nope', 'nope')
+        value = sut.Compilation._split_compiler(command, 'nope', 'nope')
         self.assertIsNone(value)
 
     def test_compiler_call(self):
@@ -91,7 +91,7 @@ class CompilerTest(unittest.TestCase):
         self.assert_cxx_compiler(['/path/nope++'], cxx='nope++')
 
     def assert_arguments_equal(self, expected, command):
-        value = sut.split_compiler(command, 'nope', 'nope')
+        value = sut.Compilation._split_compiler(command, 'nope', 'nope')
         self.assertIsNotNone(value)
         self.assertEqual(expected, value[1])
 
@@ -108,11 +108,11 @@ class CompilerTest(unittest.TestCase):
 class SplitTest(unittest.TestCase):
 
     def assert_compilation(self, command):
-        result = sut.split_command(command, 'nope', 'nope')
+        result = sut.Compilation._split_command(command, 'nope', 'nope')
         self.assertIsNotNone(result)
 
     def assert_non_compilation(self, command):
-        result = sut.split_command(command, 'nope', 'nope')
+        result = sut.Compilation._split_command(command, 'nope', 'nope')
         self.assertIsNone(result)
 
     def test_action(self):
@@ -126,7 +126,7 @@ class SplitTest(unittest.TestCase):
         self.assert_non_compilation(['clang', '-c', '-MM', 'source.c'])
 
     def assert_source_files(self, expected, command):
-        result = sut.split_command(command, 'nope', 'nope')
+        result = sut.Compilation._split_command(command, 'nope', 'nope')
         self.assertIsNotNone(result)
         self.assertEqual(expected, result.files)
 
@@ -151,7 +151,7 @@ class SplitTest(unittest.TestCase):
 
     def assert_flags(self, expected, flags):
         command = ['clang', '-c', 'src.c'] + flags
-        result = sut.split_command(command, 'nope', 'nope')
+        result = sut.Compilation._split_command(command, 'nope', 'nope')
         self.assertIsNotNone(result)
         self.assertEqual(expected, result.flags)
 

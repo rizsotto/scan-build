@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 """ This module is a collection of methods commonly used in this project. """
-
+import collections
 import functools
 import json
 import logging
@@ -16,6 +16,9 @@ import subprocess
 import sys
 
 ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
+
+Execution = collections.namedtuple(
+    'Execution', ['pid', 'ppid', 'function', 'directory', 'command'])
 
 
 def shell_split(string):
@@ -140,8 +143,7 @@ def wrapper_entry_point(function):
     The decorator itself execute the real compiler call. Then it calls the
     decorated method. The method will receive dictionary of parameters.
 
-    - compiler:     the compiler name which was executed.
-    - command:      the command executed by the wrapper.
+    - execution:    the command executed by the wrapper.
     - result:       the exit code of the compilation.
 
     The return value will be the exit code of the compiler call. (The
@@ -158,18 +160,25 @@ def wrapper_entry_point(function):
         # set logging level when needed
         verbose = parameters['verbose']
         reconfigure_logging(verbose)
-        # find out what is the real compiler
+        # find out what is the real compiler (wrapper names encode the
+        # compiler type. C++ compiler wrappers ends with `++`)
         wrapper_command = os.path.basename(sys.argv[0])
-        is_cxx = re.match(r'(.+)c\+\+(.*)', wrapper_command)
-        compiler = parameters['cxx'] if is_cxx else parameters['cc']
+        is_cxx = re.match(r'(.+)\+\+', wrapper_command)
+        real_compiler = parameters['cxx'] if is_cxx else parameters['cc']
         # execute compilation with the real compiler
-        command = shell_split(compiler) + sys.argv[1:]
+        command = shell_split(real_compiler) + sys.argv[1:]
         logging.debug('compilation: %s', command)
         result = subprocess.call(command)
         logging.debug('compilation exit code: %d', result)
         # call the wrapped method and ignore it's return value ...
         try:
-            function(compiler=compiler, command=command, result=result)
+            call = Execution(
+                pid=os.getpid(),
+                ppid=os.getpid(),
+                function='wrapper',
+                directory=os.getcwd(),
+                command=['c++' if is_cxx else 'cc'] + sys.argv[1:])
+            function(execution=call, result=result)
         except:
             logging.exception('Compiler wrapper failed complete.')
         # ... return the real compiler exit code instead.

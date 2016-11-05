@@ -29,7 +29,7 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import scan, analyze
 from libscanbuild.intercept import capture
 from libscanbuild.report import document
-from libscanbuild.compilation import compilation, classify_source, \
+from libscanbuild.compilation import Compilation, classify_source, \
     CompilationDatabase
 from libscanbuild.clang import get_version, get_arguments
 
@@ -151,8 +151,6 @@ def analyze_parameters(args):
         return prefix_with('-Xclang', result)
 
     return {
-        'cc': args.cc,
-        'cxx': args.cxx,
         'clang': args.clang,
         'output_dir': args.output,
         'output_format': args.output_format,
@@ -209,11 +207,9 @@ def analyze_build_wrapper(**kwargs):
         return
     # collect the needed parameters from environment
     parameters = json.loads(os.environ[ENVIRONMENT_KEY])
-    cc = parameters['cc']
-    cxx = parameters['cxx']
     # don't run analyzer when the command is not a compilation.
     # (filtering non compilations is done by the generator.)
-    for entry in compilation(kwargs['command'], os.getcwd(), cc, cxx):
+    for entry in Compilation.from_call(kwargs['execution']):
         current = dict(entry.to_analyzer(), **parameters)
         logging_analyzer_output(run(current))
 

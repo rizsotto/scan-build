@@ -100,10 +100,6 @@ def analyze_validate(parser, args, from_build_command):
     if from_build_command:
         # add cdb parameter invisibly to make intercept.capture working
         args.cdb = 'compile_commands.json'
-    else:
-        # same hack for compiler specification (does not matter what value)
-        args.cc = 'cc'
-        args.cxx = 'c++'
 
 
 def intercept_parser():
