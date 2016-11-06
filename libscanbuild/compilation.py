@@ -77,6 +77,10 @@ CompilationCommand = collections.namedtuple(
 
 class Compilation:
     def __init__(self, compiler, flags, source, directory):
+        """ Constructor for a single compilation.
+
+        This method just normalize the paths and store the values. """
+
         self.compiler = compiler
         self.flags = flags
         self.directory = os.path.normpath(directory)
@@ -84,6 +88,14 @@ class Compilation:
             os.path.normpath(os.path.join(self.directory, source))
 
     def _hash_str(self):
+        """ Generate unique hash string for compilation entry.
+
+        Python requires __hash__ and __eq__ methods implemented in order to
+        store the object in a set. We use the set to filter out duplicate
+        entries from compilation database.
+
+        :return: a unique hash string. """
+
         return ':'.join([
             self.source[::-1],  # for faster lookup it's reverted
             self.directory[::-1],  # for faster lookup it's reverted
@@ -92,16 +104,24 @@ class Compilation:
         ])
 
     def __hash__(self):
+        """ See comment for _hash_str method. """
+
         return hash(self._hash_str())
 
     def __eq__(self, other):
+        """ See comment for _hash_str method. """
+
         return isinstance(other, Compilation) and \
-               self._hash_str() == other._hash_str()
+            self._hash_str() == other._hash_str()
 
     def to_analyzer(self):
+        """ This method dumps the object attributes into a dictionary. """
+
         return dict((key, value) for key, value in vars(self).items())
 
     def to_db(self):
+        """ This method creates a compilation database entry. """
+
         relative = os.path.relpath(self.source, self.directory)
         compiler = 'cc' if self.compiler == 'c' else 'c++'
         return {
@@ -112,8 +132,9 @@ class Compilation:
 
     @staticmethod
     def from_call(execution, cc='cc', cxx='c++'):
-        """ Generator method for compilation database entries.
-        From a single compiler calls it can generate zero or more entries.
+        """ Generator method for compilation entries.
+
+        From a single compiler call it can generate zero or more entries.
 
         :param execution:   executed command and working directory
         :param cc:          user specified C compiler name
@@ -131,6 +152,13 @@ class Compilation:
 
     @staticmethod
     def from_db(entry):
+        """ Factory method for compilation entry.
+
+        From compilation database entry it creates the compilation object.
+
+        :param entry:   the compilation database entry
+        :return: a single compilation object """
+
         command = shell_split(entry['command']) if 'command' in entry else \
             entry['arguments']
         execution = Execution(command=command,
@@ -228,10 +256,9 @@ class Compilation:
 class CompilationDatabase:
     @staticmethod
     def save(filename, iterator):
-        entries = (entry.to_db() for entry in iterator)
+        entries = [entry.to_db() for entry in iterator]
         with open(filename, 'w+') as handle:
-            # list constructor will exhaust the entries generator
-            json.dump(list(entries), handle, sort_keys=True, indent=4)
+            json.dump(entries, handle, sort_keys=True, indent=4)
 
     @staticmethod
     def load(filename):
