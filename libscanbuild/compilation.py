@@ -141,9 +141,9 @@ class Compilation:
         :param cxx:         user specified C++ compiler name
         :return: stream of CompilationDbEntry objects """
 
-        candidate = Compilation._split_command(execution.command, cc, cxx)
+        candidate = Compilation._split_command(execution.cmd, cc, cxx)
         for source in (candidate.files if candidate else []):
-            result = Compilation(directory=execution.directory,
+            result = Compilation(directory=execution.cwd,
                                  source=source,
                                  compiler=candidate.compiler,
                                  flags=candidate.flags)
@@ -161,11 +161,7 @@ class Compilation:
 
         command = shell_split(entry['command']) if 'command' in entry else \
             entry['arguments']
-        execution = Execution(command=command,
-                              directory=entry['directory'],
-                              pid=0,
-                              ppid=0,
-                              function='file')
+        execution = Execution(cmd=command, cwd=entry['directory'], pid=0)
         entries = list(Compilation.from_call(execution))
         assert len(entries) == 1
         return entries[0]

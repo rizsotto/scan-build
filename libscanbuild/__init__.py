@@ -17,8 +17,7 @@ import sys
 
 ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
 
-Execution = collections.namedtuple(
-    'Execution', ['pid', 'ppid', 'function', 'directory', 'command'])
+Execution = collections.namedtuple('Execution', ['pid', 'cwd', 'cmd'])
 
 
 def shell_split(string):
@@ -166,7 +165,7 @@ def wrapper_entry_point(function):
         is_cxx = re.match(r'(.+)\+\+', wrapper_command)
         real_compiler = parameters['cxx'] if is_cxx else parameters['cc']
         # execute compilation with the real compiler
-        command = shell_split(real_compiler) + sys.argv[1:]
+        command = real_compiler + sys.argv[1:]
         logging.debug('compilation: %s', command)
         result = subprocess.call(command)
         logging.debug('compilation exit code: %d', result)
@@ -174,10 +173,8 @@ def wrapper_entry_point(function):
         try:
             call = Execution(
                 pid=os.getpid(),
-                ppid=os.getpid(),
-                function='wrapper',
-                directory=os.getcwd(),
-                command=['c++' if is_cxx else 'cc'] + sys.argv[1:])
+                cwd=os.getcwd(),
+                cmd=['c++' if is_cxx else 'cc'] + sys.argv[1:])
             function(execution=call, result=result)
         except:
             logging.exception('Compiler wrapper failed complete.')
@@ -193,7 +190,7 @@ def wrapper_environment(args):
     return {
         ENVIRONMENT_KEY: json.dumps({
             'verbose': args.verbose,
-            'cc': args.cc,
-            'cxx': args.cxx
+            'cc': shell_split(args.cc),
+            'cxx': shell_split(args.cxx)
         })
     }

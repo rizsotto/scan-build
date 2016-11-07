@@ -6,11 +6,13 @@
 #
 # RUN: %{python} %s
 
-import libear
-import libscanbuild.intercept as sut
-import unittest
 import os
 import os.path
+import unittest
+
+import libear
+import libscanbuild.intercept as sut
+from libscanbuild import Execution
 
 IS_WINDOWS = os.getenv('windows')
 
@@ -18,18 +20,14 @@ IS_WINDOWS = os.getenv('windows')
 class InterceptUtilTest(unittest.TestCase):
 
     def test_read_write_exec_trace(self):
-        input_one = sut.Execution(
+        input_one = Execution(
             pid=123,
-            ppid=121,
-            function='something',
-            directory='/path/to/here',
-            command=['cc', '-c', 'this.c'])
-        input_two = sut.Execution(
+            cwd='/path/to/here',
+            cmd=['cc', '-c', 'this.c'])
+        input_two = Execution(
             pid=123,
-            ppid=121,
-            function='something',
-            directory='/path/to/here',
-            command=['cc', '-c', 'that.c'])
+            cwd='/path/to/here',
+            cmd=['cc', '-c', 'that.c'])
         # test with a single exec report
         with libear.temporary_directory() as tmp_dir:
             temp_file = os.path.join(tmp_dir, 'single_report.cmd')

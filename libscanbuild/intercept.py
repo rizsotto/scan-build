@@ -20,23 +20,21 @@ The module also implements compiler wrappers to intercept the compiler calls.
 The module implements the build command execution and the post-processing of
 the output files, which will condensates into a compilation database. """
 
-import sys
+import itertools
+import json
+import logging
 import os
 import os.path
 import re
-import itertools
-import logging
+import sys
+
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command, Execution
-from libscanbuild.compilation import Compilation, CompilationDatabase
 from libscanbuild.arguments import intercept
+from libscanbuild.compilation import Compilation, CompilationDatabase
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
-
-GS = chr(0x1d)
-RS = chr(0x1e)
-US = chr(0x1f)
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
@@ -157,27 +155,16 @@ def write_exec_trace(filename, entry):
     """ Write execution report file.
 
     This method shall be sync with the execution report writer in interception
-    library. The file format is very simple and easy to implement in both
-    programming language (C and python). The main focus of the format to be
-    human readable and easy to reconstruct the different types from it.
-
-    Integers are converted to string. String lists are concatenated with
-    special characters. Fields are separated with special characters. (Field
-    names are not given, the position identifies the field.)
+    library. The entries in the file are new line separated JSON objects.
+    (Where the JSON object shall not have new line.)
 
     :param filename:    path to the output execution trace file,
     :param entry:       the Execution object to append to that file. """
 
-    # create the payload first
-    command = US.join(entry.command) + US
-    pid = str(entry.pid)
-    ppid = str(entry.ppid)
-    content = RS.join([pid, ppid, entry.function, entry.directory, command
-                       ]) + GS
-    # write it into the target file
-    with open(filename, 'ab') as handler:
-        # FIXME why convert it to string?
-        handler.write(content.encode('utf-8'))
+    with open(filename, 'a') as handler:
+        call = {'pid': entry.pid, 'cwd': entry.cwd, 'cmd': entry.cmd}
+        line = json.dumps(call)
+        handler.write(line + '\n')
 
 
 def parse_exec_trace(filename):
@@ -192,15 +179,12 @@ def parse_exec_trace(filename):
 
     logging.debug(filename)
     with open(filename, 'r') as handler:
-        content = handler.read()
-        for group in filter(bool, content.split(GS)):
-            records = group.split(RS)
+        for line in handler:
+            entry = json.loads(line.strip())
             yield Execution(
-                pid=int(records[0]),
-                ppid=int(records[1]),
-                function=records[2],
-                directory=records[3],
-                command=records[4].split(US)[:-1])
+                pid=entry['pid'],
+                cwd=entry['cwd'],
+                cmd=entry['cmd'])
 
 
 def exec_trace_files(directory):
