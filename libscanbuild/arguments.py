@@ -98,7 +98,7 @@ def analyze_validate(parser, args, from_build_command):
     # methods more readable. (it's an arguable choice, took it only for those
     #  which have good default value.)
     if from_build_command:
-        # add cdb parameter invisibly to make intercept.capture working
+        # add cdb parameter invisibly to make report module working
         args.cdb = 'compile_commands.json'
 
 

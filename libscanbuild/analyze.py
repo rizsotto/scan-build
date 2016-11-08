@@ -53,19 +53,16 @@ def scan_build():
         # for the Makefile.
         if args.intercept_first:
             # run build command with intercept module
-            exit_code = capture(args)
+            exit_code, compilations = capture(args)
             if need_analyzer(args.build):
                 # run the analyzer against the captured commands
-                run_analyzer_against_cdb(args)
+                run_analyzer_parallel(compilations, args)
         else:
             # run build command and analyzer with compiler wrappers
             environment = setup_environment(args)
             exit_code = run_build(args.build, env=environment)
         # cover report generation and bug counting
         number_of_bugs = document(args)
-        # do cleanup temporary files
-        if args.intercept_first:
-            os.unlink(args.cdb)
         # set exit status as it was requested
         return number_of_bugs if args.status_bugs else exit_code
 
@@ -78,7 +75,8 @@ def analyze_build():
     # will re-assign the report directory as new output
     with report_directory(args.output, args.keep_empty) as args.output:
         # run the analyzer against a compilation db
-        run_analyzer_against_cdb(args)
+        compilations = CompilationDatabase.load(args.cdb)
+        run_analyzer_parallel(compilations, args)
         # cover report generation and bug counting
         number_of_bugs = document(args)
         # set exit status as it was requested
@@ -161,13 +159,13 @@ def analyze_parameters(args):
     }
 
 
-def run_analyzer_against_cdb(args):
-    """ Runs the analyzer against the given compilation database. """
+def run_analyzer_parallel(compilations, args):
+    """ Runs the analyzer against the given compilations. """
 
     logging.debug('run analyzer against compilation database')
     consts = analyze_parameters(args)
-    entries = CompilationDatabase.load(args.cdb)
-    parameters = (dict(entry.to_analyzer(), **consts) for entry in entries)
+    parameters = (dict(compilation.to_analyzer(), **consts)
+                  for compilation in compilations)
     # when verbose output requested execute sequentially
     pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
     for current in pool.imap_unordered(run, parameters):

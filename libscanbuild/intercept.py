@@ -47,7 +47,10 @@ def intercept_build_main():
     """ Entry point for 'intercept-build' command. """
 
     args = intercept()
-    return capture(args)
+
+    exit_code, compilations = capture(args)
+    CompilationDatabase.save(args.cdb, compilations)
+    return exit_code
 
 
 def capture(args):
@@ -71,9 +74,7 @@ def capture(args):
         current = compilations(exec_calls, args.cc, args.cxx)
         # merge compilation from previous and current run
         entries = iter(set(itertools.chain(previous, current)))
-        # and dump the unique elements into the output file
-        CompilationDatabase.save(args.cdb, entries)
-        return exit_code
+        return exit_code, entries
 
 
 def compilations(exec_calls, cc, cxx):
