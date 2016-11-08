@@ -116,6 +116,7 @@ def command_entry_point(function):
             logging.basicConfig(format='%(name)s: %(message)s',
                                 level=logging.WARNING,
                                 stream=sys.stdout)
+            # this hack to get the executable name as %(name)
             logging.getLogger().name = os.path.basename(sys.argv[0])
             return function(*args, **kwargs)
         except KeyboardInterrupt:
@@ -160,9 +161,10 @@ def wrapper_entry_point(function):
         verbose = parameters['verbose']
         reconfigure_logging(verbose)
         # find out what is the real compiler (wrapper names encode the
-        # compiler type. C++ compiler wrappers ends with `++`)
+        # compiler type. C++ compiler wrappers ends with `c++`, but might
+        # have `.exe` extension on windows)
         wrapper_command = os.path.basename(sys.argv[0])
-        is_cxx = re.match(r'(.+)\+\+', wrapper_command)
+        is_cxx = re.match(r'(.+)c\+\+(.*)', wrapper_command)
         real_compiler = parameters['cxx'] if is_cxx else parameters['cc']
         # execute compilation with the real compiler
         command = real_compiler + sys.argv[1:]
