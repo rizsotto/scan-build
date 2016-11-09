@@ -417,17 +417,26 @@ static void bear_report_call(char const *const argv[]) {
         exit(EXIT_FAILURE);
     }
     char const * const out_dir = initial_env[0];
+    // generate report file path. file name will be "<pid>_<idx>.json"
+    // it needs to append an index field, since pid is not unique. (many
+    // compiler wrapper just exec another file, therefore sharing pid.)
     size_t const path_max_length = strlen(out_dir) + 32;
     char filename[path_max_length];
-    if (-1 == snprintf(filename, path_max_length, "%s/%d.cmd", out_dir, getpid())) {
-        perror("bear: snprintf");
-        exit(EXIT_FAILURE);
+    for (int idx = 0; idx < 100; ++idx) {
+        if (-1 == snprintf(filename, path_max_length, "%s/%d_%d.json", out_dir, getpid(), idx)) {
+            perror("bear: snprintf");
+            exit(EXIT_FAILURE);
+        }
+        if (-1 == access(filename, W_OK)) {
+            break;
+        }
     }
-    FILE * fd = fopen(filename, "a+");
+    FILE * fd = fopen(filename, "w+");
     if (0 == fd) {
         perror("bear: fopen");
         exit(EXIT_FAILURE);
     }
+    // dump the content in JSON format
     size_t const argc = bear_strings_length(argv);
     fprintf(fd, "{ \"pid\": %d, \"cwd\": \"%s\", ", getpid(), cwd);
     fprintf(fd, "\"cmd\": [");

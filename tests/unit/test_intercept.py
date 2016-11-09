@@ -24,23 +24,11 @@ class InterceptUtilTest(unittest.TestCase):
             pid=123,
             cwd='/path/to/here',
             cmd=['cc', '-c', 'this.c'])
-        input_two = Execution(
-            pid=123,
-            cwd='/path/to/here',
-            cmd=['cc', '-c', 'that.c'])
-        # test with a single exec report
         with libear.temporary_directory() as tmp_dir:
             temp_file = os.path.join(tmp_dir, 'single_report.cmd')
             sut.write_exec_trace(temp_file, input_one)
             result = sut.parse_exec_trace(temp_file)
-            self.assertEqual([input_one], list(result))
-        # test with multiple exec report
-        with libear.temporary_directory() as tmp_dir:
-            temp_file = os.path.join(tmp_dir, 'multiple_report.cmd')
-            sut.write_exec_trace(temp_file, input_one)
-            sut.write_exec_trace(temp_file, input_two)
-            result = sut.parse_exec_trace(temp_file)
-            self.assertEqual([input_one, input_two], list(result))
+            self.assertEqual(input_one, result)
 
     @unittest.skipIf(IS_WINDOWS, 'this code is not running on windows')
     def test_sip(self):
