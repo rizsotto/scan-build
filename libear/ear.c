@@ -70,6 +70,7 @@ static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *const argv[]);
+static void bear_write_json_string(char const *word, FILE *stream);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
 static char const **bear_strings_append(char const **in, char const *e);
@@ -437,22 +438,52 @@ static void bear_report_call(char const *const argv[]) {
         exit(EXIT_FAILURE);
     }
     // dump the content in JSON format
-    size_t const argc = bear_strings_length(argv);
-    fprintf(fd, "{ \"pid\": %d, \"cwd\": \"%s\", ", getpid(), cwd);
-    fprintf(fd, "\"cmd\": [");
-    for (size_t it = 0; it < argc; ++it) {
-        if (it != 0) {
-            fprintf(fd, ", ");
+    fprintf(fd, "{ \"pid\": %d, \"cmd\": [", getpid());
+    for (char const *const *it = argv; (it) && (*it); ++it) {
+        if (it != argv) {
+            fputc(',', fd);
         }
-        fprintf(fd, "\"%s\"", argv[it]);
+        bear_write_json_string(*it, fd);
     }
-    fprintf(fd, "]}\n");
+    fputs("], \"cwd\": ", fd);
+    bear_write_json_string(cwd, fd);
+    fputc('}', fd);
     if (fclose(fd)) {
         perror("bear: fclose");
         exit(EXIT_FAILURE);
     }
     free((void *)cwd);
     pthread_mutex_unlock(&mutex);
+}
+
+static void bear_write_json_string(char const *word, FILE *fd) {
+    fputc('"', fd);
+    for (char const * it = word; *it; ++it) {
+        char const current = *it;
+        switch (current) {
+        case '\b':
+            fputs("\\b", fd);
+            break;
+        case '\f':
+            fputs("\\f", fd);
+            break;
+        case '\n':
+            fputs("\\n", fd);
+            break;
+        case '\r':
+            fputs("\\r", fd);
+            break;
+        case '\t':
+            fputs("\\t", fd);
+            break;
+        case '"':
+        case '\\':
+            fputc('\\', fd);
+        default:
+            fputc(current, fd);
+        }
+    }
+    fputc('"', fd);
 }
 
 /* update environment assure that chilren processes will copy the desired
