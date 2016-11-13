@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='scan-buildb-ftt',
-    version='2.0',
+    version='2.0.1',
     author='László Nagy',
     author_email='rizsotto@gmail.com',
     url='https://github.com/rizsotto/scan-build',
