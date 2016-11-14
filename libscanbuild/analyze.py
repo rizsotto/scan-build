@@ -372,7 +372,7 @@ def run_analyzer(opts, continuation=report_failure):
                 'plist',
                 'plist-html',
                 'plist-multi-file'
-            } :
+                }:
             (handle, name) = tempfile.mkstemp(prefix='report-',
                                               suffix='.plist',
                                               dir=opts['output_dir'])
