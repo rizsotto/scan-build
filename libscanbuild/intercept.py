@@ -27,6 +27,7 @@ import os
 import os.path
 import re
 import sys
+import uuid
 
 from libear import build_libear, temporary_directory
 from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
@@ -143,9 +144,9 @@ def intercept_build_wrapper(**kwargs):
     if not target_dir:
         logging.warning(message_prefix, 'missing target directory')
         return
-    # append the current execution info to the pid file
+    # write current execution info to the pid file
     try:
-        target_file_name = str(os.getpid()) + TRACE_FILE_EXTENSION
+        target_file_name = str(uuid.uuid4()) + TRACE_FILE_EXTENSION
         target_file = os.path.join(target_dir, target_file_name)
         logging.debug('writing execution report to: %s', target_file)
         write_exec_trace(target_file, kwargs['execution'])
