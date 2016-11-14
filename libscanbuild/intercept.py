@@ -47,9 +47,17 @@ def intercept_build_main():
     """ Entry point for 'intercept-build' command. """
 
     args = intercept()
+    exit_code, current = capture(args)
 
-    exit_code, compilations = capture(args)
-    CompilationDatabase.save(args.cdb, compilations)
+    # To support incremental builds, it is desired to read elements from
+    # an existing compilation database from a previous run.
+    if args.append and os.path.isfile(args.cdb):
+        previous = CompilationDatabase.load(args.cdb)
+        entries = iter(set(itertools.chain(previous, current)))
+        CompilationDatabase.save(args.cdb, entries)
+    else:
+        CompilationDatabase.save(args.cdb, current)
+
     return exit_code
 
 
@@ -63,18 +71,11 @@ def capture(args):
         # run the build command
         environment = setup_environment(args, tmp_dir)
         exit_code = run_build(args.build, env=environment)
-        # To support incremental builds, it is desired to read elements from
-        # an existing compilation database from a previous run.
-        if 'append' in args and args.append and os.path.isfile(args.cdb):
-            previous = CompilationDatabase.load(args.cdb)
-        else:
-            previous = iter([])
         # read the intercepted exec calls
-        exec_calls = exec_calls_from(exec_trace_files(tmp_dir))
-        current = compilations(exec_calls, args.cc, args.cxx)
-        # merge compilation from previous and current run
-        entries = iter(set(itertools.chain(previous, current)))
-        return exit_code, entries
+        calls = (parse_exec_trace(file) for file in exec_trace_files(tmp_dir))
+        current = compilations(calls, args.cc, args.cxx)
+
+        return exit_code, iter(set(current))
 
 
 def compilations(exec_calls, cc, cxx):
@@ -195,16 +196,6 @@ def exec_trace_files(directory):
             __, extension = os.path.splitext(candidate)
             if extension == TRACE_FILE_EXTENSION:
                 yield os.path.join(root, candidate)
-
-
-def exec_calls_from(trace_files):
-    """ Generator of execution objects from execution trace files.
-
-    :param trace_files: iterator of file names which can contains exec trace
-    :return:            a generator of parsed exec traces. """
-
-    for trace_file in trace_files:
-        yield parse_exec_trace(trace_file)
 
 
 def is_preload_disabled(platform):
