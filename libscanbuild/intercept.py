@@ -161,10 +161,9 @@ def write_exec_trace(filename, entry):
     :param filename:    path to the output execution trace file,
     :param entry:       the Execution object to append to that file. """
 
+    call = {'pid': entry.pid, 'cwd': entry.cwd, 'cmd': entry.cmd}
     with open(filename, 'w') as handler:
-        call = {'pid': entry.pid, 'cwd': entry.cwd, 'cmd': entry.cmd}
-        line = json.dumps(call)
-        handler.write(line)
+        json.dump(call, handler)
 
 
 def parse_exec_trace(filename):
@@ -178,12 +177,11 @@ def parse_exec_trace(filename):
 
     logging.debug(filename)
     with open(filename, 'r') as handler:
-        for line in handler:
-            entry = json.loads(line.strip())
-            return Execution(
-                pid=entry['pid'],
-                cwd=entry['cwd'],
-                cmd=entry['cmd'])
+        entry = json.load(handler)
+        return Execution(
+            pid=entry['pid'],
+            cwd=entry['cwd'],
+            cmd=entry['cmd'])
 
 
 def exec_trace_files(directory):
