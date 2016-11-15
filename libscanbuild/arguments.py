@@ -197,6 +197,15 @@ def analyze_parser(from_build_command):
         default='html',
         action='store_const',
         help="""Cause the results as a set of .html and .plist files.""")
+    format_group.add_argument(
+        '--plist-multi-file',
+        '-plist-multi-file',
+        dest='output_format',
+        const='plist-multi-file',
+        default='html',
+        action='store_const',
+        help="""Cause the results as a set of .plist files with extra
+        information on related files.""")
     # TODO: implement '-view '
 
     advanced = parser.add_argument_group('advanced options')
