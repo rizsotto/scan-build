@@ -13,3 +13,5 @@ v1.3, 2016-10-22 -- Port test framework to LLVM's lit
 v2.0, 2016-11-08 -- Simplify
 
 v2.0.1 2016-11-13 -- Fix JSON encoding problem in libear
+
+v2.0.2 2016-11-15 -- Simplify
