@@ -151,37 +151,46 @@ def wrapper_entry_point(function):
 
     If the decorated method throws exception, it will be caught and logged. """
 
+    def is_cxx_wrapper():
+        """ Find out was it a C++ compiler call. Compiler wrapper names
+        contain the compiler type. C++ compiler wrappers ends with `c++`,
+        but might have `.exe` extension on windows. """
+
+        wrapper_command = os.path.basename(sys.argv[0])
+        return re.match(r'(.+)c\+\+(.*)', wrapper_command)
+
+    def run_compiler(executable):
+        """ Execute compilation with the real compiler. """
+
+        command = executable + sys.argv[1:]
+        logging.debug('compilation: %s', command)
+        result = subprocess.call(command)
+        logging.debug('compilation exit code: %d', result)
+        return result
+
     @functools.wraps(function)
     def wrapper():
         """ It executes the compilation and calls the wrapped method. """
 
         # get relevant parameters from environment
         parameters = json.loads(os.environ[ENVIRONMENT_KEY])
-        # set logging level when needed
-        verbose = parameters['verbose']
-        reconfigure_logging(verbose)
-        # find out what is the real compiler (wrapper names encode the
-        # compiler type. C++ compiler wrappers ends with `c++`, but might
-        # have `.exe` extension on windows)
-        wrapper_command = os.path.basename(sys.argv[0])
-        is_cxx = re.match(r'(.+)c\+\+(.*)', wrapper_command)
-        real_compiler = parameters['cxx'] if is_cxx else parameters['cc']
-        # execute compilation with the real compiler
-        command = real_compiler + sys.argv[1:]
-        logging.debug('compilation: %s', command)
-        result = subprocess.call(command)
-        logging.debug('compilation exit code: %d', result)
-        # call the wrapped method and ignore it's return value ...
+        reconfigure_logging(parameters['verbose'])
+        # execute the requested compilation and crash if anything goes wrong
+        cxx = is_cxx_wrapper()
+        compiler = parameters['cxx'] if cxx else parameters['cc']
+        result = run_compiler(compiler)
+        # call the wrapped method and ignore it's return value
         try:
             call = Execution(
                 pid=os.getpid(),
                 cwd=os.getcwd(),
-                cmd=['c++' if is_cxx else 'cc'] + sys.argv[1:])
+                cmd=['c++' if cxx else 'cc'] + sys.argv[1:])
             function(execution=call, result=result)
         except:
             logging.exception('Compiler wrapper failed complete.')
-        # ... return the real compiler exit code instead.
-        return result
+        finally:
+            # always return the real compiler exit code
+            return result
 
     return wrapper
 
