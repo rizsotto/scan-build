@@ -138,18 +138,20 @@ def command_entry_point(function):
 
 
 def wrapper_entry_point(function):
-    """ Decorator for wrapper command entry methods.
+    """ Implements compiler wrapper base functionality.
 
-    The decorator itself execute the real compiler call. Then it calls the
-    decorated method. The method will receive dictionary of parameters.
+    A compiler wrapper executes the real compiler, then implement some
+    functionality, then returns with the real compiler exit code.
 
-    - execution:    the command executed by the wrapper.
-    - result:       the exit code of the compilation.
+    :param function: the extra functionality what the wrapper want to
+    do on top of the compiler call. If it throws exception, it will be
+    caught and logged.
+    :return: the exit code of the real compiler.
 
-    The return value will be the exit code of the compiler call. (The
-    decorated method return value is ignored.)
+    The :param function: will receive the following arguments:
 
-    If the decorated method throws exception, it will be caught and logged. """
+    :param result:       the exit code of the compilation.
+    :param execution:    the command executed by the wrapper. """
 
     def is_cxx_wrapper():
         """ Find out was it a C++ compiler call. Compiler wrapper names
@@ -185,7 +187,7 @@ def wrapper_entry_point(function):
                 pid=os.getpid(),
                 cwd=os.getcwd(),
                 cmd=['c++' if cxx else 'cc'] + sys.argv[1:])
-            function(execution=call, result=result)
+            function(result, call)
         except:
             logging.exception('Compiler wrapper failed complete.')
         finally:

@@ -35,7 +35,7 @@ from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import intercept
 from libscanbuild.compilation import Compilation, CompilationDatabase
 
-__all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
+__all__ = ['capture', 'intercept_build_main', 'intercept_compiler_wrapper']
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
@@ -132,7 +132,7 @@ def setup_environment(args, destination):
 
 @command_entry_point
 @wrapper_entry_point
-def intercept_build_wrapper(**kwargs):
+def intercept_compiler_wrapper(_, execution):
     """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 
     It does generate execution report into target directory.
@@ -149,7 +149,7 @@ def intercept_build_wrapper(**kwargs):
         target_file_name = str(uuid.uuid4()) + TRACE_FILE_EXTENSION
         target_file = os.path.join(target_dir, target_file_name)
         logging.debug('writing execution report to: %s', target_file)
-        write_exec_trace(target_file, kwargs['execution'])
+        write_exec_trace(target_file, execution)
     except IOError:
         logging.warning(message_prefix, 'io problem')
 

@@ -33,7 +33,7 @@ from libscanbuild.compilation import Compilation, classify_source, \
     CompilationDatabase
 from libscanbuild.clang import get_version, get_arguments
 
-__all__ = ['scan_build', 'analyze_build', 'analyze_build_wrapper']
+__all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
 
 COMPILER_WRAPPER_CC = 'analyze-cc'
 COMPILER_WRAPPER_CXX = 'analyze-c++'
@@ -197,17 +197,17 @@ def setup_environment(args):
 
 @command_entry_point
 @wrapper_entry_point
-def analyze_build_wrapper(**kwargs):
+def analyze_compiler_wrapper(result, execution):
     """ Entry point for `analyze-cc` and `analyze-c++` compiler wrappers. """
 
     # don't run analyzer when compilation fails. or when it's not requested.
-    if kwargs['result'] or not os.getenv(ENVIRONMENT_KEY):
+    if result or not os.getenv(ENVIRONMENT_KEY):
         return
     # collect the needed parameters from environment
     parameters = json.loads(os.environ[ENVIRONMENT_KEY])
     # don't run analyzer when the command is not a compilation.
     # (filtering non compilations is done by the generator.)
-    for entry in Compilation.from_call(kwargs['execution']):
+    for entry in Compilation.from_call(execution):
         current = dict(entry.to_analyzer(), **parameters)
         logging_analyzer_output(run(current))
 

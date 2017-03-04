@@ -21,11 +21,11 @@ setup(
         'console_scripts': [
             'scan-build = libscanbuild.analyze:scan_build',
             'analyze-build = libscanbuild.analyze:analyze_build',
-            'analyze-cc = libscanbuild.analyze:analyze_build_wrapper',
-            'analyze-c++ = libscanbuild.analyze:analyze_build_wrapper',
+            'analyze-cc = libscanbuild.analyze:analyze_compiler_wrapper',
+            'analyze-c++ = libscanbuild.analyze:analyze_compiler_wrapper',
             'intercept-build = libscanbuild.intercept:intercept_build_main',
-            'intercept-cc = libscanbuild.intercept:intercept_build_wrapper',
-            'intercept-c++ = libscanbuild.intercept:intercept_build_wrapper'
+            'intercept-cc = libscanbuild.intercept:intercept_compiler_wrapper',
+            'intercept-c++ = libscanbuild.intercept:intercept_compiler_wrapper'
         ]
     },
     classifiers=[
