@@ -23,7 +23,7 @@ setup(
             'analyze-build = libscanbuild.analyze:analyze_build',
             'analyze-cc = libscanbuild.analyze:analyze_compiler_wrapper',
             'analyze-c++ = libscanbuild.analyze:analyze_compiler_wrapper',
-            'intercept-build = libscanbuild.intercept:intercept_build_main',
+            'intercept-build = libscanbuild.intercept:intercept_build',
             'intercept-cc = libscanbuild.intercept:intercept_compiler_wrapper',
             'intercept-c++ = libscanbuild.intercept:intercept_compiler_wrapper'
         ]

@@ -35,7 +35,7 @@ from libscanbuild import command_entry_point, wrapper_entry_point, \
 from libscanbuild.arguments import intercept
 from libscanbuild.compilation import Compilation, CompilationDatabase
 
-__all__ = ['capture', 'intercept_build_main', 'intercept_compiler_wrapper']
+__all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
@@ -44,7 +44,7 @@ WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
 @command_entry_point
-def intercept_build_main():
+def intercept_build():
     """ Entry point for 'intercept-build' command. """
 
     args = intercept()
