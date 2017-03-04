@@ -30,7 +30,7 @@ import sys
 import uuid
 
 from libear import build_libear, temporary_directory
-from libscanbuild import tempdir, command_entry_point, wrapper_entry_point, \
+from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command, Execution
 from libscanbuild.arguments import intercept
 from libscanbuild.compilation import Compilation, CompilationDatabase
@@ -68,7 +68,7 @@ def capture(args):
     :param args:    the parsed and validated command line arguments
     :return:        the exit status of build process. """
 
-    with temporary_directory(prefix='intercept-', dir=tempdir()) as tmp_dir:
+    with temporary_directory(prefix='intercept-') as tmp_dir:
         # run the build command
         environment = setup_environment(args, tmp_dir)
         exit_code = run_build(args.build, env=environment)
