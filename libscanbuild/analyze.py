@@ -26,7 +26,8 @@ import datetime
 
 from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command
-from libscanbuild.arguments import scan, analyze
+from libscanbuild.arguments import parse_args_for_scan_build, \
+    parse_args_for_analyze_build
 from libscanbuild.intercept import capture
 from libscanbuild.report import document
 from libscanbuild.compilation import Compilation, classify_source, \
@@ -44,7 +45,7 @@ ENVIRONMENT_KEY = 'ANALYZE_BUILD'
 def scan_build():
     """ Entry point for scan-build command. """
 
-    args = scan()
+    args = parse_args_for_scan_build()
     # will re-assign the report directory as new output
     with report_directory(args.output, args.keep_empty) as args.output:
         # run against a build command. there are cases, when analyzer run
@@ -71,7 +72,7 @@ def scan_build():
 def analyze_build():
     """ Entry point for analyze-build command. """
 
-    args = analyze()
+    args = parse_args_for_analyze_build()
     # will re-assign the report directory as new output
     with report_directory(args.output, args.keep_empty) as args.output:
         # run the analyzer against a compilation db

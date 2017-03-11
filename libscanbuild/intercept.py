@@ -32,7 +32,7 @@ import uuid
 from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command, Execution
-from libscanbuild.arguments import intercept
+from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.compilation import Compilation, CompilationDatabase
 
 __all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
@@ -47,7 +47,7 @@ WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 def intercept_build():
     """ Entry point for 'intercept-build' command. """
 
-    args = intercept()
+    args = parse_args_for_intercept_build()
     exit_code, current = capture(args)
 
     # To support incremental builds, it is desired to read elements from

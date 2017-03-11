@@ -3,7 +3,7 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-""" The module implements command line interface related duties.
+""" This module parses and validates arguments for command-line interfaces.
 
 It uses argparse module to create the command line parser. (This library is
 in the standard python library since 3.2 and backported to 2.7, but not
@@ -21,13 +21,14 @@ import tempfile
 from libscanbuild import reconfigure_logging
 from libscanbuild.clang import get_checkers
 
-__all__ = ['intercept', 'analyze', 'scan']
+__all__ = ['parse_args_for_intercept_build', 'parse_args_for_analyze_build',
+           'parse_args_for_scan_build']
 
 
-def intercept():
-    """ Parse and validate command line arguments. """
+def parse_args_for_intercept_build():
+    """ Parse and validate command-line arguments for intercept-build. """
 
-    parser = intercept_parser()
+    parser = create_intercept_parser()
     args = parser.parse_args()
 
     reconfigure_logging(args.verbose)
@@ -41,43 +42,75 @@ def intercept():
     return args
 
 
-def analyze():
-    """ Parse and validate command line arguments. """
+def parse_args_for_analyze_build():
+    """ Parse and validate command-line arguments for analyze-build. """
 
     from_build_command = False
-    parser = analyze_parser(from_build_command)
+    parser = create_analyze_parser(from_build_command)
     args = parser.parse_args()
 
     reconfigure_logging(args.verbose)
     logging.debug('Raw arguments %s', sys.argv)
 
-    analyze_validate(parser, args, from_build_command)
+    normalize_args_for_analyze(args, from_build_command)
+    validate_args_for_analyze(parser, args, from_build_command)
     logging.debug('Parsed arguments: %s', args)
     return args
 
 
-def scan():
-    """ Parse and validate command line arguments. """
+def parse_args_for_scan_build():
+    """ Parse and validate command-line arguments for scan-build. """
 
     from_build_command = True
-    parser = analyze_parser(from_build_command)
+    parser = create_analyze_parser(from_build_command)
     args = parser.parse_args()
 
     reconfigure_logging(args.verbose)
     logging.debug('Raw arguments %s', sys.argv)
 
-    analyze_validate(parser, args, from_build_command)
+    normalize_args_for_analyze(args, from_build_command)
+    validate_args_for_analyze(parser, args, from_build_command)
     logging.debug('Parsed arguments: %s', args)
     return args
 
 
-def analyze_validate(parser, args, from_build_command):
-    """ Validation done by the parser itself, but semantic check still
-    needs to be done. This method is doing it for analyze related commands."""
+def normalize_args_for_analyze(args, from_build_command):
+    """ Normalize parsed arguments for analyze-build and scan-build.
 
-    # Make plugins always a list. (It might be None when not specified.)
-    args.plugins = args.plugins if args.plugins else []
-    # Make sure that these checks are bellow this ^
+    :param args: Parsed argument object. (Will be mutated.)
+    :param from_build_command: Boolean value tells is the command suppose
+    to run the analyzer against a build command or a compilation db. """
+
+    # make plugins always a list. (it might be None when not specified.)
+    if args.plugins is None:
+        args.plugins = []
+
+    # make exclude directory list unique and absolute.
+    uniq_excludes = set(os.path.abspath(entry) for entry in args.excludes)
+    args.excludes = list(uniq_excludes)
+
+    # because shared codes for all tools, some common used methods are
+    # expecting some argument to be present. so, instead of query the args
+    # object about the presence of the flag, we fake it here. to make those
+    # methods more readable. (it's an arguable choice, took it only for those
+    # which have good default value.)
+    if from_build_command:
+        # add cdb parameter invisibly to make report module working.
+        args.cdb = 'compile_commands.json'
+
+
+def validate_args_for_analyze(parser, args, from_build_command):
+    """ Command line parsing is done by the argparse module, but semantic
+    validation still needs to be done. This method is doing it for
+    analyze-build and scan-build commands.
+
+    :param parser: The command line parser object.
+    :param args: Parsed argument object.
+    :param from_build_command: Boolean value tells is the command suppose
+    to run the analyzer against a build command or a compilation db.
+    :return: No return value, but this call might throw when validation
+    fails. """
+
     if args.help_checkers_verbose:
         print_checkers(get_checkers(args.clang, args.plugins))
         parser.exit(status=0)
@@ -89,24 +122,11 @@ def analyze_validate(parser, args, from_build_command):
     elif not from_build_command and not os.path.exists(args.cdb):
         parser.error(message='compilation database is missing')
 
-    # Make exclude directory list unique and absolute
-    uniq_excludes = set(os.path.abspath(entry) for entry in args.excludes)
-    args.excludes = list(uniq_excludes)
 
-    # because shared codes for all tools, some common used methods are
-    # expecting some argument to be present. so, instead of query the args
-    # object about the presence of the flag, we fake it here. to make those
-    # methods more readable. (it's an arguable choice, took it only for those
-    #  which have good default value.)
-    if from_build_command:
-        # add cdb parameter invisibly to make report module working
-        args.cdb = 'compile_commands.json'
+def create_intercept_parser():
+    """ Creates a parser for command-line arguments to 'intercept'. """
 
-
-def intercept_parser():
-    """ Command line argument parser factory method. """
-
-    parser = parser_create()
+    parser = create_default_parser()
     parser_add_cdb(parser)
 
     parser_add_prefer_wrapper(parser)
@@ -127,10 +147,10 @@ def intercept_parser():
     return parser
 
 
-def analyze_parser(from_build_command):
-    """ Command line argument parser factory method. """
+def create_analyze_parser(from_build_command):
+    """ Creates a parser for command-line arguments to 'analyze'. """
 
-    parser = parser_create()
+    parser = create_default_parser()
 
     if from_build_command:
         parser_add_prefer_wrapper(parser)
@@ -316,8 +336,8 @@ def analyze_parser(from_build_command):
     return parser
 
 
-def parser_create():
-    """ Command line argument parser factory method. """
+def create_default_parser():
+    """ Creates command line parser for all build wrapper commands. """
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
