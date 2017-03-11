@@ -338,7 +338,7 @@ def parse_crash(filename):
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
     with open(filename, mode='rb') as handler:
-        # this is a workaround to fix windows read '\r\n' as new lines
+        # this is a workaround to fix windows read '\r\n' as new lines.
         lines = [line.decode().rstrip() for line in handler.readlines()]
         return {
             'source': lines[0],
@@ -513,9 +513,8 @@ def commonprefix_from(filename):
 def commonprefix(files):
     """ Fixed version of os.path.commonprefix.
 
-    :param files: list of file names
-    :return: the longest path prefix that is a prefix of all paths in files
-    """
+    :param files: list of file names.
+    :return: the longest path prefix that is a prefix of all files. """
     result = None
     for current in files:
         if result is not None:
