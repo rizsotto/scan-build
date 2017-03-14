@@ -28,6 +28,57 @@ class InterceptUtilTest(unittest.TestCase):
             result = sut.parse_exec_trace(temp_file)
             self.assertEqual(input_one, result)
 
+    def test_simple_expand_cmd_with_response_files(self):
+        with libear.temporary_directory() as tmp_dir:
+            response_file = os.path.join(tmp_dir, 'response.jom')
+            with open(response_file, 'w') as response_file_handle:
+                response_file_handle.write('        Hello\n')
+                response_file_handle.write('        World!\n')
+            cmd_input = ['echo', '@'+response_file]
+            cmd_output = ['echo', 'Hello', 'World!']
+            self.assertEqual(cmd_output,
+                             sut.expand_cmd_with_response_files(cmd_input))
+
+    def test_complex_expand_cmd_with_response_files(self):
+        with libear.temporary_directory() as tmp_dir:
+            response_file = os.path.join(tmp_dir, 'response.jom')
+            with open(response_file, 'w') as response_file_handle:
+                response_file_handle.write('-DMY_STRING=\\\"IS\ COMPLEX\\\"\n')
+                response_file_handle.write('-DCAN_CONTAIN -DMULTIPLE\n')
+                response_file_handle.write('    source.cpp\n')
+            cmd_input = ['clang-cl', '-c', '@'+response_file]
+            cmd_output = ['clang-cl', '-c',
+                          '-DMY_STRING=\"IS COMPLEX\"',
+                          '-DCAN_CONTAIN',
+                          '-DMULTIPLE',
+                          'source.cpp']
+            self.assertEqual(cmd_output,
+                             sut.expand_cmd_with_response_files(cmd_input))
+
+    def test_write_exec_trace_with_response(self):
+        with libear.temporary_directory() as tmp_dir:
+            response_file_one = os.path.join(tmp_dir, 'response1.jom')
+            response_file_two = os.path.join(tmp_dir, 'response2.jom')
+            input_one = Execution(
+                pid=123,
+                cwd='/path/to/here',
+                cmd=['clang-cl', '-c', '@'+response_file_one,
+                     '-Idoes_not_exists', '@'+response_file_two])
+            output_one = Execution(
+                pid=123,
+                cwd='/path/to/here',
+                cmd=['clang-cl', '-c', '-DSOMETHING_HERE',
+                     '-Idoes_not_exists', 'that.cpp'])
+            with open(response_file_one, 'w') as response_file_one_handle:
+                response_file_one_handle.write('        -DSOMETHING_HERE\n')
+            with open(response_file_two, 'w') as response_file_two_handle:
+                response_file_two_handle.write('        that.cpp\n')
+
+            temp_file = os.path.join(tmp_dir, 'single_report.cmd')
+            sut.write_exec_trace(temp_file, input_one)
+            result = sut.parse_exec_trace(temp_file)
+            self.assertEqual(output_one, result)
+
     @unittest.skipIf(IS_WINDOWS, 'this code is not running on windows')
     def test_sip(self):
         def create_status_report(filename, message):

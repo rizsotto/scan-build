@@ -49,7 +49,13 @@ IGNORED_FLAGS = {
     '-u': 1,
     '-z': 1,
     '-T': 1,
-    '-Xlinker': 1
+    '-Xlinker': 1,
+    # clang-cl / msvc cl specific flags
+    # consider moving visual studio specific warning flags also
+    '-nologo': 0,
+    '-EHsc': 0,
+    '-EHa': 0
+
 }  # type: Dict[str, int]
 
 # Known C/C++ compiler wrapper name patterns
