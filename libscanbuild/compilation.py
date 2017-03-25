@@ -87,32 +87,16 @@ class Compilation:
         self.source = source if os.path.isabs(source) else \
             os.path.normpath(os.path.join(self.directory, source))
 
-    def _hash_str(self):
-        """ Generate unique hash string for compilation entry.
-
-        Python requires __hash__ and __eq__ methods implemented in order to
-        store the object in a set. We use the set to filter out duplicate
-        entries from compilation database.
-
-        :return: a unique hash string. """
-
-        return ':'.join([
-            self.source[::-1],  # for faster lookup it's reverted
-            self.directory[::-1],  # for faster lookup it's reverted
-            ' '.join(self.flags),  # just concat, don't escape it
-            self.compiler
-        ])
-
     def __hash__(self):
-        """ See comment for _hash_str method. """
-
-        return hash(self._hash_str())
+        return hash((self.compiler, self.source, self.directory,
+                     ':'.join(self.flags)))
 
     def __eq__(self, other):
-        """ See comment for _hash_str method. """
-
         return isinstance(other, Compilation) and \
-            self._hash_str() == other._hash_str()
+            self.compiler == other.compiler and \
+            self.flags == other.flags and \
+            self.directory == other.directory and \
+            self.source == other.source
 
     def to_analyzer(self):
         """ This method dumps the object attributes into a dictionary. """
