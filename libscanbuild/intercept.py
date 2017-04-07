@@ -90,8 +90,8 @@ def compilations(exec_calls, cc, cxx):
     :return: stream of formatted compilation database entries """
 
     for call in exec_calls:
-        for entry in Compilation.from_call(call, cc, cxx):
-            yield entry
+        for compilation in Compilation.iter_from_execution(call, cc, cxx):
+            yield compilation
 
 
 def setup_environment(args, destination):

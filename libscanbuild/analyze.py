@@ -165,7 +165,7 @@ def run_analyzer_parallel(compilations, args):
 
     logging.debug('run analyzer against compilation database')
     consts = analyze_parameters(args)
-    parameters = (dict(compilation.to_analyzer(), **consts)
+    parameters = (dict(compilation.as_dict(), **consts)
                   for compilation in compilations)
     # when verbose output requested execute sequentially
     pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
@@ -208,8 +208,8 @@ def analyze_compiler_wrapper(result, execution):
     parameters = json.loads(os.environ[ENVIRONMENT_KEY])
     # don't run analyzer when the command is not a compilation.
     # (filtering non compilations is done by the generator.)
-    for entry in Compilation.from_call(execution):
-        current = dict(entry.to_analyzer(), **parameters)
+    for compilation in Compilation.iter_from_execution(execution):
+        current = dict(compilation.as_dict(), **parameters)
         logging_analyzer_output(run(current))
 
 

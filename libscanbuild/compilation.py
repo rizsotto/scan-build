@@ -3,7 +3,7 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-""" This module is responsible for to parse a compiler invocation. """
+""" This module is responsible to parse a compiler invocation. """
 
 import re
 import os
@@ -79,7 +79,7 @@ class Compilation:
     def __init__(self, compiler, flags, source, directory):
         """ Constructor for a single compilation.
 
-        This method just normalize the paths and store the values. """
+        This method just normalize the paths and initialize values. """
 
         self.compiler = compiler
         self.flags = flags
@@ -92,18 +92,14 @@ class Compilation:
                      ':'.join(self.flags)))
 
     def __eq__(self, other):
-        return isinstance(other, Compilation) and \
-            self.compiler == other.compiler and \
-            self.flags == other.flags and \
-            self.directory == other.directory and \
-            self.source == other.source
+        return vars(self) == vars(other)
 
-    def to_analyzer(self):
+    def as_dict(self):
         """ This method dumps the object attributes into a dictionary. """
 
-        return dict((key, value) for key, value in vars(self).items())
+        return vars(self)
 
-    def to_db(self):
+    def as_db_entry(self):
         """ This method creates a compilation database entry. """
 
         relative = os.path.relpath(self.source, self.directory)
@@ -115,7 +111,23 @@ class Compilation:
         }
 
     @staticmethod
-    def from_call(execution, cc='cc', cxx='c++'):
+    def from_db_entry(entry):
+        """ Parser method for compilation entry.
+
+        From compilation database entry it creates the compilation object.
+
+        :param entry:   the compilation database entry
+        :return: a single compilation object """
+
+        command = shell_split(entry['command']) if 'command' in entry else \
+            entry['arguments']
+        execution = Execution(cmd=command, cwd=entry['directory'], pid=0)
+        entries = list(Compilation.iter_from_execution(execution))
+        assert len(entries) == 1
+        return entries[0]
+
+    @staticmethod
+    def iter_from_execution(execution, cc='cc', cxx='c++'):
         """ Generator method for compilation entries.
 
         From a single compiler call it can generate zero or more entries.
@@ -133,22 +145,6 @@ class Compilation:
                                  flags=candidate.flags)
             if os.path.isfile(result.source):
                 yield result
-
-    @staticmethod
-    def from_db(entry):
-        """ Factory method for compilation entry.
-
-        From compilation database entry it creates the compilation object.
-
-        :param entry:   the compilation database entry
-        :return: a single compilation object """
-
-        command = shell_split(entry['command']) if 'command' in entry else \
-            entry['arguments']
-        execution = Execution(cmd=command, cwd=entry['directory'], pid=0)
-        entries = list(Compilation.from_call(execution))
-        assert len(entries) == 1
-        return entries[0]
 
     @staticmethod
     def _split_compiler(command, cc, cxx):
@@ -236,7 +232,7 @@ class Compilation:
 class CompilationDatabase:
     @staticmethod
     def save(filename, iterator):
-        entries = [entry.to_db() for entry in iterator]
+        entries = [entry.as_db_entry() for entry in iterator]
         with open(filename, 'w+') as handle:
             json.dump(entries, handle, sort_keys=True, indent=4)
 
@@ -244,7 +240,7 @@ class CompilationDatabase:
     def load(filename):
         with open(filename, 'r') as handle:
             for entry in json.load(handle):
-                yield Compilation.from_db(entry)
+                yield Compilation.from_db_entry(entry)
 
 
 def classify_source(filename, c_compiler=True):
