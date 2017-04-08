@@ -177,7 +177,7 @@ def parse_exec_trace(filename):
     :param filename: path to an execution trace file to read from,
     :return: an Execution object. """
 
-    logging.debug(filename)
+    logging.debug('parse exec trace file: %s', filename)
     with open(filename, 'r') as handler:
         entry = json.load(handler)
         return Execution(
