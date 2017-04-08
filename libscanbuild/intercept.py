@@ -39,7 +39,7 @@ __all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
-TRACE_FILE_EXTENSION = '.json'  # same as in ear.c
+TRACE_FILE_PREFIX = 'execution.'  # same as in ear.c
 WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
@@ -146,7 +146,7 @@ def intercept_compiler_wrapper(_, execution):
         return
     # write current execution info to the pid file
     try:
-        target_file_name = str(uuid.uuid4()) + TRACE_FILE_EXTENSION
+        target_file_name = TRACE_FILE_PREFIX + str(uuid.uuid4())
         target_file = os.path.join(target_dir, target_file_name)
         logging.debug('writing execution report to: %s', target_file)
         write_exec_trace(target_file, execution)
@@ -194,8 +194,7 @@ def exec_trace_files(directory):
 
     for root, _, files in os.walk(directory):
         for candidate in files:
-            __, extension = os.path.splitext(candidate)
-            if extension == TRACE_FILE_EXTENSION:
+            if candidate.startswith(TRACE_FILE_PREFIX):
                 yield os.path.join(root, candidate)
 
 

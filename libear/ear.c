@@ -28,6 +28,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <pthread.h>
 
 #if defined HAVE_POSIX_SPAWN || defined HAVE_POSIX_SPAWNP
@@ -70,7 +72,7 @@ static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *const argv[]);
-static void bear_write_json_string(char const *word, FILE *stream);
+static void bear_write_json_string(int fd, char const *word);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
 static char const **bear_strings_append(char const **in, char const *e);
@@ -418,72 +420,64 @@ static void bear_report_call(char const *const argv[]) {
         exit(EXIT_FAILURE);
     }
     char const * const out_dir = initial_env[0];
-    // generate report file path. file name will be "<pid>_<idx>.json"
-    // it needs to append an index field, since pid is not unique. (many
-    // compiler wrapper just exec another file, therefore sharing pid.)
+    // generate report file path.
     size_t const path_max_length = strlen(out_dir) + 32;
     char filename[path_max_length];
-    for (int idx = 0; idx < 100; ++idx) {
-        if (-1 == snprintf(filename, path_max_length, "%s/%d_%d.json", out_dir, getpid(), idx)) {
-            perror("bear: snprintf");
-            exit(EXIT_FAILURE);
-        }
-        if (-1 == access(filename, W_OK)) {
-            break;
-        }
+    if (-1 == snprintf(filename, path_max_length, "%s/execution.XXXXXX", out_dir)) {
+        perror("bear: snprintf");
+        exit(EXIT_FAILURE);
     }
-    FILE * fd = fopen(filename, "w+");
-    if (0 == fd) {
-        perror("bear: fopen");
+    int fd = mkstemp(&filename);
+    if (-1 == fd) {
+        perror("bear: mkstemp");
         exit(EXIT_FAILURE);
     }
     // dump the content in JSON format
-    fprintf(fd, "{ \"pid\": %d, \"cmd\": [", getpid());
+    dprintf(fd, "{ \"pid\": %d, \"cmd\": [", getpid());
     for (char const *const *it = argv; (it) && (*it); ++it) {
         if (it != argv) {
-            fputc(',', fd);
+            write(fd, ", ", 2);
         }
-        bear_write_json_string(*it, fd);
+        bear_write_json_string(fd, *it);
     }
-    fputs("], \"cwd\": ", fd);
-    bear_write_json_string(cwd, fd);
-    fputc('}', fd);
-    if (fclose(fd)) {
-        perror("bear: fclose");
+    dprintf(fd, "], \"cwd\": ");
+    bear_write_json_string(fd, cwd);
+    write(fd, " }", 2);
+    if (close(fd)) {
+        perror("bear: close");
         exit(EXIT_FAILURE);
     }
     free((void *)cwd);
     pthread_mutex_unlock(&mutex);
 }
 
-static void bear_write_json_string(char const *word, FILE *fd) {
-    fputc('"', fd);
+static void bear_write_json_string(int fd, char const *word) {
+    write(fd, "\"", 1);
     for (char const * it = word; *it; ++it) {
-        char const current = *it;
-        switch (current) {
+        switch (*it) {
         case '\b':
-            fputs("\\b", fd);
+            write(fd, "\\b", 2);
             break;
         case '\f':
-            fputs("\\f", fd);
+            write(fd, "\\f", 2);
             break;
         case '\n':
-            fputs("\\n", fd);
+            write(fd, "\\n", 2);
             break;
         case '\r':
-            fputs("\\r", fd);
+            write(fd, "\\r", 2);
             break;
         case '\t':
-            fputs("\\t", fd);
+            write(fd, "\\t", 2);
             break;
         case '"':
         case '\\':
-            fputc('\\', fd);
+            write(fd, "\\", 1);
         default:
-            fputc(current, fd);
+            write(fd, it, 1);
         }
     }
-    fputc('"', fd);
+    write(fd, "\"", 1);
 }
 
 /* update environment assure that chilren processes will copy the desired
