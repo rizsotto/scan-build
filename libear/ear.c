@@ -73,7 +73,7 @@ static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *const argv[]);
-static void bear_write_json_report(int fd, char const *const cmd[], char const *cwd, pid_t pid);
+static int bear_write_json_report(int fd, char const *const cmd[], char const *cwd, pid_t pid);
 static int bear_encode_json_string(char const *src, char *dst, size_t dst_size);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
@@ -432,7 +432,10 @@ static void bear_report_call(char const *const argv[]) {
         perror("bear: mkstemp");
         exit(EXIT_FAILURE);
     }
-    bear_write_json_report(fd, argv, cwd, getpid());
+    if (0 > bear_write_json_report(fd, argv, cwd, getpid())) {
+        perror("bear: writing json problem");
+        exit(EXIT_FAILURE);
+    }
     if (close(fd)) {
         perror("bear: close");
         exit(EXIT_FAILURE);
@@ -441,25 +444,27 @@ static void bear_report_call(char const *const argv[]) {
     pthread_mutex_unlock(&mutex);
 }
 
-static void bear_write_json_report(int fd, char const *const cmd[], char const *const cwd, pid_t pid) {
-    dprintf(fd, "{ \"pid\": %d, \"cmd\": [", pid);
+static int bear_write_json_report(int fd, char const *const cmd[], char const *const cwd, pid_t pid) {
+    if (0 > dprintf(fd, "{ \"pid\": %d, \"cmd\": [", pid))
+        return -1;
+
     for (char const *const *it = cmd; (it) && (*it); ++it) {
         char const *const sep = (it != cmd) ? "," : "";
         const size_t buffer_size = 2 * strlen(*it);
         char buffer[buffer_size];
-        if (-1 == bear_encode_json_string(*it, buffer, buffer_size)) {
-            perror("bear: encode failure");
-            exit(EXIT_FAILURE);
-        }
-        dprintf(fd, "%s \"%s\"", sep, buffer);
+        if (-1 == bear_encode_json_string(*it, buffer, buffer_size))
+            return -1;
+        if (0 > dprintf(fd, "%s \"%s\"", sep, buffer))
+            return -1;
     }
     const size_t buffer_size = 2 * strlen(cwd);
     char buffer[buffer_size];
-    if (-1 == bear_encode_json_string(cwd, buffer, buffer_size)) {
-        perror("bear: encode failure");
-        exit(EXIT_FAILURE);
-    }
-    dprintf(fd, "], \"cwd\": \"%s\" }", buffer);
+    if (-1 == bear_encode_json_string(cwd, buffer, buffer_size))
+        return -1;
+    if (0 > dprintf(fd, "], \"cwd\": \"%s\" }", buffer))
+        return -1;
+
+    return 0;
 }
 
 static int bear_encode_json_string(char const *const src, char *const dst, size_t const dst_size) {
