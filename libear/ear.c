@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <pthread.h>
 
@@ -72,7 +73,8 @@ static void bear_release_env_t(bear_env_t *env);
 static char const **bear_update_environment(char *const envp[], bear_env_t *env);
 static char const **bear_update_environ(char const **in, char const *key, char const *value);
 static void bear_report_call(char const *const argv[]);
-static void bear_write_json_string(int fd, char const *word);
+static void bear_write_json_report(int fd, char const *const cmd[], char const *cwd, pid_t pid);
+static int bear_encode_json_string(char const *src, char *dst, size_t dst_size);
 static char const **bear_strings_build(char const *arg, va_list *ap);
 static char const **bear_strings_copy(char const **const in);
 static char const **bear_strings_append(char const **in, char const *e);
@@ -409,7 +411,6 @@ static int call_posix_spawnp(pid_t *restrict pid, const char *restrict file,
 /* this method is to write log about the process creation. */
 
 static void bear_report_call(char const *const argv[]) {
-
     if (!initialized)
         return;
 
@@ -420,29 +421,18 @@ static void bear_report_call(char const *const argv[]) {
         exit(EXIT_FAILURE);
     }
     char const * const out_dir = initial_env[0];
-    // generate report file path.
     size_t const path_max_length = strlen(out_dir) + 32;
     char filename[path_max_length];
     if (-1 == snprintf(filename, path_max_length, "%s/execution.XXXXXX", out_dir)) {
         perror("bear: snprintf");
         exit(EXIT_FAILURE);
     }
-    int fd = mkstemp(&filename);
+    int fd = mkstemp((char *)&filename);
     if (-1 == fd) {
         perror("bear: mkstemp");
         exit(EXIT_FAILURE);
     }
-    // dump the content in JSON format
-    dprintf(fd, "{ \"pid\": %d, \"cmd\": [", getpid());
-    for (char const *const *it = argv; (it) && (*it); ++it) {
-        if (it != argv) {
-            write(fd, ", ", 2);
-        }
-        bear_write_json_string(fd, *it);
-    }
-    dprintf(fd, "], \"cwd\": ");
-    bear_write_json_string(fd, cwd);
-    write(fd, " }", 2);
+    bear_write_json_report(fd, argv, cwd, getpid());
     if (close(fd)) {
         perror("bear: close");
         exit(EXIT_FAILURE);
@@ -451,33 +441,77 @@ static void bear_report_call(char const *const argv[]) {
     pthread_mutex_unlock(&mutex);
 }
 
-static void bear_write_json_string(int fd, char const *word) {
-    write(fd, "\"", 1);
-    for (char const * it = word; *it; ++it) {
-        switch (*it) {
+static void bear_write_json_report(int fd, char const *const cmd[], char const *const cwd, pid_t pid) {
+    dprintf(fd, "{ \"pid\": %d, \"cmd\": [", pid);
+    for (char const *const *it = cmd; (it) && (*it); ++it) {
+        char const *const sep = (it != cmd) ? "," : "";
+        const size_t buffer_size = 2 * strlen(*it);
+        char buffer[buffer_size];
+        if (-1 == bear_encode_json_string(*it, buffer, buffer_size)) {
+            perror("bear: encode failure");
+            exit(EXIT_FAILURE);
+        }
+        dprintf(fd, "%s \"%s\"", sep, buffer);
+    }
+    const size_t buffer_size = 2 * strlen(cwd);
+    char buffer[buffer_size];
+    if (-1 == bear_encode_json_string(cwd, buffer, buffer_size)) {
+        perror("bear: encode failure");
+        exit(EXIT_FAILURE);
+    }
+    dprintf(fd, "], \"cwd\": \"%s\" }", buffer);
+}
+
+static int bear_encode_json_string(char const *const src, char *const dst, size_t const dst_size) {
+    char const *src_it = src;
+    char const *const src_end = src + strlen(src);
+
+    char *dst_it = dst;
+    char *const dst_end = dst + dst_size;
+
+    for (; src_it != src_end; ++src_it, ++dst_it) {
+        if (dst_it == dst_end)
+            return -1;
+        // Insert an escape character before control characters.
+        switch (*src_it) {
         case '\b':
-            write(fd, "\\b", 2);
-            break;
         case '\f':
-            write(fd, "\\f", 2);
-            break;
         case '\n':
-            write(fd, "\\n", 2);
-            break;
         case '\r':
-            write(fd, "\\r", 2);
-            break;
         case '\t':
-            write(fd, "\\t", 2);
-            break;
         case '"':
         case '\\':
-            write(fd, "\\", 1);
+            *dst_it++ = '\\';
+            break;
         default:
-            write(fd, it, 1);
+            break;
+        }
+        // Transform some of the control characters.
+        switch (*src_it) {
+        case '\b':
+            *dst_it = 'b';
+            break;
+        case '\f':
+            *dst_it = 'f';
+            break;
+        case '\n':
+            *dst_it = 'n';
+            break;
+        case '\r':
+            *dst_it = 'r';
+            break;
+        case '\t':
+            *dst_it = 't';
+            break;
+        default:
+            *dst_it = *src_it;
         }
     }
-    write(fd, "\"", 1);
+    if (dst_it == dst_end)
+        return -1;
+    // Insert a terminating 0 value.
+    *dst_it = 0;
+    return 0;
 }
 
 /* update environment assure that chilren processes will copy the desired

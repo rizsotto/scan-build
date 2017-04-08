@@ -13,6 +13,7 @@ import tempfile
 import shutil
 import contextlib
 import logging
+import subprocess
 
 __all__ = ['build_libear']
 
@@ -62,7 +63,6 @@ def build_libear(compiler, dst_dir):
 def execute(cmd, *args, **kwargs):
     """ Make subprocess execution silent. """
 
-    import subprocess
     kwargs.update({'stdout': subprocess.PIPE, 'stderr': subprocess.STDOUT})
     return subprocess.check_call(cmd, *args, **kwargs)
 
