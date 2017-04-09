@@ -6,39 +6,39 @@ matrix:
       sudo: false
       python: 2.7
       env:
-        - TRAVIS_CLANG=clang-3.7
-        - TRAVIS_CLANGPP=clang++-3.7
+        - TRAVIS_CLANG=clang-3.9
+        - TRAVIS_CLANGPP=clang++-3.9
     - os: linux
       sudo: false
       python: 3.3
       env:
-        - TRAVIS_CLANG=clang-3.7
-        - TRAVIS_CLANGPP=clang++-3.7
+        - TRAVIS_CLANG=clang-3.9
+        - TRAVIS_CLANGPP=clang++-3.9
     - os: linux
       sudo: false
       python: 3.4
       env:
-        - TRAVIS_CLANG=clang-3.7
-        - TRAVIS_CLANGPP=clang++-3.7
+        - TRAVIS_CLANG=clang-3.9
+        - TRAVIS_CLANGPP=clang++-3.9
     - os: linux
       sudo: false
       python: 3.5
       env:
-        - TRAVIS_CLANG=clang-3.7
-        - TRAVIS_CLANGPP=clang++-3.7
+        - TRAVIS_CLANG=clang-3.9
+        - TRAVIS_CLANGPP=clang++-3.9
     - os: linux
       sudo: false
       python: "pypy"
       env:
-        - TRAVIS_CLANG=clang-3.7
-        - TRAVIS_CLANGPP=clang++-3.7
+        - TRAVIS_CLANG=clang-3.9
+        - TRAVIS_CLANGPP=clang++-3.9
     - os: linux
       sudo: required
       dist: trusty
       python: 2.7
       env:
-        - TRAVIS_CLANG=clang-3.7
-        - TRAVIS_CLANGPP=clang++-3.7
+        - TRAVIS_CLANG=clang-3.9
+        - TRAVIS_CLANGPP=clang++-3.9
     - os: osx
       osx_image: xcode6.4
       language: generic
@@ -54,9 +54,9 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise
-      - llvm-toolchain-precise-3.7
+      - llvm-toolchain-precise-3.9
     packages:
-      - clang-3.7
+      - clang-3.9
 
 before_install:
   - uname
