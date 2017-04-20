@@ -133,8 +133,7 @@ def create_intercept_parser():
     parser_add_compilers(parser)
 
     advanced = parser.add_argument_group('advanced options')
-    group = advanced.add_mutually_exclusive_group()
-    group.add_argument(
+    advanced.add_argument(
         '--append',
         action='store_true',
         help="""Extend existing compilation database with new entries.
