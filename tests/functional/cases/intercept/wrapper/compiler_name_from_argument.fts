@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-# REQUIRES: preload
-# RUN: bash %s %T/clean_env_build
-# RUN: cd %T/clean_env_build; %{intercept-build} --cdb result.json env - ./run.sh
-# RUN: cd %T/clean_env_build; cdb_diff result.json expected.json
+# RUN: bash %s %T
+# RUN: cd %T; %{intercept-wrapped-build} --cdb wrapper.json --override-compiler ./run.sh
+# RUN: cd %T; %{cdb_diff} wrapper.json expected.json
+#
+# when library preload disabled, it falls back to use compiler wrapper
+#
+# RUN: cd %T; %{intercept-wrapped-build} --cdb preload.json ./run.sh
+# RUN: cd %T; %{cdb_diff} preload.json expected.json
 
 set -o errexit
 set -o nounset
@@ -12,18 +16,37 @@ set -o xtrace
 # the test creates a subdirectory inside output dir.
 #
 # ${root_dir}
+# ├── wrapper
+# ├── wrapper++
 # ├── run.sh
 # ├── expected.json
 # └── src
 #    └── empty.c
 
-clang=$(command -v ${CC})
-clangpp=$(command -v ${CXX})
-
 root_dir=$1
 mkdir -p "${root_dir}/src"
 
 touch "${root_dir}/src/empty.c"
+
+wrapper_file="${root_dir}/wrapper"
+cat >> ${wrapper_file} << EOF
+#!/usr/bin/env bash
+
+set -o xtrace
+
+${REAL_CC} \$@
+EOF
+chmod +x ${wrapper_file}
+
+wrapperxx_file="${root_dir}/wrapper++"
+cat >> ${wrapperxx_file} << EOF
+#!/usr/bin/env bash
+
+set -o xtrace
+
+${REAL_CXX} \$@
+EOF
+chmod +x ${wrapperxx_file}
 
 build_file="${root_dir}/run.sh"
 cat >> ${build_file} << EOF
@@ -32,14 +55,12 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-${clang} -c -o src/empty.o -Dver=1 src/empty.c;
-${clangpp} -c -o src/empty.o -Dver=2 src/empty.c;
+"\$CC" -c -o src/empty.o -Dver=1 src/empty.c;
+"\$CXX" -c -o src/empty.o -Dver=2 src/empty.c;
 
 cd src
-${clang} -c -o empty.o -Dver=3 empty.c;
-${clangpp} -c -o empty.o -Dver=4 empty.c;
-
-true;
+"\$CC" -c -o empty.o -Dver=3 empty.c;
+"\$CXX" -c -o empty.o -Dver=4 empty.c;
 EOF
 chmod +x ${build_file}
 

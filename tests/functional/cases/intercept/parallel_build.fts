@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/successful_build
-# RUN: cd %T/successful_build; %{intercept-build} --cdb wrapper.json --override-compiler ./run.sh
-# RUN: cd %T/successful_build; cdb_diff wrapper.json expected.json
+# RUN: bash %s %T/parallel_build
+# RUN: cd %T/parallel_build; %{intercept-build} --cdb wrapper.json --override-compiler ./run.sh
+# RUN: cd %T/parallel_build; %{cdb_diff} wrapper.json expected.json
 #
 # when library preload disabled, it falls back to use compiler wrapper
 #
-# RUN: cd %T/successful_build; %{intercept-build} --cdb preload.json ./run.sh
-# RUN: cd %T/successful_build; cdb_diff preload.json expected.json
+# RUN: cd %T/parallel_build; %{intercept-build} --cdb preload.json ./run.sh
+# RUN: cd %T/parallel_build; %{cdb_diff} preload.json expected.json
 
 set -o errexit
 set -o nounset
@@ -33,12 +33,15 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-"\$CC" -c -o src/empty.o -Dver=1 src/empty.c;
-"\$CXX" -c -o src/empty.o -Dver=2 src/empty.c;
+"\$CC" -c -o src/empty.o -Dver=1 src/empty.c &
+"\$CXX" -c -o src/empty.o -Dver=2 src/empty.c &
 
 cd src
-"\$CC" -c -o empty.o -Dver=3 empty.c;
-"\$CXX" -c -o empty.o -Dver=4 empty.c;
+
+"\$CC" -c -o empty.o -Dver=3 empty.c &
+"\$CXX" -c -o empty.o -Dver=4 empty.c &
+
+wait
 
 true;
 EOF

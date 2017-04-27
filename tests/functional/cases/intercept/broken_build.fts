@@ -2,12 +2,12 @@
 
 # RUN: bash %s %T/broken_build
 # RUN: cd %T/broken_build; %{intercept-build} --cdb wrapper.json --override-compiler ./run.sh
-# RUN: cd %T/broken_build; cdb_diff wrapper.json expected.json
+# RUN: cd %T/broken_build; %{cdb_diff} wrapper.json expected.json
 #
 # when library preload disabled, it falls back to use compiler wrapper
 #
 # RUN: cd %T/broken_build; %{intercept-build} --cdb preload.json ./run.sh
-# RUN: cd %T/broken_build; cdb_diff preload.json expected.json
+# RUN: cd %T/broken_build; %{cdb_diff} preload.json expected.json
 
 set -o errexit
 set -o nounset

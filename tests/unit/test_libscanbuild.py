@@ -3,8 +3,6 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-#
-# RUN: %{python} %s
 
 import libscanbuild as sut
 import unittest
@@ -34,7 +32,3 @@ class ShellSplitTest(unittest.TestCase):
                          sut.shell_split('clang -c file.c -Dv=\\\"quote'))
         self.assertEqual(['clang', '-c', 'file.c', '-Dv=(word)'],
                          sut.shell_split('clang -c file.c -Dv=\(word\)'))
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T/noisy_build
-# RUN: cd %T/noisy_build; %{intercept-build} --cdb wrapper.json --override-compiler ./run.sh
-# RUN: cd %T/noisy_build; cdb_diff wrapper.json expected.json
-#
-# when library preload disabled, it falls back to use compiler wrapper
-#
-# RUN: cd %T/noisy_build; %{intercept-build} --cdb preload.json ./run.sh
-# RUN: cd %T/noisy_build; cdb_diff preload.json expected.json
+# REQUIRES: preload
+# RUN: bash %s %T/clean_env_build
+# RUN: cd %T/clean_env_build; %{intercept-build} --cdb result.json env - ./run.sh
+# RUN: cd %T/clean_env_build; %{cdb_diff} result.json expected.json
 
 set -o errexit
 set -o nounset
@@ -21,6 +17,9 @@ set -o xtrace
 # └── src
 #    └── empty.c
 
+clang=$(command -v ${CC})
+clangpp=$(command -v ${CXX})
+
 root_dir=$1
 mkdir -p "${root_dir}/src"
 
@@ -33,16 +32,12 @@ cat >> ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-echo "hi there \"people\""
-echo "hi	again"
+${clang} -c -o src/empty.o -Dver=1 src/empty.c;
+${clangpp} -c -o src/empty.o -Dver=2 src/empty.c;
 
-"\$CC" -c -o src/empty.o -Dver=1 src/empty.c;
-"\$CXX" -c -o src/empty.o -Dver=2 src/empty.c;
-
-bash -c "\
-mkdir -p ./this/that \
-touch ./this/that \
-rm -rf ./this"
+cd src
+${clang} -c -o empty.o -Dver=3 empty.c;
+${clangpp} -c -o empty.o -Dver=4 empty.c;
 
 true;
 EOF
@@ -60,6 +55,18 @@ cat >> "${root_dir}/expected.json" << EOF
   "command": "c++ -c -o src/empty.o -Dver=2 src/empty.c",
   "directory": "${root_dir}",
   "file": "src/empty.c"
+}
+,
+{
+  "command": "cc -c -o empty.o -Dver=3 empty.c",
+  "directory": "${root_dir}/src",
+  "file": "empty.c"
+}
+,
+{
+  "command": "c++ -c -o empty.o -Dver=4 empty.c",
+  "directory": "${root_dir}/src",
+  "file": "empty.c"
 }
 ]
 EOF

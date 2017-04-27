@@ -65,11 +65,11 @@ before_install:
 install:
   - pip --version
   - pip install --upgrade pip
-  - pip install -r tests/requirements.txt
+  - pip install lit
+  - pip install pep8
 
 script:
   - pip install .
-  - pip install ./tests
   - lit -v tests
   - python setup.py sdist
 
