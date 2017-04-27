@@ -30,7 +30,7 @@ touch "${root_dir}/src/empty.c"
 touch "${root_dir}/src/ignore/empty.c"
 
 build_file="${root_dir}/run.sh"
-cat >> ${build_file} << EOF
+cat > ${build_file} << EOF
 #!/usr/bin/env bash
 
 set -o nounset
@@ -45,7 +45,7 @@ EOF
 chmod +x ${build_file}
 
 checker_file="${root_dir}/check.sh"
-cat >> ${checker_file} << EOF
+cat > ${checker_file} << EOF
 #!/usr/bin/env bash
 
 set -o errexit

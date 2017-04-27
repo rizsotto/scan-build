@@ -8,35 +8,30 @@ matrix:
       python: 2.7
       env:
         - TRAVIS_CLANG=clang-4.0
-        - TRAVIS_CLANGPP=clang++-4.0
     - os: linux
       dist: trusty
       sudo: false
       python: 3.3
       env:
         - TRAVIS_CLANG=clang-4.0
-        - TRAVIS_CLANGPP=clang++-4.0
     - os: linux
       dist: trusty
       sudo: false
       python: 3.4
       env:
         - TRAVIS_CLANG=clang-4.0
-        - TRAVIS_CLANGPP=clang++-4.0
     - os: linux
       dist: trusty
       sudo: false
       python: 3.5
       env:
         - TRAVIS_CLANG=clang-4.0
-        - TRAVIS_CLANGPP=clang++-4.0
     - os: linux
       dist: trusty
       sudo: false
       python: 3.6
       env:
         - TRAVIS_CLANG=clang-4.0
-        - TRAVIS_CLANGPP=clang++-4.0
     - os: osx
       osx_image: xcode6.4
       language: generic
@@ -54,6 +49,9 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - clang-4.0
+      - cmake
+      - scons
+      - qt4-qmake
 
 before_install:
   - uname

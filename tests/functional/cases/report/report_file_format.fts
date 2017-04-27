@@ -25,7 +25,7 @@ mkdir -p "${root_dir}/src"
 cp "${test_input_dir}/div_zero.c" "${root_dir}/src/broken.c"
 
 build_file="${root_dir}/run.sh"
-cat >> "${build_file}" << EOF
+cat > "${build_file}" << EOF
 #!/usr/bin/env bash
 
 set -o nounset
@@ -37,7 +37,7 @@ EOF
 chmod +x "${build_file}"
 
 check_one="${root_dir}/check_plist.sh"
-cat >> "${check_one}" << EOF
+cat > "${check_one}" << EOF
 #!/usr/bin/env bash
 
 set -o errexit
@@ -56,7 +56,7 @@ EOF
 chmod +x "${check_one}"
 
 check_two="${root_dir}/check_html.sh"
-cat >> "${check_two}" << EOF
+cat > "${check_two}" << EOF
 #!/usr/bin/env bash
 
 set -o errexit

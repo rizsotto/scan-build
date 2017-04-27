@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# RUN: bash %s %T
-# RUN: cd %T; %{scan-wrapped-build} -o . --intercept-first ./run.sh | ./check.sh
-# RUN: cd %T; %{scan-wrapped-build} -o . --intercept-first --override-compiler ./run.sh | ./check.sh
-# RUN: cd %T; %{scan-wrapped-build} -o . --override-compiler ./run.sh | ./check.sh
+# RUN: bash %s %T/unkown_compiler_recognised
+# RUN: cd %T/unkown_compiler_recognised; %{scan-build} --use-cc=%T/unkown_compiler_recognised/wrapper --use-c++=%T/unkown_compiler_recognised/wrapper++ -o . --intercept-first --override-compiler ./run.sh | ./check.sh
+# RUN: cd %T/unkown_compiler_recognised; %{scan-build} --use-cc=%T/unkown_compiler_recognised/wrapper --use-c++=%T/unkown_compiler_recognised/wrapper++ -o . --override-compiler ./run.sh | ./check.sh
 
 set -o errexit
 set -o nounset
@@ -28,9 +27,7 @@ wrapper_file="${root_dir}/wrapper"
 cat > ${wrapper_file} << EOF
 #!/usr/bin/env bash
 
-set -o xtrace
-
-${REAL_CC} \$@
+true
 EOF
 chmod +x ${wrapper_file}
 
@@ -38,9 +35,7 @@ wrapperxx_file="${root_dir}/wrapper++"
 cat > ${wrapperxx_file} << EOF
 #!/usr/bin/env bash
 
-set -o xtrace
-
-${REAL_CXX} \$@
+true
 EOF
 chmod +x ${wrapperxx_file}
 
@@ -51,12 +46,12 @@ cat > ${build_file} << EOF
 set -o nounset
 set -o xtrace
 
-"\$CC" -c -o ./src/empty.o ./src/broken.c;
-"\$CXX" -c -o ./src/empty.o ./src/broken.c;
+\$CC -c -o ./src/empty.o ./src/broken.c;
+\$CXX -c -o ./src/empty.o ./src/broken.c;
 
 cd src
-"\$CC" -c -o ./empty.o ./broken.c;
-"\$CXX" -c -o ./empty.o ./broken.c;
+\$CC -c -o ./empty.o ./broken.c;
+\$CXX -c -o ./empty.o ./broken.c;
 EOF
 chmod +x ${build_file}
 

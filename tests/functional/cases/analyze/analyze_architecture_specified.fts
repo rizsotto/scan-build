@@ -20,7 +20,7 @@ mkdir -p "${root_dir}/src"
 
 touch "${root_dir}/src/empty.c"
 
-cat >> "${root_dir}/input.json" << EOF
+cat > "${root_dir}/input.json" << EOF
 [
   {
     "directory": "${root_dir}",
@@ -46,7 +46,7 @@ cat >> "${root_dir}/input.json" << EOF
 EOF
 
 checker_file="${root_dir}/check.sh"
-cat >> ${checker_file} << EOF
+cat > ${checker_file} << EOF
 #!/usr/bin/env bash
 
 set -o errexit

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # REQUIRES: preload
 # RUN: cmake -B%T -H%S
 # RUN: make -C %T

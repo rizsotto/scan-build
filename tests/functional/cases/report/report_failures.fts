@@ -28,7 +28,7 @@ mkdir -p "${root_dir}/src"
 
 cp "${test_input_dir}/compile_error.c" "${root_dir}/src/broken.c"
 
-cat >> "${root_dir}/input.json" << EOF
+cat > "${root_dir}/input.json" << EOF
 [
     {
         "directory": "${root_dir}",
@@ -39,7 +39,7 @@ cat >> "${root_dir}/input.json" << EOF
 EOF
 
 check_one="${root_dir}/check_exists.sh"
-cat >> "${check_one}" << EOF
+cat > "${check_one}" << EOF
 #!/usr/bin/env bash
 
 set -o errexit
@@ -62,7 +62,7 @@ EOF
 chmod +x "${check_one}"
 
 check_two="${root_dir}/check_not_exists.sh"
-cat >> "${check_two}" << EOF
+cat > "${check_two}" << EOF
 #!/usr/bin/env bash
 
 set -o errexit

@@ -20,7 +20,7 @@ mkdir -p "${root_dir}/src"
 
 cp "${test_input_dir}/div_zero.c" "${root_dir}/src/broken.c"
 
-cat >> "${root_dir}/run.sh" << EOF
+cat > "${root_dir}/run.sh" << EOF
 #!/usr/bin/env bash
 
 set -o nounset

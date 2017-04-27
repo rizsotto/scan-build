@@ -18,7 +18,7 @@ set -o xtrace
 root_dir=$1
 mkdir -p "${root_dir}/src"
 
-cat >> "${root_dir}/src/broken.c" << EOF
+cat > "${root_dir}/src/broken.c" << EOF
 #if NDEBUG
 #else
 EOF
@@ -28,7 +28,7 @@ cat >> "${root_dir}/src/broken.c" << EOF
 EOF
 
 build_file="${root_dir}/run.sh"
-cat >> ${build_file} << EOF
+cat > ${build_file} << EOF
 #!/usr/bin/env bash
 
 set -o nounset

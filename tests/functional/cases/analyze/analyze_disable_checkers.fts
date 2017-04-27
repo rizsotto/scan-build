@@ -19,7 +19,7 @@ mkdir -p "${root_dir}/src"
 
 cp "${test_input_dir}/div_zero.c" "${root_dir}/src/broken.c"
 
-cat >> "${root_dir}/input.json" << EOF
+cat > "${root_dir}/input.json" << EOF
 [
     {
         "directory": "${root_dir}",

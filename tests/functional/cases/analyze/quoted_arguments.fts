@@ -19,7 +19,7 @@ set -o xtrace
 root_dir=$1
 mkdir -p "${root_dir}/src"
 
-cat >> "${root_dir}/src/names.c" << EOF
+cat > "${root_dir}/src/names.c" << EOF
 char const * const first = FIRST;
 char const * const last = LAST;
 
@@ -32,7 +32,7 @@ int main() {
 EOF
 
 build_file="${root_dir}/run.sh"
-cat >> ${build_file} << EOF
+cat > ${build_file} << EOF
 #!/usr/bin/env bash
 
 set -o nounset
