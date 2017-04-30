@@ -15,3 +15,5 @@ v2.0, 2016-11-08 -- Simplify
 v2.0.1 2016-11-13 -- Fix JSON encoding problem in libear
 
 v2.0.2 2016-11-15 -- Simplify
+
+v2.0.3 2017-04-30 -- Bug fixes and simplifications
