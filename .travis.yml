@@ -71,6 +71,14 @@ script:
   - lit -v tests
   - python setup.py sdist
 
+deploy:
+  provider: pypi
+  user: "rizsotto"
+  password:
+    secure: "ModXQEmzuckPZ3KhHR8sU7Or2ivqfifY15/fTFZ5h3zhVfeqFjIdjcqb9lZSM3tezCKgsPv6jCC5T92tY/Ul78tUOuA71rWlqkiacxrMOF3AprXr7QJ/+ssY+AmRS+Mb1e/JgeRra+2AUIwZfLPK4sV8mvbvRUebw9M/xGf9eIc="
+  on:
+    tags: true
+
 notifications:
   webhooks:
     urls:
