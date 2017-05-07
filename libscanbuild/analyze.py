@@ -281,7 +281,7 @@ def run(opts):
     of the compilation database.
 
     This complex task is decomposed into smaller methods which are calling
-    each other in chain. If the analyzis is not possibe the given method
+    each other in chain. If the analysis is not possible the given method
     just return and break the chain.
 
     The passed parameter is a python dictionary. Each method first check
@@ -289,13 +289,9 @@ def run(opts):
     decorator. It's like an 'assert' to check the contract between the
     caller and the called method.) """
 
-    try:
-        command = [opts['compiler'], '-c'] + opts['flags'] + [opts['source']]
-        logging.debug("Run analyzer against '%s'", command)
-        return exclude(opts)
-    except Exception:
-        logging.error("Problem occured during analyzis.", exc_info=1)
-        return None
+    command = [opts['compiler'], '-c'] + opts['flags'] + [opts['source']]
+    logging.debug("Run analyzer against '%s'", command)
+    return exclude(opts)
 
 
 def logging_analyzer_output(opts):
@@ -340,23 +336,26 @@ def report_failure(opts):
                                       dir=destination())
     os.close(handle)
     # Execute Clang again, but run the syntax check only.
-    cwd = opts['directory']
-    cmd = get_arguments(
-        [opts['clang'], '-fsyntax-only', '-E'
-         ] + opts['flags'] + [opts['source'], '-o', name], cwd)
-    run_command(cmd, cwd=cwd)
-    # write general information about the crash
-    with open(name + '.info.txt', 'w') as handle:
-        handle.write(opts['source'] + os.linesep)
-        handle.write(error.title().replace('_', ' ') + os.linesep)
-        handle.write(' '.join(cmd) + os.linesep)
-        handle.write(' '.join(platform.uname()) + os.linesep)
-        handle.write(get_version(opts['clang']))
-        handle.close()
-    # write the captured output too
-    with open(name + '.stderr.txt', 'w') as handle:
-        handle.write(opts['error_output'])
-        handle.close()
+    try:
+        cwd = opts['directory']
+        cmd = get_arguments([opts['clang'], '-fsyntax-only', '-E'] +
+                            opts['flags'] + [opts['source'], '-o', name], cwd)
+        run_command(cmd, cwd=cwd)
+        # write general information about the crash
+        with open(name + '.info.txt', 'w') as handle:
+            handle.write(opts['source'] + os.linesep)
+            handle.write(error.title().replace('_', ' ') + os.linesep)
+            handle.write(' '.join(cmd) + os.linesep)
+            handle.write(' '.join(platform.uname()) + os.linesep)
+            handle.write(get_version(opts['clang']))
+            handle.close()
+        # write the captured output too
+        with open(name + '.stderr.txt', 'w') as handle:
+            for line in opts['error_output']:
+                handle.write(line)
+            handle.close()
+    except (OSError, subprocess.CalledProcessError):
+        logging.warning('failed to report failure', exc_info=True)
 
 
 @require(['clang', 'directory', 'flags', 'direct_args', 'source', 'output_dir',
@@ -384,7 +383,11 @@ def run_analyzer(opts, continuation=report_failure):
                             cwd)
         output = run_command(cmd, cwd=cwd)
         return {'error_output': output, 'exit_code': 0}
+    except OSError:
+        message = 'failed to execute "{0}"'.format(opts['clang'])
+        return {'error_output': message, 'exit_code': 127}
     except subprocess.CalledProcessError as ex:
+        logging.warning('analysis failed: %s', exc_info=True)
         result = {'error_output': ex.output, 'exit_code': ex.returncode}
         if opts.get('output_failures', False):
             opts.update(result)
@@ -426,11 +429,11 @@ def language_check(opts, continuation=filter_debug_flags):
     elif language not in accepted:
         logging.debug('skip analysis, language not supported')
         return None
-    else:
-        logging.debug('analysis, language: %s', language)
-        opts.update({'language': language,
-                     'flags': ['-x', language] + opts['flags']})
-        return continuation(opts)
+
+    logging.debug('analysis, language: %s', language)
+    opts.update({'language': language,
+                 'flags': ['-x', language] + opts['flags']})
+    return continuation(opts)
 
 
 @require(['arch_list', 'flags'])
@@ -453,12 +456,10 @@ def arch_check(opts, continuation=language_check):
 
             opts.update({'flags': ['-arch', current] + opts['flags']})
             return continuation(opts)
-        else:
-            logging.debug('skip analysis, found not supported arch')
-            return None
-    else:
-        logging.debug('analysis, on default arch')
-        return continuation(opts)
+        logging.debug('skip analysis, found not supported arch')
+        return None
+    logging.debug('analysis, on default arch')
+    return continuation(opts)
 
 
 # To have good results from static analyzer certain compiler options shall be
@@ -539,5 +540,4 @@ def exclude(opts, continuation=classify_parameters):
     if any(contains(dir, opts['source']) for dir in opts['excludes']):
         logging.debug('skip analysis, file requested to exclude')
         return None
-    else:
-        return continuation(opts)
+    return continuation(opts)

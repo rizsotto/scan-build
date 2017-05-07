@@ -63,11 +63,12 @@ before_install:
 install:
   - pip --version
   - pip install --upgrade pip
-  - pip install lit pep8 flake8
+  - pip install lit pep8 flake8 pylint
 
 script:
   - pep8 --verbose --show-source --show-pep8 libscanbuild libear tests
   - flake8 --verbose libscanbuild libear tests
+  - pylint libscanbuild libear || true
   - pip install .
   - lit -v tests
   - python setup.py sdist

@@ -217,7 +217,6 @@ def create_analyze_parser(from_build_command):
         default='html',
         action='store_const',
         help="""Cause the results as a set of .html and .plist files.""")
-    # TODO: implement '-view '
 
     advanced = parser.add_argument_group('advanced options')
     advanced.add_argument(
@@ -393,7 +392,7 @@ def parser_add_compilers(parser):
 class AppendCommaSeparated(argparse.Action):
     """ argparse Action class to support multiple comma separated lists. """
 
-    def __call__(self, __parser, namespace, values, __option_string):
+    def __call__(self, __parser, namespace, values, __option_string=None):
         # getattr(obj, attr, default) does not really returns default but none
         if getattr(namespace, self.dest, None) is None:
             setattr(namespace, self.dest, [])

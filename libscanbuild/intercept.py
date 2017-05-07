@@ -28,6 +28,7 @@ import os.path
 import re
 import sys
 import uuid
+import subprocess
 
 from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
@@ -215,7 +216,7 @@ def is_preload_disabled(platform):
         pattern = re.compile(r'System Integrity Protection status:\s+enabled')
         try:
             return any(pattern.match(line) for line in run_command(command))
-        except:
+        except (OSError, subprocess.CalledProcessError):
             return False
     else:
         return False

@@ -138,7 +138,7 @@ class Compilation:
         :return: stream of CompilationDbEntry objects """
 
         candidate = Compilation._split_command(execution.cmd, cc, cxx)
-        for source in (candidate.files if candidate else []):
+        for source in candidate.files if candidate else []:
             result = Compilation(directory=execution.cwd,
                                  source=source,
                                  compiler=candidate.compiler,

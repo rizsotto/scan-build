@@ -467,7 +467,7 @@ def encode_value(container, key, encode):
 def chop(prefix, filename):
     """ Create 'filename' from '/prefix/filename' """
 
-    return filename if not len(prefix) else os.path.relpath(filename, prefix)
+    return filename if not prefix else os.path.relpath(filename, prefix)
 
 
 def escape(text):
@@ -488,17 +488,18 @@ def reindent(text, indent):
 
     result = ''
     for line in text.splitlines():
-        if len(line.strip()):
+        if line.strip():
             result += ' ' * indent + line.split('|')[1] + os.linesep
     return result
 
 
-def comment(name, opts=dict()):
+def comment(name, opts=None):
     """ Utility function to format meta information as comment. """
 
     attributes = ''
-    for key, value in opts.items():
-        attributes += ' {0}="{1}"'.format(key, value)
+    if opts:
+        for key, value in opts.items():
+            attributes += ' {0}="{1}"'.format(key, value)
 
     return '<!-- {0}{1} -->{2}'.format(name, attributes, os.linesep)
 
@@ -526,5 +527,4 @@ def commonprefix(files):
         return ''
     elif not os.path.isdir(result):
         return os.path.dirname(result)
-    else:
-        return os.path.abspath(result)
+    return os.path.abspath(result)
