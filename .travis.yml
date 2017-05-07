@@ -66,9 +66,9 @@ install:
   - pip install lit pep8 flake8 pylint
 
 script:
-  - pep8 --verbose --show-source --show-pep8 libscanbuild libear tests
-  - flake8 --verbose libscanbuild libear tests
-  - pylint libscanbuild libear || true
+  - pep8 --show-source --show-pep8 libscanbuild
+  - flake8 --verbose libscanbuild
+  - pylint libscanbuild || true
   - pip install .
   - lit -v tests
   - python setup.py sdist
