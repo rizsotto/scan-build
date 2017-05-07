@@ -252,13 +252,13 @@ def require(required):
     It checks the required attributes in the passed state and stop when
     any of those is missing. """
 
-    def decorator(function):
-        @functools.wraps(function)
+    def decorator(method):
+        @functools.wraps(method)
         def wrapper(*args, **kwargs):
             for key in required:
                 assert key in args[0], '{} is missing'.format(key)
 
-            return function(*args, **kwargs)
+            return method(*args, **kwargs)
 
         return wrapper
 
@@ -532,6 +532,8 @@ def exclude(opts, continuation=classify_parameters):
     directory contains the file. """
 
     def contains(directory, entry):
+        """ Check is directory contains the given file. """
+
         # When a directory contains a file, then the relative path to the
         # file from that directory does not start with a parent dir prefix.
         relative = os.path.relpath(entry, directory).split(os.sep)

@@ -76,6 +76,7 @@ CompilationCommand = collections.namedtuple(
 
 
 class Compilation:
+    """ Represents a compilation of a single module. """
     def __init__(self, compiler, flags, source, directory):
         """ Constructor for a single compilation.
 
@@ -230,14 +231,26 @@ class Compilation:
 
 
 class CompilationDatabase:
+    """ Compilation Database persistence methods. """
+
     @staticmethod
     def save(filename, iterator):
+        """ Saves compilations to given file.
+
+        :param filename: the destination file name
+        :param iterator: iterator of Compilation objects. """
+
         entries = [entry.as_db_entry() for entry in iterator]
         with open(filename, 'w+') as handle:
             json.dump(entries, handle, sort_keys=True, indent=4)
 
     @staticmethod
     def load(filename):
+        """ Load compilations from file.
+
+        :param filename: the file to read from
+        :returns: iterator of Compilation objects. """
+
         with open(filename, 'r') as handle:
             for entry in json.load(handle):
                 yield Compilation.from_db_entry(entry)

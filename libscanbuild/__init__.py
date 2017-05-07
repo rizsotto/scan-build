@@ -118,7 +118,7 @@ def command_entry_point(function):
         except KeyboardInterrupt:
             logging.warning('Keyboard interrupt')
             return 130  # signal received exit code for bash
-        except Exception:
+        except (OSError, subprocess.CalledProcessError):
             logging.exception('Internal error.')
             if logging.getLogger().isEnabledFor(logging.DEBUG):
                 logging.error("Please report this bug and attach the output "
@@ -184,11 +184,10 @@ def wrapper_entry_point(function):
                 cwd=os.getcwd(),
                 cmd=['c++' if cxx else 'cc'] + sys.argv[1:])
             function(result, call)
-        except:
+        except (OSError, subprocess.CalledProcessError):
             logging.exception('Compiler wrapper failed complete.')
-        finally:
-            # always return the real compiler exit code
-            return result
+        # always return the real compiler exit code
+        return result
 
     return wrapper
 
