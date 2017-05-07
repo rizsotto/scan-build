@@ -8,7 +8,6 @@ import libear
 import libscanbuild.clang as sut
 import unittest
 import os.path
-import sys
 
 
 class ClangGetVersion(unittest.TestCase):
@@ -47,13 +46,12 @@ class ClangGetCheckersTest(unittest.TestCase):
     def test_get_checkers(self):
         # this test is only to see is not crashing
         result = sut.get_checkers('clang', [])
-        self.assertTrue(len(result))
+        self.assertTrue(result)
         # do check result types
-        string_type = unicode if sys.version_info < (3,) else str
         for key, value in result.items():
-            self.assertEqual(string_type, type(key))
-            self.assertEqual(string_type, type(value[0]))
-            self.assertEqual(bool, type(value[1]))
+            self.assertTrue(isinstance(key, str))
+            self.assertTrue(isinstance(value[0], str))
+            self.assertTrue(isinstance(value[1], bool))
 
     def test_get_active_checkers(self):
         # this test is only to see is not crashing

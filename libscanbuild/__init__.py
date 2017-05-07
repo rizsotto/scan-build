@@ -55,7 +55,10 @@ def run_command(command, cwd=None):
     """
     def decode_when_needed(result):
         """ check_output returns bytes or string depend on python version """
-        return result.decode('utf-8') if isinstance(result, bytes) else result
+        if not isinstance(result, str):
+            return result.decode('utf-8')
+        else:
+            return result
 
     try:
         directory = os.path.abspath(cwd) if cwd else os.getcwd()

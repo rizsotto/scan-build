@@ -460,6 +460,7 @@ def arch_check(opts, continuation=language_check):
         logging.debug('analysis, on default arch')
         return continuation(opts)
 
+
 # To have good results from static analyzer certain compiler options shall be
 # omitted. The compiler flag filtering only affects the static analyzer run.
 #
