@@ -19,3 +19,5 @@ v2.0.2 2016-11-15 -- Simplify
 v2.0.3 2017-04-30 -- Bug fixes and simplifications
 
 v2.0.4 2017-05-07 -- Bug fixes
+
+v2.0.5 2017-05-20 -- Simplify testing
