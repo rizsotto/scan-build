@@ -1,0 +1,11 @@
+[run]
+branch=True
+parallel=True
+concurrency=
+    multiprocessing
+source=
+    libscanbuild
+
+[report]
+include=
+    libscanbuild/*

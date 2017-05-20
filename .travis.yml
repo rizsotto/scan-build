@@ -63,16 +63,22 @@ before_install:
 install:
   - pip --version
   - pip install --upgrade pip
-  - pip install lit pep8 flake8 pylint
+  - pip install lit pep8 flake8 pylint nose coverage coveralls
 
 script:
   - pep8 --show-source --show-pep8 libscanbuild
   - flake8 --verbose libscanbuild
   - pylint libscanbuild || true
+  - nosetests tests/unit --with-coverage --cover-branches
   - lit -v tests
   - pip install .
-  - git clean -fd
-  - lit -DBINARIES=PATH -v tests
+
+after_success:
+  - find . -type f -name ".coverage.*" | xargs coverage combine
+  - coverage report
+  - coveralls
+
+before_deploy:
   - python setup.py sdist
 
 deploy:

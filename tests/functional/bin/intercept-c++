@@ -3,4 +3,11 @@
 import sys
 from libscanbuild.intercept import intercept_compiler_wrapper as main
 
+try:
+    import coverage
+
+    coverage.process_startup()
+except ImportError:
+    pass
+
 sys.exit(main())

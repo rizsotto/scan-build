@@ -4,6 +4,9 @@
 .. image:: https://ci.appveyor.com/api/projects/status/k5fi1xy90xieqxir/branch/master?svg=true
         :target: https://ci.appveyor.com/project/rizsotto/scan-build/branch/master
 
+.. image:: https://coveralls.io/repos/github/rizsotto/scan-build/badge.svg?branch=master
+        :target: https://coveralls.io/github/rizsotto/scan-build?branch=master
+
 .. image:: https://img.shields.io/pypi/v/scan-build.svg
        :target: https://pypi.python.org/pypi/scan-build
 
