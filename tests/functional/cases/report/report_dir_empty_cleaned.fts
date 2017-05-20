@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# RUN: mkdir %T/output_dir_clean_when_empty
+# RUN: mkdir -p %T/output_dir_clean_when_empty
 # RUN: cd %T/output_dir_clean_when_empty; %{scan-build} --output . true | bash %s
 # RUN: cd %T/output_dir_clean_when_empty; %{scan-build} --output . --status-bugs true | bash %s
 # RUN: cd %T/output_dir_clean_when_empty; %{scan-build} --output . --status-bugs false | bash %s
