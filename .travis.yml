@@ -69,8 +69,10 @@ script:
   - pep8 --show-source --show-pep8 libscanbuild
   - flake8 --verbose libscanbuild
   - pylint libscanbuild || true
-  - pip install .
   - lit -v tests
+  - pip install .
+  - git clean -fd
+  - lit -DBINARIES=PATH -v tests
   - python setup.py sdist
 
 deploy:

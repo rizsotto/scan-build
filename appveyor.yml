@@ -55,7 +55,7 @@ build_script:
 
 test_script:
   # Run the project tests
-  - "lit -v tests"
+  - "lit -DBINARIES=PATH -v tests"
 
 after_test:
   # If tests are successful, create binary packages for the project.
