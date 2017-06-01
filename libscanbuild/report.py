@@ -13,6 +13,7 @@ import os
 import os.path
 import sys
 import shutil
+import itertools
 import plistlib
 import glob
 import json
