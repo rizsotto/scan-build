@@ -102,19 +102,20 @@ def need_analyzer(args):
     return len(args) and not re.search('configure|autogen', args[0])
 
 
+def prefix_with(constant, pieces):
+    """ From a sequence create another sequence where every second element
+    is from the original sequence and the odd elements are the prefix.
+
+    eg.: prefix_with(0, [1,2,3]) creates [0, 1, 0, 2, 0, 3] """
+
+    return [elem for piece in pieces for elem in [constant, piece]]
+
+
 def analyze_parameters(args):
     """ Mapping between the command line parameters and the analyzer run
     method. The run method works with a plain dictionary, while the command
     line parameters are in a named tuple.
     The keys are very similar, and some values are preprocessed. """
-
-    def prefix_with(constant, pieces):
-        """ From a sequence create another sequence where every second element
-        is from the original sequence and the odd elements are the prefix.
-
-        eg.: prefix_with(0, [1,2,3]) creates [0, 1, 0, 2, 0, 3] """
-
-        return [elem for piece in pieces for elem in [constant, piece]]
 
     def direct_args(args):
         """ A group of command line arguments can mapped to command
@@ -212,13 +213,15 @@ def run_analyzer_parallel(compilations, args):
     consts = analyze_parameters(args)
     if consts['ctu_collect']:
         shutil.rmtree(consts['ctu_dir'], ignore_errors=True)
+        os.makedirs(os.path.join(consts['ctu_dir'], CTU_TEMP_FNMAP_FOLDER))
     if consts['ctu_collect'] and consts['ctu_analyze']:
+        compilation_list = list(compilations)
         consts['ctu_analyze'] = False
-        run_parallel_with_consts(compilations, consts)
+        run_parallel_with_consts(compilation_list, consts)
         merge_ctu_func_maps(consts['ctu_dir'])
         consts['ctu_collect'] = False
         consts['ctu_analyze'] = True
-        run_parallel_with_consts(compilations, consts)
+        run_parallel_with_consts(compilation_list, consts)
         shutil.rmtree(consts['ctu_dir'], ignore_errors=True)
     else:
         run_parallel_with_consts(compilations, consts)
@@ -458,7 +461,7 @@ def ctu_collect_phase(opts):
         cwd = opts['directory']
         cmd = get_arguments([opts['clang'], '--analyze'] +
                             opts['direct_args'] + opts['flags'] +
-                            opts['source'],
+                            [opts['source']],
                             cwd)
         arch = ""
         i = 0
@@ -489,7 +492,7 @@ def ctu_collect_phase(opts):
         ast_command.append(opts['source'])
         ast_command.append('-o')
         ast_command.append(ast_path)
-        logging.debug('Generating AST using %s', ' '.join(ast_command))
+        logging.debug("Generating AST using '%s'", ast_command)
         subprocess.call(ast_command, cwd=opts['directory'], shell=False)
 
     def map_functions(triple_arch):
@@ -501,8 +504,7 @@ def ctu_collect_phase(opts):
         funcmap_command.append(opts['source'])
         funcmap_command.append('--')
         funcmap_command.extend(args)
-        logging.debug("Generating function map using %s",
-                      ' '.join(funcmap_command))
+        logging.debug("Generating function map using '%s'", funcmap_command)
         fn_out = subprocess.check_output(funcmap_command,
                                          cwd=opts['directory'],
                                          shell=False)
@@ -534,8 +536,11 @@ def dispatch_ctu(opts, continuation=run_analyzer):
         if opts['ctu_collect']:
             return ctu_collect_phase(opts)
         if opts['ctu_analyze']:
-            opts['direct_args'].append('ctu-dir=' + opts['ctu_dir'])
-            opts['direct_args'].append('reanalyze-ctu-visited=true')
+            ctu_options = ['ctu-dir=' + opts['ctu_dir'],
+                           'reanalyze-ctu-visited=true']
+            analyzer_options = prefix_with('-analyzer-config', ctu_options)
+            direct_options = prefix_with('-Xclang', analyzer_options)
+            opts['direct_args'].extend(direct_options)
 
     return continuation(opts)
 
