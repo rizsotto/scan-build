@@ -539,7 +539,7 @@ def dispatch_ctu(opts, continuation=run_analyzer):
             ctu_options = ['ctu-dir=' + opts['ctu_dir'],
                            'reanalyze-ctu-visited=true']
             analyzer_options = prefix_with('-analyzer-config', ctu_options)
-            direct_options = prefix_with('-Xclang', analyzer_options)
+            direct_options = prefix_with('-Xanalyzer', analyzer_options)
             opts['direct_args'].extend(direct_options)
 
     return continuation(opts)
