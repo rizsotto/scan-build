@@ -328,7 +328,7 @@ def require(required):
           'excludes',  # list of directories
           'force_debug',  # kill non debug macros
           'output_dir',  # where generated report files shall go
-          'output_format',  # it's 'plist' or 'html' or both
+          'output_format',  # it's 'plist', 'html', both or plist-multi-file
           'output_failures',  # generate crash reports or not
           'ctu_collect', 'ctu_analyze', 'ctu_dir'])  # ctu control options
 def run(opts):
@@ -422,7 +422,9 @@ def run_analyzer(opts, continuation=report_failure):
 
     def target():
         """ Creates output file name for reports. """
-        if opts['output_format'] in {'plist', 'plist-html'}:
+        if opts['output_format'] in {'plist',
+                                     'plist-html',
+                                     'plist-multi-file'}:
             (handle, name) = tempfile.mkstemp(prefix='report-',
                                               suffix='.plist',
                                               dir=opts['output_dir'])
