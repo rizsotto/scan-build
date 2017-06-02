@@ -5,6 +5,7 @@
 # RUN: cd %T/report_file_format; %{scan-build} --output . --keep-empty --plist ./run.sh | ./check_plist.sh
 # RUN: cd %T/report_file_format; %{scan-build} --output . --keep-empty --plist-html ./run.sh | ./check_html.sh
 # RUN: cd %T/report_file_format; %{scan-build} --output . --keep-empty --plist-html ./run.sh | ./check_plist.sh
+# RUN: cd %T/report_file_format; %{scan-build} --output . --keep-empty --plist-multi-file ./run.sh | ./check_plist.sh
 
 set -o errexit
 set -o nounset
