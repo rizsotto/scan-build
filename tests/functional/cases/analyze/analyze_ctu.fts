@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# RUN: bash %s %T/ctu
+# RUN: cd %T/ctu; %{analyze-build} -o . --cdb buildlog.json --ctu --plist-multi-file | ./check.sh
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── buildlog.json
+# ├── check.sh
+# └── src
+#    ├── lib.c
+#    └── main.c
+
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+cat > "${root_dir}/src/lib.c" << EOF
+int bad_guy(int * i)
+{
+    *i = 9;
+    return *i;
+}
+EOF
+
+cat > "${root_dir}/src/main.c" << EOF
+int bad_guy(int * i);
+
+void bad_guy_test()
+{
+    int * ptr = 0;
+    bad_guy(ptr);
+}
+EOF
+
+cat > "${root_dir}/buildlog.json" << EOF
+[
+  {
+    "directory": "${root_dir}",
+    "file": "${root_dir}/src/lib.c",
+    "command": "cc -c ./src/lib.c -o ./src/lib.o"
+  },
+  {
+    "directory": "${root_dir}",
+    "file": "${root_dir}/src/main.c",
+    "command": "cc -c ./src/main.c -o ./src/main.o"
+  }
+]
+EOF
+
+checker_file="${root_dir}/check.sh"
+cat > ${checker_file} << EOF
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+out=\$(sort | uniq)
+runs=\$(echo "\$out" | grep "exec command" | sort | uniq)
+analyze_out=\$(echo "\$out" | grep "logging_analyzer_output" | sort | uniq)
+
+assert_present() {
+    local pattern="\$1";
+    local message="\$2";
+
+    if [ \$(echo "\$runs" | grep -- "\$pattern" | wc -l) -eq 0 ]; then
+        echo "\$message" && false;
+    fi
+}
+
+assert_present     "ctu-dir=" "using CTU mode"
+assert_present     "reanalyze-ctu-visited=true" "using CTU reanalyze mode"
+
+if [ \$(echo "\$analyze_out" | grep -- "Dereference of null pointer" | wc -l) -ne 1 ]; then
+    echo "cross translation unit problem found" && false;
+fi
+
+if [ \$(find ${root_dir} -type d -name "scan-build-*" | wc -l) -ne 1 ]; then
+    echo "CTU report was generated" && false;
+fi
+EOF
+chmod +x ${checker_file}
