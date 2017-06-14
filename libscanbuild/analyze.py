@@ -180,15 +180,15 @@ def merge_ctu_func_maps(ctudir):
     extern_fns_map_file = os.path.join(ctudir, CTU_FUNCTION_MAP_FILENAME)
     mangled_to_asts = {}
     for filename in files:
-        with open(filename, 'rb') as in_file:
+        with open(filename, 'r') as in_file:
             for line in in_file:
                 mangled_name, ast_file = line.strip().split(' ', 1)
                 if mangled_name not in mangled_to_asts:
                     mangled_to_asts[mangled_name] = {ast_file}
                 else:
                     mangled_to_asts[mangled_name].add(ast_file)
-    with open(extern_fns_map_file, 'wb') as out_file:
-        for mangled_name, ast_files in mangled_to_asts.iteritems():
+    with open(extern_fns_map_file, 'w') as out_file:
+        for mangled_name, ast_files in mangled_to_asts.items():
             if len(ast_files) == 1:
                 out_file.write('%s %s\n' % (mangled_name, ast_files.pop()))
     shutil.rmtree(fnmap_dir, ignore_errors=True)
@@ -425,8 +425,7 @@ def run_analyzer(opts, continuation=report_failure):
         if opts['output_format'] in {
                 'plist',
                 'plist-html',
-                'plist-multi-file'
-            }:
+                'plist-multi-file'}:
             (handle, name) = tempfile.mkstemp(prefix='report-',
                                               suffix='.plist',
                                               dir=opts['output_dir'])
@@ -511,7 +510,8 @@ def ctu_collect_phase(opts):
         logging.debug("Generating function map using '%s'", funcmap_command)
         fn_out = subprocess.check_output(funcmap_command,
                                          cwd=opts['directory'],
-                                         shell=False)
+                                         shell=False,
+                                         universal_newlines=True)
         output = []
         fn_list = fn_out.splitlines()
         for fn_txt in fn_list:
@@ -523,7 +523,8 @@ def ctu_collect_phase(opts):
         extern_fns_map_folder = os.path.join(opts['ctu_dir'],
                                              CTU_TEMP_FNMAP_FOLDER)
         if output:
-            with tempfile.NamedTemporaryFile(dir=extern_fns_map_folder,
+            with tempfile.NamedTemporaryFile(mode='w',
+                                             dir=extern_fns_map_folder,
                                              delete=False) as out_file:
                 out_file.write("\n".join(output) + "\n")
 
