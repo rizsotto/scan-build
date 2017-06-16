@@ -177,25 +177,65 @@ def analyze_parameters(args):
     }
 
 
+def create_global_ctu_function_map(func_map_lines):
+    """ Takes iterator of individual function maps and creates a global map
+    keeping only unique names. We leave conflicting names out of CTU.
+    A function map contains the id of a function (mangled name) and the
+    originating source (the corresponding AST file) name."""
+
+    mangled_to_asts = {}
+
+    for line in func_map_lines:
+        mangled_name, ast_file = line.strip().split(' ', 1)
+        # We collect all occurences of a function name into a list
+        if mangled_name not in mangled_to_asts:
+            mangled_to_asts[mangled_name] = {ast_file}
+        else:
+            mangled_to_asts[mangled_name].add(ast_file)
+
+    mangled_ast_pairs = []
+
+    for mangled_name, ast_files in mangled_to_asts.items():
+        if len(ast_files) == 1:
+            mangled_ast_pairs.append((mangled_name, ast_files.pop()))
+
+    return mangled_ast_pairs
+
+
 def merge_ctu_func_maps(ctudir):
-    """ Merge individual function maps into a global one. """
+    """ Merge individual function maps into a global one.
+
+    As the collect phase runs parallel on multiple threads, all compilation
+    units are separately mapped into a temporary file in CTU_TEMP_FNMAP_FOLDER.
+    These function maps contain the mangled names of functions and the source
+    (AST generated from the source) which had them.
+    These files should be merged at the end into a global map file:
+    CTU_FUNCTION_MAP_FILENAME."""
+
+    def generate_func_map_lines(fnmap_dir):
+        """ Iterate over all lines of input files in random order. """
+
+        files = glob.glob(os.path.join(fnmap_dir, '*'))
+        for filename in files:
+            with open(filename, 'r') as in_file:
+                for line in in_file:
+                    yield line
+
+    def write_global_map(ctudir, mangled_ast_pairs):
+        """ Write (mangled function name, ast file) pairs into final file. """
+
+        extern_fns_map_file = os.path.join(ctudir, CTU_FUNCTION_MAP_FILENAME)
+        with open(extern_fns_map_file, 'w') as out_file:
+            for mangled_name, ast_file in mangled_ast_pairs:
+                out_file.write('%s %s\n' % (mangled_name, ast_file))
 
     fnmap_dir = os.path.join(ctudir, CTU_TEMP_FNMAP_FOLDER)
-    files = glob.glob(os.path.join(fnmap_dir, '*'))
-    extern_fns_map_file = os.path.join(ctudir, CTU_FUNCTION_MAP_FILENAME)
-    mangled_to_asts = {}
-    for filename in files:
-        with open(filename, 'r') as in_file:
-            for line in in_file:
-                mangled_name, ast_file = line.strip().split(' ', 1)
-                if mangled_name not in mangled_to_asts:
-                    mangled_to_asts[mangled_name] = {ast_file}
-                else:
-                    mangled_to_asts[mangled_name].add(ast_file)
-    with open(extern_fns_map_file, 'w') as out_file:
-        for mangled_name, ast_files in mangled_to_asts.items():
-            if len(ast_files) == 1:
-                out_file.write('%s %s\n' % (mangled_name, ast_files.pop()))
+
+    func_map_lines = generate_func_map_lines(fnmap_dir)
+    mangled_ast_pairs = create_global_ctu_function_map(func_map_lines)
+    write_global_map(ctudir, mangled_ast_pairs)
+
+    # Remove all temporary files
     shutil.rmtree(fnmap_dir, ignore_errors=True)
 
 
