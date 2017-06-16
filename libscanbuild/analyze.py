@@ -27,7 +27,7 @@ import shutil
 import glob
 
 from libscanbuild import command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, run_command
+    wrapper_environment, run_build, run_command, CtuConfig
 from libscanbuild.arguments import parse_args_for_scan_build, \
     parse_args_for_analyze_build
 from libscanbuild.intercept import capture
@@ -155,6 +155,16 @@ def analyze_parameters(args):
 
         return prefix_with('-Xclang', result)
 
+    def get_ctu_config(args):
+        """ CTU configuration is created from the chosen phases and dir """
+
+        return (
+            CtuConfig(collect=args.ctu_phases.collect,
+                      analyze=args.ctu_phases.analyze,
+                      dir=args.ctu_dir)
+            if hasattr(args, 'ctu_phases') and hasattr(args.ctu_phases, 'dir')
+            else CtuConfig(collect=False, analyze=False, dir=''))
+
     return {
         'clang': args.clang,
         'output_dir': args.output,
@@ -163,12 +173,7 @@ def analyze_parameters(args):
         'direct_args': direct_args(args),
         'force_debug': args.force_debug,
         'excludes': args.excludes,
-        'ctu_collect':
-            args.ctu_collect if hasattr(args, 'ctu_collect') else False,
-        'ctu_analyze':
-            args.ctu_analyze if hasattr(args, 'ctu_analyze') else False,
-        'ctu_dir':
-            os.path.abspath(args.ctu_dir) if hasattr(args, 'ctu_dir') else ''
+        'ctu': get_ctu_config(args)
     }
 
 
@@ -211,22 +216,26 @@ def run_analyzer_parallel(compilations, args):
 
     logging.debug('run analyzer against compilation database')
     consts = analyze_parameters(args)
-    if consts['ctu_collect']:
-        shutil.rmtree(consts['ctu_dir'], ignore_errors=True)
-        os.makedirs(os.path.join(consts['ctu_dir'], CTU_TEMP_FNMAP_FOLDER))
-    if consts['ctu_collect'] and consts['ctu_analyze']:
+    ctu_config = consts['ctu']
+    if ctu_config.collect:
+        shutil.rmtree(ctu_config.dir, ignore_errors=True)
+        os.makedirs(os.path.join(ctu_config.dir, CTU_TEMP_FNMAP_FOLDER))
+    if ctu_config.collect and ctu_config.analyze:
         compilation_list = list(compilations)
-        consts['ctu_analyze'] = False
+        consts['ctu'] = CtuConfig(collect=True,
+                                  analyze=False,
+                                  dir=ctu_config.dir)
         run_parallel_with_consts(compilation_list, consts)
-        merge_ctu_func_maps(consts['ctu_dir'])
-        consts['ctu_collect'] = False
-        consts['ctu_analyze'] = True
+        merge_ctu_func_maps(ctu_config.dir)
+        consts['ctu'] = CtuConfig(collect=False,
+                                  analyze=True,
+                                  dir=ctu_config.dir)
         run_parallel_with_consts(compilation_list, consts)
-        shutil.rmtree(consts['ctu_dir'], ignore_errors=True)
+        shutil.rmtree(ctu_config.dir, ignore_errors=True)
     else:
         run_parallel_with_consts(compilations, consts)
-    if consts['ctu_collect']:
-        merge_ctu_func_maps(consts['ctu_dir'])
+        if ctu_config.collect:
+            merge_ctu_func_maps(ctu_config.dir)
 
 
 def setup_environment(args):
@@ -330,7 +339,7 @@ def require(required):
           'output_dir',  # where generated report files shall go
           'output_format',  # it's 'plist', 'html', both or plist-multi-file
           'output_failures',  # generate crash reports or not
-          'ctu_collect', 'ctu_analyze', 'ctu_dir'])  # ctu control options
+          'ctu'])  # ctu control options
 def run(opts):
     """ Entry point to run (or not) static analyzer against a single entry
     of the compilation database.
@@ -453,7 +462,7 @@ def run_analyzer(opts, continuation=report_failure):
         return result
 
 
-@require(['clang', 'directory', 'flags', 'direct_args', 'source', 'ctu_dir'])
+@require(['clang', 'directory', 'flags', 'direct_args', 'source', 'ctu'])
 def ctu_collect_phase(opts):
     """ Preprocess source by generating all data needed by CTU analysis. """
 
@@ -478,7 +487,7 @@ def ctu_collect_phase(opts):
         """ Generates ASTs for the current compilation command. """
 
         args = opts['direct_args'] + opts['flags']
-        ast_joined_path = os.path.join(opts['ctu_dir'], 'ast', triple_arch,
+        ast_joined_path = os.path.join(opts['ctu'].dir, 'ast', triple_arch,
                                        os.path.realpath(opts['source'])[1:] +
                                        '.ast')
         ast_path = os.path.abspath(ast_joined_path)
@@ -520,7 +529,7 @@ def ctu_collect_phase(opts):
             path = fn_txt[dpos + 1:]
             ast_path = os.path.join("ast", triple_arch, path[1:] + ".ast")
             output.append(mangled_name + "@" + triple_arch + " " + ast_path)
-        extern_fns_map_folder = os.path.join(opts['ctu_dir'],
+        extern_fns_map_folder = os.path.join(opts['ctu'].dir,
                                              CTU_TEMP_FNMAP_FOLDER)
         if output:
             with tempfile.NamedTemporaryFile(mode='w',
@@ -533,15 +542,24 @@ def ctu_collect_phase(opts):
     map_functions(triple_arch)
 
 
-@require(['ctu_collect', 'ctu_analyze', 'ctu_dir'])
+@require(['ctu'])
 def dispatch_ctu(opts, continuation=run_analyzer):
     """ Execute only one phase of 2 phases of CTU if needed. """
 
-    if opts['ctu_collect'] or opts['ctu_analyze']:
-        if opts['ctu_collect']:
+    ctu_config = opts['ctu']
+    # Recover namedtuple from json when coming from analyze_cc
+    if not hasattr(ctu_config, 'collect'):
+        ctu_config = CtuConfig(collect=ctu_config[0],
+                               analyze=ctu_config[1],
+                               dir=ctu_config[2])
+    opts['ctu'] = ctu_config
+
+    if ctu_config.collect or ctu_config.analyze:
+        assert ctu_config.collect != ctu_config.analyze
+        if ctu_config.collect:
             return ctu_collect_phase(opts)
-        if opts['ctu_analyze']:
-            ctu_options = ['ctu-dir=' + opts['ctu_dir'],
+        if ctu_config.analyze:
+            ctu_options = ['ctu-dir=' + ctu_config.dir,
                            'reanalyze-ctu-visited=true']
             analyzer_options = prefix_with('-analyzer-config', ctu_options)
             direct_options = prefix_with('-Xanalyzer', analyzer_options)

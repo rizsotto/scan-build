@@ -19,6 +19,8 @@ ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
 
 Execution = collections.namedtuple('Execution', ['pid', 'cwd', 'cmd'])
 
+CtuConfig = collections.namedtuple('CtuConfig', ['collect', 'analyze', 'dir'])
+
 
 def shell_split(string):
     """ Takes a command string and returns as a list. """
