@@ -123,7 +123,8 @@ def validate_args_for_analyze(parser, args, from_build_command):
         parser.error(message='compilation database is missing')
 
     # If it is CTU analyze_only, the input directory should exist
-    if not from_build_command and args.ctu[1] and not args.ctu[0] \
+    if not from_build_command \
+            and args.ctu_phases[1] and not args.ctu_phases[0] \
             and not os.path.exists(args.ctu_dir):
         parser.error(message='missing CTU directory')
 
@@ -351,7 +352,7 @@ def create_analyze_parser(from_build_command):
         ctu_mutex_group.add_argument(
             '--ctu',
             action='store_const', const=(True, True),
-            dest='ctu',
+            dest='ctu_phases',
             help="""Perform cross translation unit (ctu) analysis (both collect
             and analyze phases) using default <ctu-dir> for temporary output.
             At the end of the analysis, the temporary directory is removed.""")
@@ -364,13 +365,13 @@ def create_analyze_parser(from_build_command):
         ctu_mutex_group.add_argument(
             '--ctu-collect-only',
             action='store_const', const=(True, False),
-            dest='ctu',
+            dest='ctu_phases',
             help="""Perform only the collect phase of ctu.
             Keep <ctu-dir> for further use.""")
         ctu_mutex_group.add_argument(
             '--ctu-analyze-only',
             action='store_const', const=(False, True),
-            dest='ctu',
+            dest='ctu_phases',
             help="""Perform only the analyze phase of ctu. <ctu-dir> should be
             present and will not be removed after analysis.""")
     return parser
