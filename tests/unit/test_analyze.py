@@ -337,3 +337,14 @@ class ReportDirectoryTest(unittest.TestCase):
              sut.report_directory(tmp_dir, False) as report_dir3:
             self.assertLess(report_dir1, report_dir2)
             self.assertLess(report_dir2, report_dir3)
+
+
+class PrefixWithTest(unittest.TestCase):
+
+    def test_gives_empty_on_empty(self):
+        res = sut.prefix_with(0, [])
+        self.assertFalse(res)
+
+    def test_interleaves_prefix(self):
+        res = sut.prefix_with(0, [1, 2, 3])
+        self.assertListEqual([0, 1, 0, 2, 0, 3], res)
