@@ -98,11 +98,6 @@ def normalize_args_for_analyze(args, from_build_command):
         # add cdb parameter invisibly to make report module working.
         args.cdb = 'compile_commands.json'
 
-    if not from_build_command:
-        if args.ctu and not args.ctu_collect and not args.ctu_analyze:
-            args.ctu_collect = True
-            args.ctu_analyze = True
-
 
 def validate_args_for_analyze(parser, args, from_build_command):
     """ Command line parsing is done by the argparse module, but semantic
@@ -126,10 +121,11 @@ def validate_args_for_analyze(parser, args, from_build_command):
         parser.error(message='missing build command')
     elif not from_build_command and not os.path.exists(args.cdb):
         parser.error(message='compilation database is missing')
-    if not from_build_command:
-        if args.ctu_analyze and not args.ctu_collect:
-            if not os.path.exists(args.ctu_dir):
-                parser.error(message='missing CTU directory')
+
+    # If it is CTU analyze_only, the input directory should exist
+    if not from_build_command and args.ctu[1] and not args.ctu[0] \
+            and not os.path.exists(args.ctu_dir):
+        parser.error(message='missing CTU directory')
 
 
 def create_intercept_parser():
@@ -351,11 +347,13 @@ def create_analyze_parser(from_build_command):
             dest='build', nargs=argparse.REMAINDER, help="""Command to run.""")
     else:
         ctu = parser.add_argument_group('cross translation unit analysis')
-        ctu.add_argument(
+        ctu_mutex_group = ctu.add_mutually_exclusive_group()
+        ctu_mutex_group.add_argument(
             '--ctu',
-            action='store_true',
-            help="""Perform ctu analysis (both collect and analyze phases)
-            using default <ctu-dir> for temporary output.
+            action='store_const', const=(True, True),
+            dest='ctu',
+            help="""Perform cross translation unit (ctu) analysis (both collect
+            and analyze phases) using default <ctu-dir> for temporary output.
             At the end of the analysis, the temporary directory is removed.""")
         ctu.add_argument(
             '--ctu-dir',
@@ -363,17 +361,17 @@ def create_analyze_parser(from_build_command):
             default='ctu-dir',
             help="""Defines the temporary directory used between ctu
             phases.""")
-        ctu.add_argument(
+        ctu_mutex_group.add_argument(
             '--ctu-collect-only',
-            action='store_true',
-            dest='ctu_collect',
-            help="""Do not perform the analyis phase, only the 1st collect
-            phase. Keep <ctu-dir> for further use.""")
-        ctu.add_argument(
+            action='store_const', const=(True, False),
+            dest='ctu',
+            help="""Perform only the collect phase of ctu.
+            Keep <ctu-dir> for further use.""")
+        ctu_mutex_group.add_argument(
             '--ctu-analyze-only',
-            action='store_true',
-            dest='ctu_analyze',
-            help="""Perform only the 2nd analysis phase. <ctu-dir> should be
+            action='store_const', const=(False, True),
+            dest='ctu',
+            help="""Perform only the analyze phase of ctu. <ctu-dir> should be
             present and will not be removed after analysis.""")
     return parser
 
