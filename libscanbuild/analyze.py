@@ -34,7 +34,7 @@ from libscanbuild.intercept import capture
 from libscanbuild.report import document
 from libscanbuild.compilation import Compilation, classify_source, \
     CompilationDatabase
-from libscanbuild.clang import get_version, get_arguments
+from libscanbuild.clang import get_version, get_arguments, get_triple_arch
 
 __all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
 
@@ -506,23 +506,6 @@ def run_analyzer(opts, continuation=report_failure):
 def ctu_collect_phase(opts):
     """ Preprocess source by generating all data needed by CTU analysis. """
 
-    def get_triple_arch():
-        """Returns the architecture part of the target triple for the current
-        compilation command. """
-
-        cwd = opts['directory']
-        cmd = get_arguments([opts['clang'], '--analyze'] +
-                            opts['direct_args'] + opts['flags'] +
-                            [opts['source']],
-                            cwd)
-        arch = ""
-        i = 0
-        while i < len(cmd) and cmd[i] != "-triple":
-            i += 1
-        if i < (len(cmd) - 1):
-            arch = cmd[i + 1].split("-")[0]
-        return arch
-
     def generate_ast(triple_arch):
         """ Generates ASTs for the current compilation command. """
 
@@ -577,7 +560,10 @@ def ctu_collect_phase(opts):
                                              delete=False) as out_file:
                 out_file.write("\n".join(output) + "\n")
 
-    triple_arch = get_triple_arch()
+    cwd = opts['directory']
+    cmd = [opts['clang'], '--analyze'] + opts['direct_args'] + opts['flags'] \
+        + [opts['source']]
+    triple_arch = get_triple_arch(cmd, cwd)
     generate_ast(triple_arch)
     map_functions(triple_arch)
 

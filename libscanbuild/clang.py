@@ -11,7 +11,7 @@ a subset of that, it makes sense to create a function specific wrapper. """
 import re
 from libscanbuild import shell_split, run_command
 
-__all__ = ['get_version', 'get_arguments', 'get_checkers']
+__all__ = ['get_version', 'get_arguments', 'get_checkers', 'get_triple_arch']
 
 # regex for activated checker
 ACTIVE_CHECKER_PATTERN = re.compile(r'^-analyzer-checker=(.*)$')
@@ -151,3 +151,17 @@ def get_checkers(clang, plugins):
         raise Exception('Could not query Clang for available checkers.')
 
     return checkers
+
+
+def get_triple_arch(command, cwd):
+    """Returns the architecture part of the target triple for the given
+    compilation command. """
+
+    cmd = get_arguments(command, cwd)
+    arch = ""
+    i = 0
+    while i < len(cmd) and cmd[i] != "-triple":
+        i += 1
+    if i < (len(cmd) - 1):
+        arch = cmd[i + 1].split("-")[0]
+    return arch
