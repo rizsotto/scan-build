@@ -514,13 +514,9 @@ def ctu_collect_phase(opts):
                                        os.path.realpath(opts['source'])[1:] +
                                        '.ast')
         ast_path = os.path.abspath(ast_joined_path)
-        try:
-            os.makedirs(os.path.dirname(ast_path))
-        except OSError:
-            if os.path.isdir(os.path.dirname(ast_path)):
-                pass
-            else:
-                raise
+        ast_dir = os.path.dirname(ast_path)
+        if not os.path.isdir(ast_dir):
+            os.makedirs(ast_dir)
         ast_command = [opts['clang'], '-emit-ast']
         ast_command.extend(args)
         ast_command.append('-w')
@@ -528,7 +524,7 @@ def ctu_collect_phase(opts):
         ast_command.append('-o')
         ast_command.append(ast_path)
         logging.debug("Generating AST using '%s'", ast_command)
-        subprocess.call(ast_command, cwd=opts['directory'], shell=False)
+        run_command(ast_command, cwd=opts['directory'])
 
     def map_functions(triple_arch):
         """ Generate function map file for the current source. """
@@ -540,12 +536,8 @@ def ctu_collect_phase(opts):
         funcmap_command.append('--')
         funcmap_command.extend(args)
         logging.debug("Generating function map using '%s'", funcmap_command)
-        fn_out = subprocess.check_output(funcmap_command,
-                                         cwd=opts['directory'],
-                                         shell=False,
-                                         universal_newlines=True)
+        fn_list = run_command(funcmap_command, cwd=opts['directory'])
         output = []
-        fn_list = fn_out.splitlines()
         for fn_txt in fn_list:
             dpos = fn_txt.find(" ")
             mangled_name = fn_txt[0:dpos]
