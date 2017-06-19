@@ -62,7 +62,7 @@ def scan_build():
             exit_code, compilations = capture(args)
             if need_analyzer(args.build):
                 # run the analyzer against the captured commands
-                run_analyzer_parallel(compilations, args)
+                run_analyzer_with_ctu(compilations, args)
         else:
             # run build command and analyzer with compiler wrappers
             environment = setup_environment(args)
@@ -82,7 +82,7 @@ def analyze_build():
     with report_directory(args.output, args.keep_empty) as args.output:
         # run the analyzer against a compilation db
         compilations = CompilationDatabase.load(args.cdb)
-        run_analyzer_parallel(compilations, args)
+        run_analyzer_with_ctu(compilations, args)
         # cover report generation and bug counting
         number_of_bugs = document(args)
         # set exit status as it was requested
@@ -109,6 +109,17 @@ def prefix_with(constant, pieces):
     eg.: prefix_with(0, [1,2,3]) creates [0, 1, 0, 2, 0, 3] """
 
     return [elem for piece in pieces for elem in [constant, piece]]
+
+
+def get_ctu_config(args):
+    """ CTU configuration is created from the chosen phases and dir """
+
+    return (
+        CtuConfig(collect=args.ctu_phases.collect,
+                  analyze=args.ctu_phases.analyze,
+                  dir=args.ctu_dir)
+        if hasattr(args, 'ctu_phases') and hasattr(args.ctu_phases, 'dir')
+        else CtuConfig(collect=False, analyze=False, dir=''))
 
 
 def analyze_parameters(args):
@@ -154,16 +165,6 @@ def analyze_parameters(args):
             result.append('-analyzer-viz-egraph-ubigraph')
 
         return prefix_with('-Xclang', result)
-
-    def get_ctu_config(args):
-        """ CTU configuration is created from the chosen phases and dir """
-
-        return (
-            CtuConfig(collect=args.ctu_phases.collect,
-                      analyze=args.ctu_phases.analyze,
-                      dir=args.ctu_dir)
-            if hasattr(args, 'ctu_phases') and hasattr(args.ctu_phases, 'dir')
-            else CtuConfig(collect=False, analyze=False, dir=''))
 
     return {
         'clang': args.clang,
@@ -242,38 +243,37 @@ def merge_ctu_func_maps(ctudir):
 def run_analyzer_parallel(compilations, args):
     """ Runs the analyzer against the given compilations. """
 
-    def run_parallel_with_consts(compilations, consts):
-        """ Run one phase of an analyzer run. """
-
-        parameters = (dict(compilation.as_dict(), **consts)
-                      for compilation in compilations)
-        # when verbose output requested execute sequentially
-        pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
-        for current in pool.imap_unordered(run, parameters):
-            logging_analyzer_output(current)
-        pool.close()
-        pool.join()
-
     logging.debug('run analyzer against compilation database')
     consts = analyze_parameters(args)
-    ctu_config = consts['ctu']
+    parameters = (dict(compilation.as_dict(), **consts)
+                  for compilation in compilations)
+    # when verbose output requested execute sequentially
+    pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
+    for current in pool.imap_unordered(run, parameters):
+        logging_analyzer_output(current)
+    pool.close()
+    pool.join()
+
+
+def run_analyzer_with_ctu(compilations, args):
+    """ Governs multiple runs in CTU mode or runs once in normal mode. """
+
+    ctu_config = get_ctu_config(args)
     if ctu_config.collect:
         shutil.rmtree(ctu_config.dir, ignore_errors=True)
         os.makedirs(os.path.join(ctu_config.dir, CTU_TEMP_FNMAP_FOLDER))
     if ctu_config.collect and ctu_config.analyze:
+        # compilations is a generator but we want to do 2 CTU rounds
         compilation_list = list(compilations)
-        consts['ctu'] = CtuConfig(collect=True,
-                                  analyze=False,
-                                  dir=ctu_config.dir)
-        run_parallel_with_consts(compilation_list, consts)
+        # CTU folder is coming from args.ctu_dir, so we can leave it empty
+        args.ctu_phases = CtuConfig(collect=True, analyze=False, dir='')
+        run_analyzer_parallel(compilation_list, args)
         merge_ctu_func_maps(ctu_config.dir)
-        consts['ctu'] = CtuConfig(collect=False,
-                                  analyze=True,
-                                  dir=ctu_config.dir)
-        run_parallel_with_consts(compilation_list, consts)
+        args.ctu_phases = CtuConfig(collect=False, analyze=True, dir='')
+        run_analyzer_parallel(compilation_list, args)
         shutil.rmtree(ctu_config.dir, ignore_errors=True)
     else:
-        run_parallel_with_consts(compilations, consts)
+        run_analyzer_parallel(compilations, args)
         if ctu_config.collect:
             merge_ctu_func_maps(ctu_config.dir)
 
