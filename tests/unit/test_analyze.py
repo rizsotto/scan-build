@@ -354,7 +354,7 @@ class MergeCtuMapTest(unittest.TestCase):
 
     def test_no_map_gives_empty(self):
         pairs = sut.create_global_ctu_function_map([])
-        self.assertListEqual([], pairs)
+        self.assertFalse(pairs)
 
     def test_multiple_maps_merged(self):
         concat_map = ['_Z1fun1i@x86_64 ast/x86_64/fun1.c.ast',
@@ -390,3 +390,24 @@ class MergeCtuMapTest(unittest.TestCase):
         pairs = sut.create_global_ctu_function_map(concat_map)
         self.assertTrue(('_Z1fun1i@x86_64', 'ast/x86_64/f un.c.ast') in pairs)
         self.assertEqual(1, len(pairs))
+
+
+class FuncMapSrcToAstTest(unittest.TestCase):
+
+    def test_empty_gives_empty(self):
+        fun_ast_lst = sut.func_map_list_src_to_ast([], 'armv7')
+        self.assertFalse(fun_ast_lst)
+
+    def test_sources_to_asts(self):
+        fun_src_lst = ['_Z1f1i /path/f1.c',
+                       '_Z1f2i /path/f2.c']
+        fun_ast_lst = sut.func_map_list_src_to_ast(fun_src_lst, 'armv7')
+        self.assertTrue('_Z1f1i@armv7 ast/armv7/path/f1.c.ast' in fun_ast_lst)
+        self.assertTrue('_Z1f2i@armv7 ast/armv7/path/f2.c.ast' in fun_ast_lst)
+        self.assertEqual(2, len(fun_ast_lst))
+
+    def test_spaces_handled(self):
+        fun_src_lst = ['_Z1f1i /path/f 1.c']
+        fun_ast_lst = sut.func_map_list_src_to_ast(fun_src_lst, 'armv7')
+        self.assertTrue('_Z1f1i@armv7 ast/armv7/path/f 1.c.ast' in fun_ast_lst)
+        self.assertEqual(1, len(fun_ast_lst))

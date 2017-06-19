@@ -502,6 +502,20 @@ def run_analyzer(opts, continuation=report_failure):
         return result
 
 
+def func_map_list_src_to_ast(func_src_list, triple_arch):
+    """ Turns textual function map list with source files into a
+    function map list with ast files. """
+
+    func_ast_list = []
+    for fn_src_txt in func_src_list:
+        dpos = fn_src_txt.find(" ")
+        mangled_name = fn_src_txt[0:dpos]
+        path = fn_src_txt[dpos + 1:]
+        ast_path = os.path.join("ast", triple_arch, path[1:] + ".ast")
+        func_ast_list.append(mangled_name + "@" + triple_arch + " " + ast_path)
+    return func_ast_list
+
+
 @require(['clang', 'directory', 'flags', 'direct_args', 'source', 'ctu'])
 def ctu_collect_phase(opts):
     """ Preprocess source by generating all data needed by CTU analysis. """
@@ -536,21 +550,15 @@ def ctu_collect_phase(opts):
         funcmap_command.append('--')
         funcmap_command.extend(args)
         logging.debug("Generating function map using '%s'", funcmap_command)
-        fn_list = run_command(funcmap_command, cwd=opts['directory'])
-        output = []
-        for fn_txt in fn_list:
-            dpos = fn_txt.find(" ")
-            mangled_name = fn_txt[0:dpos]
-            path = fn_txt[dpos + 1:]
-            ast_path = os.path.join("ast", triple_arch, path[1:] + ".ast")
-            output.append(mangled_name + "@" + triple_arch + " " + ast_path)
+        func_src_list = run_command(funcmap_command, cwd=opts['directory'])
+        func_ast_list = func_map_list_src_to_ast(func_src_list, triple_arch)
         extern_fns_map_folder = os.path.join(opts['ctu'].dir,
                                              CTU_TEMP_FNMAP_FOLDER)
-        if output:
+        if func_ast_list:
             with tempfile.NamedTemporaryFile(mode='w',
                                              dir=extern_fns_map_folder,
                                              delete=False) as out_file:
-                out_file.write("\n".join(output) + "\n")
+                out_file.write("\n".join(func_ast_list) + "\n")
 
     cwd = opts['directory']
     cmd = [opts['clang'], '--analyze'] + opts['direct_args'] + opts['flags'] \
