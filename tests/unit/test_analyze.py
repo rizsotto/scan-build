@@ -384,3 +384,9 @@ class MergeCtuMapTest(unittest.TestCase):
         self.assertTrue(('_Z1fun1i@x86_64', 'ast/x86_64/fun1.c.ast') in pairs)
         self.assertTrue(('_Z1fun2i@x86_64', 'ast/x86_64/fun2.c.ast') in pairs)
         self.assertEqual(2, len(pairs))
+
+    def test_space_handled_in_source(self):
+        concat_map = ['_Z1fun1i@x86_64 ast/x86_64/f un.c.ast']
+        pairs = sut.create_global_ctu_function_map(concat_map)
+        self.assertTrue(('_Z1fun1i@x86_64', 'ast/x86_64/f un.c.ast') in pairs)
+        self.assertEqual(1, len(pairs))
