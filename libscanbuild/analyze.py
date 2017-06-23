@@ -117,9 +117,10 @@ def get_ctu_config(args):
     return (
         CtuConfig(collect=args.ctu_phases.collect,
                   analyze=args.ctu_phases.analyze,
-                  dir=args.ctu_dir)
+                  dir=args.ctu_dir,
+                  func_map_cmd=args.func_map_cmd)
         if hasattr(args, 'ctu_phases') and hasattr(args.ctu_phases, 'dir')
-        else CtuConfig(collect=False, analyze=False, dir=''))
+        else CtuConfig(collect=False, analyze=False, dir='', func_map_cmd=''))
 
 
 def analyze_parameters(args):
@@ -265,11 +266,14 @@ def run_analyzer_with_ctu(compilations, args):
     if ctu_config.collect and ctu_config.analyze:
         # compilations is a generator but we want to do 2 CTU rounds
         compilation_list = list(compilations)
-        # CTU folder is coming from args.ctu_dir, so we can leave it empty
-        args.ctu_phases = CtuConfig(collect=True, analyze=False, dir='')
+        # CTU strings are coming from args.ctu_dir and func_map_cmd,
+        # so we can leave it empty
+        args.ctu_phases = CtuConfig(collect=True, analyze=False,
+                                    dir='', func_map_cmd='')
         run_analyzer_parallel(compilation_list, args)
         merge_ctu_func_maps(ctu_config.dir)
-        args.ctu_phases = CtuConfig(collect=False, analyze=True, dir='')
+        args.ctu_phases = CtuConfig(collect=False, analyze=True,
+                                    dir='', func_map_cmd='')
         run_analyzer_parallel(compilation_list, args)
         shutil.rmtree(ctu_config.dir, ignore_errors=True)
     else:
@@ -544,8 +548,7 @@ def ctu_collect_phase(opts):
         """ Generate function map file for the current source. """
 
         args = opts['direct_args'] + opts['flags']
-        funcmap_command = [os.path.join(os.path.dirname(opts['clang']),
-                                        'clang-func-mapping')]
+        funcmap_command = [opts['ctu'].func_map_cmd]
         funcmap_command.append(opts['source'])
         funcmap_command.append('--')
         funcmap_command.extend(args)
@@ -577,7 +580,8 @@ def dispatch_ctu(opts, continuation=run_analyzer):
     if not hasattr(ctu_config, 'collect'):
         ctu_config = CtuConfig(collect=ctu_config[0],
                                analyze=ctu_config[1],
-                               dir=ctu_config[2])
+                               dir=ctu_config[2],
+                               func_map_cmd=ctu_config[3])
     opts['ctu'] = ctu_config
 
     if ctu_config.collect or ctu_config.analyze:

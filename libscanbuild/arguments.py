@@ -19,7 +19,7 @@ import argparse
 import logging
 import tempfile
 from libscanbuild import reconfigure_logging, CtuConfig
-from libscanbuild.clang import get_checkers
+from libscanbuild.clang import get_checkers, is_ctu_capable
 
 __all__ = ['parse_args_for_intercept_build', 'parse_args_for_analyze_build',
            'parse_args_for_scan_build']
@@ -122,12 +122,17 @@ def validate_args_for_analyze(parser, args, from_build_command):
     elif not from_build_command and not os.path.exists(args.cdb):
         parser.error(message='compilation database is missing')
 
-    # If it is CTU analyze_only, the input directory should exist
+    # If the user wants CTU mode
     if not from_build_command and hasattr(args, 'ctu_phases') \
             and hasattr(args.ctu_phases, 'dir'):
+        # If CTU analyze_only, the input directory should exist
         if args.ctu_phases.analyze and not args.ctu_phases.collect \
                 and not os.path.exists(args.ctu_dir):
             parser.error(message='missing CTU directory')
+        # Check CTU capability via checking clang-func-mapping
+        if not is_ctu_capable(args.clang, args.func_map_cmd):
+            parser.error(message="""This version of clang does not support CTU
+            functionality or clang-func-mapping command not found.""")
 
 
 def create_intercept_parser():
@@ -353,7 +358,8 @@ def create_analyze_parser(from_build_command):
         ctu_mutex_group.add_argument(
             '--ctu',
             action='store_const',
-            const=CtuConfig(collect=True, analyze=True, dir=''),
+            const=CtuConfig(collect=True, analyze=True,
+                            dir='', func_map_cmd=''),
             dest='ctu_phases',
             help="""Perform cross translation unit (ctu) analysis (both collect
             and analyze phases) using default <ctu-dir> for temporary output.
@@ -367,17 +373,29 @@ def create_analyze_parser(from_build_command):
         ctu_mutex_group.add_argument(
             '--ctu-collect-only',
             action='store_const',
-            const=CtuConfig(collect=True, analyze=False, dir=''),
+            const=CtuConfig(collect=True, analyze=False,
+                            dir='', func_map_cmd=''),
             dest='ctu_phases',
             help="""Perform only the collect phase of ctu.
             Keep <ctu-dir> for further use.""")
         ctu_mutex_group.add_argument(
             '--ctu-analyze-only',
             action='store_const',
-            const=CtuConfig(collect=False, analyze=True, dir=''),
+            const=CtuConfig(collect=False, analyze=True,
+                            dir='', func_map_cmd=''),
             dest='ctu_phases',
             help="""Perform only the analyze phase of ctu. <ctu-dir> should be
             present and will not be removed after analysis.""")
+        ctu.add_argument(
+            '--use-func-map-cmd',
+            metavar='<path>',
+            dest='func_map_cmd',
+            default='clang-func-mapping',
+            help="""'%(prog)s' uses the 'clang-func-mapping' executable
+            relative to itself for generating function maps for static
+            analysis. One can override this behavior with this option by using
+            the 'clang-func-mapping' packaged with Xcode (on OS X) or from the
+            PATH.""")
     return parser
 
 
