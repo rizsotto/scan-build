@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # RUN: bash %s %T/ctu
-# RUN: cd %T/ctu; %{analyze-build} -o . --cdb buildlog.json --ctu --plist-multi-file | ./check.sh
+# RUN: cd %T/ctu; ./go_with_ctu.sh %{analyze-build} -o . --cdb buildlog.json --ctu --plist-multi-file
 
 set -o errexit
 set -o nounset
@@ -18,6 +18,20 @@ set -o xtrace
 
 root_dir=$1
 mkdir -p "${root_dir}/src"
+
+go_with_ctu="${root_dir}/go_with_ctu.sh"
+cat > ${go_with_ctu} << EOF
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+if command -v clang-func-mapping; then
+    \$* | ./check.sh;
+fi
+EOF
+chmod +x ${go_with_ctu}
 
 cat > "${root_dir}/src/lib.c" << EOF
 int bad_guy(int * i)
