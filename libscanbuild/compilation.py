@@ -118,14 +118,12 @@ class Compilation:
         From compilation database entry it creates the compilation object.
 
         :param entry:   the compilation database entry
-        :return: a single compilation object """
+        :return: stream of CompilationDbEntry objects """
 
         command = shell_split(entry['command']) if 'command' in entry else \
             entry['arguments']
         execution = Execution(cmd=command, cwd=entry['directory'], pid=0)
-        entries = list(Compilation.iter_from_execution(execution))
-        assert len(entries) == 1
-        return entries[0]
+        return Compilation.iter_from_execution(execution)
 
     @staticmethod
     def iter_from_execution(execution, cc='cc', cxx='c++'):
@@ -253,7 +251,8 @@ class CompilationDatabase:
 
         with open(filename, 'r') as handle:
             for entry in json.load(handle):
-                yield Compilation.from_db_entry(entry)
+                for compilation in Compilation.from_db_entry(entry):
+                    yield compilation
 
 
 def classify_source(filename, c_compiler=True):
