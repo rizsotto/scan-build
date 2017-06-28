@@ -515,7 +515,11 @@ def func_map_list_src_to_ast(func_src_list, triple_arch):
         dpos = fn_src_txt.find(" ")
         mangled_name = fn_src_txt[0:dpos]
         path = fn_src_txt[dpos + 1:]
-        ast_path = os.path.join("ast", triple_arch, path[1:] + ".ast")
+        # Normalize path on windows as well
+        path = os.path.splitdrive(path)[1]
+        # Make relative path out of absolute
+        path = path[1:] if path[0] == os.sep else path
+        ast_path = os.path.join("ast", triple_arch, path + ".ast")
         func_ast_list.append(mangled_name + "@" + triple_arch + " " + ast_path)
     return func_ast_list
 

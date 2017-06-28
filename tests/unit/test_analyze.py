@@ -4,13 +4,13 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libear
-import libscanbuild.analyze as sut
 import unittest
 import os
 import os.path
 import glob
 import platform
+import libear
+import libscanbuild.analyze as sut
 
 IS_WINDOWS = os.getenv('windows')
 
@@ -399,15 +399,21 @@ class FuncMapSrcToAstTest(unittest.TestCase):
         self.assertFalse(fun_ast_lst)
 
     def test_sources_to_asts(self):
-        fun_src_lst = ['_Z1f1i /path/f1.c',
-                       '_Z1f2i /path/f2.c']
+        fun_src_lst = ['_Z1f1i ' + os.path.join(os.sep + 'path', 'f1.c'),
+                       '_Z1f2i ' + os.path.join(os.sep + 'path', 'f2.c')]
         fun_ast_lst = sut.func_map_list_src_to_ast(fun_src_lst, 'armv7')
-        self.assertTrue('_Z1f1i@armv7 ast/armv7/path/f1.c.ast' in fun_ast_lst)
-        self.assertTrue('_Z1f2i@armv7 ast/armv7/path/f2.c.ast' in fun_ast_lst)
+        self.assertTrue('_Z1f1i@armv7 ' +
+                        os.path.join('ast', 'armv7', 'path', 'f1.c.ast')
+                        in fun_ast_lst)
+        self.assertTrue('_Z1f2i@armv7 ' +
+                        os.path.join('ast', 'armv7', 'path', 'f2.c.ast')
+                        in fun_ast_lst)
         self.assertEqual(2, len(fun_ast_lst))
 
     def test_spaces_handled(self):
-        fun_src_lst = ['_Z1f1i /path/f 1.c']
+        fun_src_lst = ['_Z1f1i ' + os.path.join(os.sep + 'path', 'f 1.c')]
         fun_ast_lst = sut.func_map_list_src_to_ast(fun_src_lst, 'armv7')
-        self.assertTrue('_Z1f1i@armv7 ast/armv7/path/f 1.c.ast' in fun_ast_lst)
+        self.assertTrue('_Z1f1i@armv7 ' +
+                        os.path.join('ast', 'armv7', 'path', 'f 1.c.ast')
+                        in fun_ast_lst)
         self.assertEqual(1, len(fun_ast_lst))
