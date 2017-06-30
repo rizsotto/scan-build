@@ -266,6 +266,14 @@ def read_bugs(output_dir, html):
     duplicate = duplicate_check(
         lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
 
+    # Protect parsers from bogus report files coming from clang crashes
+    for filename in glob.iglob(os.path.join(output_dir, pattern)):
+        if os.stat(filename).st_size == 0:
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+
     bugs = itertools.chain.from_iterable(
         # parser creates a bug generator not the bug itself
         parser(filename)
