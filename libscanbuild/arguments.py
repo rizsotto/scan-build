@@ -98,6 +98,11 @@ def normalize_args_for_analyze(args, from_build_command):
         # add cdb parameter invisibly to make report module working.
         args.cdb = 'compile_commands.json'
 
+    # Make ctu_dir an abspath as it is needed inside clang
+    if not from_build_command and hasattr(args, 'ctu_phases') \
+            and hasattr(args.ctu_phases, 'dir'):
+        args.ctu_dir = os.path.abspath(args.ctu_dir)
+
 
 def validate_args_for_analyze(parser, args, from_build_command):
     """ Command line parsing is done by the argparse module, but semantic
