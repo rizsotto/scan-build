@@ -111,8 +111,8 @@ class Compilation:
             'directory': self.directory
         }
 
-    @staticmethod
-    def from_db_entry(entry):
+    @classmethod
+    def from_db_entry(cls, entry):
         """ Parser method for compilation entry.
 
         From compilation database entry it creates the compilation object.
@@ -123,10 +123,10 @@ class Compilation:
         command = shell_split(entry['command']) if 'command' in entry else \
             entry['arguments']
         execution = Execution(cmd=command, cwd=entry['directory'], pid=0)
-        return Compilation.iter_from_execution(execution)
+        return cls.iter_from_execution(execution)
 
-    @staticmethod
-    def iter_from_execution(execution, cc='cc', cxx='c++'):
+    @classmethod
+    def iter_from_execution(cls, execution, cc='cc', cxx='c++'):
         """ Generator method for compilation entries.
 
         From a single compiler call it can generate zero or more entries.
@@ -136,7 +136,7 @@ class Compilation:
         :param cxx:         user specified C++ compiler name
         :return: stream of CompilationDbEntry objects """
 
-        candidate = Compilation._split_command(execution.cmd, cc, cxx)
+        candidate = cls._split_command(execution.cmd, cc, cxx)
         for source in candidate.files if candidate else []:
             result = Compilation(directory=execution.cwd,
                                  source=source,
@@ -145,8 +145,8 @@ class Compilation:
             if os.path.isfile(result.source):
                 yield result
 
-    @staticmethod
-    def _split_compiler(command, cc, cxx):
+    @classmethod
+    def _split_compiler(cls, command, cc, cxx):
         """ A predicate to decide the command is a compiler call or not.
 
         :param command:     the command to classify
@@ -173,7 +173,7 @@ class Compilation:
             # 'wrapper' 'compiler' 'parameters' are valid.
             # plus, a wrapper can wrap wrapper too.
             if is_wrapper(executable):
-                result = Compilation._split_compiler(parameters, cc, cxx)
+                result = cls._split_compiler(parameters, cc, cxx)
                 return ('c', parameters) if result is None else result
             # and 'compiler' 'parameters' is valid.
             elif is_c_compiler(executable):
@@ -182,8 +182,8 @@ class Compilation:
                 return 'c++', parameters
         return None
 
-    @staticmethod
-    def _split_command(command, cc, cxx):
+    @classmethod
+    def _split_command(cls, command, cc, cxx):
         """ Returns a value when the command is a compilation, None otherwise.
 
         :param command:     the command to classify
@@ -193,7 +193,7 @@ class Compilation:
 
         logging.debug('input was: %s', command)
         # quit right now, if the program was not a C/C++ compiler
-        compiler_and_arguments = Compilation._split_compiler(command, cc, cxx)
+        compiler_and_arguments = cls._split_compiler(command, cc, cxx)
         if compiler_and_arguments is None:
             return None
 
@@ -239,7 +239,7 @@ class CompilationDatabase:
         :param iterator: iterator of Compilation objects. """
 
         entries = [entry.as_db_entry() for entry in iterator]
-        with open(filename, 'w+') as handle:
+        with open(filename, 'w') as handle:
             json.dump(entries, handle, sort_keys=True, indent=4)
 
     @staticmethod
