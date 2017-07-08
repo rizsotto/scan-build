@@ -51,11 +51,11 @@ class CompilerTest(unittest.TestCase):
         self.assert_c_compiler(['gxlc'])
         self.assert_cxx_compiler(['gxlc++'])
 
-    def test_open_mpi_compiler_call(self):
-        self.assert_c_compiler(['mpicc'])
-        self.assert_cxx_compiler(['mpiCC'])
-        self.assert_cxx_compiler(['mpicxx'])
-        self.assert_cxx_compiler(['mpic++'])
+    # def test_open_mpi_compiler_call(self):
+    #     self.assert_c_compiler(['mpicc'])
+    #     self.assert_cxx_compiler(['mpiCC'])
+    #     self.assert_cxx_compiler(['mpicxx'])
+    #     self.assert_cxx_compiler(['mpic++'])
 
     def test_compiler_call_with_path(self):
         self.assert_c_compiler(['/usr/local/bin/gcc'])

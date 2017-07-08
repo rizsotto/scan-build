@@ -10,7 +10,7 @@ import os
 import collections
 import logging
 import json
-from libscanbuild import Execution, shell_split
+from libscanbuild import Execution, shell_split, run_command
 
 __all__ = ['classify_source', 'Compilation', 'CompilationDatabase']
 
@@ -54,11 +54,14 @@ IGNORED_FLAGS = {
 # Known C/C++ compiler wrapper name patterns
 COMPILER_PATTERN_WRAPPER = re.compile(r'^(distcc|ccache)$')
 
+# Known MPI compiler wrapper name patterns
+COMPILER_PATTERNS_MPI_WRAPPER = re.compile(r'^mpi(cc|cxx|CC|c\+\+)$')
+
 # Known C compiler executable name patterns
 COMPILER_PATTERNS_CC = frozenset([
-    re.compile(r'^(|i|mpi)cc$'),
     re.compile(r'^([^-]*-)*[mg]cc(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^([^-]*-)*clang(-\d+(\.\d+){0,2})?$'),
+    re.compile(r'^(|i)cc$'),
     re.compile(r'^(g|)xlc$'),
 ])
 
@@ -67,7 +70,7 @@ COMPILER_PATTERNS_CXX = frozenset([
     re.compile(r'^(c\+\+|cxx|CC)$'),
     re.compile(r'^([^-]*-)*[mg]\+\+(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^([^-]*-)*clang\+\+(-\d+(\.\d+){0,2})?$'),
-    re.compile(r'^(icpc|mpiCC|mpicxx|mpic\+\+)$'),
+    re.compile(r'^icpc$'),
     re.compile(r'^(g|)xl(C|c\+\+)$'),
 ])
 
@@ -158,6 +161,9 @@ class Compilation:
         def is_wrapper(cmd):
             return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False
 
+        def is_mpi_wrapper(cmd):
+            return True if COMPILER_PATTERNS_MPI_WRAPPER.match(cmd) else False
+
         def is_c_compiler(cmd):
             return os.path.basename(cc) == cmd or \
                 any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
@@ -175,6 +181,10 @@ class Compilation:
             if is_wrapper(executable):
                 result = cls._split_compiler(parameters, cc, cxx)
                 return ('c', parameters) if result is None else result
+            # MPI compiler wrappers add extra parameters
+            elif is_mpi_wrapper(executable):
+                mpi_call = get_mpi_call(executable)
+                return cls._split_compiler(mpi_call + parameters, cc, cxx)
             # and 'compiler' 'parameters' is valid.
             elif is_c_compiler(executable):
                 return 'c', parameters
@@ -284,3 +294,19 @@ def classify_source(filename, c_compiler=True):
 
     __, extension = os.path.splitext(os.path.basename(filename))
     return mapping.get(extension)
+
+
+def get_mpi_call(wrapper):
+    # type: (str) -> list(str)
+    """ Provide information on how the underlying compiler would have been
+    invoked without the MPI compiler wrapper. """
+
+    for query_flags in [['-show'], ['--showme']]:
+        try:
+            output = run_command([wrapper] + query_flags)
+            if output:
+                return shell_split(output[0])
+        except:
+            pass
+        # Fail loud
+        raise RuntimeError("Could not determinate MPI flags.")
