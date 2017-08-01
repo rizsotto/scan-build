@@ -77,3 +77,16 @@ class SymbolMapTest(unittest.TestCase):
         self.assertFalse(input[0] in result)
         self.assertTrue(input[1] in result)
         self.assertFalse(input[2] in result)
+
+
+class ClangIsCtuCapableTest(unittest.TestCase):
+    def test_ctu_not_found(self):
+        is_ctu = sut.is_ctu_capable('not-found-clang',
+                                    'not-found-clang-func-mapping')
+        self.assertFalse(is_ctu)
+
+
+class ClangGetTripleArchTest(unittest.TestCase):
+    def test_arch_is_not_empty(self):
+        arch = sut.get_arch_from_compilation(['clang', '-E', '-'], '.')
+        self.assertTrue(len(arch) > 0)

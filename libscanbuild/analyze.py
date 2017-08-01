@@ -24,7 +24,6 @@ import platform
 import contextlib
 import datetime
 import shutil
-import glob
 
 from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command, CtuConfig
@@ -34,8 +33,8 @@ from libscanbuild.intercept import capture
 from libscanbuild.report import document
 from libscanbuild.compilation import Compilation, classify_source, \
     CompilationDatabase
-from libscanbuild.clang import get_version, get_arguments, get_triple_arch
-from libscanbuild.ctu import merge_symbol_map_files
+from libscanbuild.clang import get_version, get_arguments
+from libscanbuild.ctu import merge_symbol_map_files, get_arch_from_compilation
 
 from typing import Any, Dict, List, Callable, Iterable, Generator  # noqa: ignore=F401
 from libscanbuild import Execution  # noqa: ignore=F401
@@ -545,7 +544,7 @@ def ctu_collect_phase(opts):
     cwd = opts['directory']
     cmd = [opts['clang'], '--analyze'] + opts['direct_args'] + opts['flags'] \
         + [opts['source']]
-    triple_arch = get_triple_arch(cmd, cwd)
+    triple_arch = get_arch_from_compilation(cmd, cwd)
     generate_ast(triple_arch)
     map_functions(triple_arch)
 
