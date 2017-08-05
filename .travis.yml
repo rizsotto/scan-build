@@ -26,12 +26,14 @@ matrix:
       python: 3.5
       env:
         - TRAVIS_CLANG=clang-4.0
+        - TYPECHECK=true
     - os: linux
       dist: trusty
       sudo: false
       python: 3.6
       env:
         - TRAVIS_CLANG=clang-4.0
+        - TYPECHECK=true
     - os: osx
       osx_image: xcode6.4
       language: generic
@@ -63,11 +65,18 @@ before_install:
 install:
   - pip --version
   - pip install --upgrade pip
+  - pip install -r requirements.txt
   - pip install lit pep8 flake8 pylint nose coverage coveralls
+  - if [[ "$TYPECHECK" ]]; then
+      pip install mypy;
+    fi
 
 script:
   - pep8 --show-source --show-pep8 libscanbuild
   - flake8 --verbose libscanbuild
+  - if [[ "$TYPECHECK" ]]; then
+      mypy libscanbuild;
+    fi
   - pylint libscanbuild || true
   - nosetests tests/unit --with-coverage --cover-branches
   - lit -v tests

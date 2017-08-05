@@ -29,6 +29,8 @@ import re
 import sys
 import uuid
 import subprocess
+import argparse  # noqa: ignore=F401
+from typing import Iterable, Dict, Tuple  # noqa: ignore=F401
 
 from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
@@ -46,6 +48,7 @@ WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 @command_entry_point
 def intercept_build():
+    # type: () -> int
     """ Entry point for 'intercept-build' command. """
 
     args = parse_args_for_intercept_build()
@@ -64,6 +67,7 @@ def intercept_build():
 
 
 def capture(args):
+    # type: (argparse.Namespace) -> Tuple[int, Iterable[Compilation]]
     """ Implementation of compilation database generation.
 
     :param args:    the parsed and validated command line arguments
@@ -81,6 +85,7 @@ def capture(args):
 
 
 def compilations(exec_calls, cc, cxx):
+    # type: (Iterable[Execution], str, str) -> Iterable[Compilation]
     """ Needs to filter out commands which are not compiler calls. And those
     compiler calls shall be compilation (not pre-processing or linking) calls.
     Plus needs to find the source file name from the arguments.
@@ -96,6 +101,7 @@ def compilations(exec_calls, cc, cxx):
 
 
 def setup_environment(args, destination):
+    # type: (argparse.Namespace, str) -> Dict[str, str]
     """ Sets up the environment for the build command.
 
     In order to capture the sub-commands (executed by the build process),
@@ -134,6 +140,7 @@ def setup_environment(args, destination):
 @command_entry_point
 @wrapper_entry_point
 def intercept_compiler_wrapper(_, execution):
+    # type: (int, Execution) -> None
     """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 
     It does generate execution report into target directory.
@@ -156,6 +163,7 @@ def intercept_compiler_wrapper(_, execution):
 
 
 def write_exec_trace(filename, entry):
+    # type: (str, Execution) -> None
     """ Write execution report file.
 
     This method shall be sync with the execution report writer in interception
@@ -170,6 +178,7 @@ def write_exec_trace(filename, entry):
 
 
 def parse_exec_trace(filename):
+    # type: (str) -> Execution
     """ Parse execution report file.
 
     Given filename points to a file which contains the basic report
@@ -188,6 +197,7 @@ def parse_exec_trace(filename):
 
 
 def exec_trace_files(directory):
+    # type: (str) -> Iterable[str]
     """ Generates exec trace file names.
 
     :param directory:   path to directory which contains the trace files.
@@ -200,6 +210,7 @@ def exec_trace_files(directory):
 
 
 def is_preload_disabled(platform):
+    # type: (str) -> bool
     """ Library-based interposition will fail silently if SIP is enabled,
     so this should be detected. You can detect whether SIP is enabled on
     Darwin by checking whether (1) there is a binary called 'csrutil' in

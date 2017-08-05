@@ -18,6 +18,7 @@ import sys
 import argparse
 import logging
 import tempfile
+from typing import Tuple, Dict  # noqa: ignore=F401
 from libscanbuild import reconfigure_logging
 from libscanbuild.clang import get_checkers
 
@@ -26,6 +27,7 @@ __all__ = ['parse_args_for_intercept_build', 'parse_args_for_analyze_build',
 
 
 def parse_args_for_intercept_build():
+    # type: () -> argparse.Namespace
     """ Parse and validate command-line arguments for intercept-build. """
 
     parser = create_intercept_parser()
@@ -43,6 +45,7 @@ def parse_args_for_intercept_build():
 
 
 def parse_args_for_analyze_build():
+    # type: () -> argparse.Namespace
     """ Parse and validate command-line arguments for analyze-build. """
 
     from_build_command = False
@@ -59,6 +62,7 @@ def parse_args_for_analyze_build():
 
 
 def parse_args_for_scan_build():
+    # type: () -> argparse.Namespace
     """ Parse and validate command-line arguments for scan-build. """
 
     from_build_command = True
@@ -75,6 +79,7 @@ def parse_args_for_scan_build():
 
 
 def normalize_args_for_analyze(args, from_build_command):
+    # type: (argparse.Namespace, bool) -> None
     """ Normalize parsed arguments for analyze-build and scan-build.
 
     :param args: Parsed argument object. (Will be mutated.)
@@ -100,6 +105,7 @@ def normalize_args_for_analyze(args, from_build_command):
 
 
 def validate_args_for_analyze(parser, args, from_build_command):
+    # type: (argparse.ArgumentParser, argparse.Namespace, bool) -> None
     """ Command line parsing is done by the argparse module, but semantic
     validation still needs to be done. This method is doing it for
     analyze-build and scan-build commands.
@@ -124,6 +130,7 @@ def validate_args_for_analyze(parser, args, from_build_command):
 
 
 def create_intercept_parser():
+    # type: () -> argparse.ArgumentParser
     """ Creates a parser for command-line arguments to 'intercept'. """
 
     parser = create_default_parser()
@@ -147,6 +154,7 @@ def create_intercept_parser():
 
 
 def create_analyze_parser(from_build_command):
+    # type: (bool) -> argparse.ArgumentParser
     """ Creates a parser for command-line arguments to 'analyze'. """
 
     parser = create_default_parser()
@@ -345,6 +353,7 @@ def create_analyze_parser(from_build_command):
 
 
 def create_default_parser():
+    # type: () -> argparse.ArgumentParser
     """ Creates command line parser for all build wrapper commands. """
 
     parser = argparse.ArgumentParser(
@@ -361,6 +370,7 @@ def create_default_parser():
 
 
 def parser_add_cdb(parser):
+    # type: (argparse.ArgumentParser) -> None
     parser.add_argument(
         '--cdb',
         metavar='<file>',
@@ -369,6 +379,7 @@ def parser_add_cdb(parser):
 
 
 def parser_add_prefer_wrapper(parser):
+    # type: (argparse.ArgumentParser) -> None
     parser.add_argument(
         '--override-compiler',
         action='store_true',
@@ -377,6 +388,7 @@ def parser_add_prefer_wrapper(parser):
 
 
 def parser_add_compilers(parser):
+    # type: (argparse.ArgumentParser) -> None
     parser.add_argument(
         '--use-cc',
         metavar='<path>',
@@ -413,6 +425,7 @@ class AppendCommaSeparated(argparse.Action):
 
 
 def print_active_checkers(checkers):
+    # type: (Dict[str, Tuple[str, bool]]) -> None
     """ Print active checkers to stdout. """
 
     for name in sorted(name for name, (_, active) in checkers.items()
@@ -421,6 +434,7 @@ def print_active_checkers(checkers):
 
 
 def print_checkers(checkers):
+    # type: (Dict[str, Tuple[str, bool]]) -> None
     """ Print verbose checker help to stdout. """
 
     print('')

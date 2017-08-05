@@ -10,6 +10,7 @@ import os
 import collections
 import logging
 import json
+from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
 from libscanbuild import Execution, shell_split, run_command
 
 __all__ = ['classify_source', 'Compilation', 'CompilationDatabase']
@@ -49,7 +50,7 @@ IGNORED_FLAGS = {
     '-z': 1,
     '-T': 1,
     '-Xlinker': 1
-}
+}  # type: Dict[str, int]
 
 # Known C/C++ compiler wrapper name patterns
 COMPILER_PATTERN_WRAPPER = re.compile(r'^(distcc|ccache)$')
@@ -81,6 +82,7 @@ CompilationCommand = collections.namedtuple(
 class Compilation:
     """ Represents a compilation of a single module. """
     def __init__(self, compiler, flags, source, directory):
+        # type: (Compilation, str, List[str], str, str) -> None
         """ Constructor for a single compilation.
 
         This method just normalize the paths and initialize values. """
@@ -92,18 +94,22 @@ class Compilation:
             os.path.normpath(os.path.join(self.directory, source))
 
     def __hash__(self):
+        # type: (Compilation) -> int
         return hash((self.compiler, self.source, self.directory,
                      ':'.join(self.flags)))
 
     def __eq__(self, other):
+        # type: (Compilation, object) -> bool
         return vars(self) == vars(other)
 
     def as_dict(self):
+        # type: (Compilation) -> Dict[str, str]
         """ This method dumps the object attributes into a dictionary. """
 
         return vars(self)
 
     def as_db_entry(self):
+        # type: (Compilation) -> Dict[str, Any]
         """ This method creates a compilation database entry. """
 
         relative = os.path.relpath(self.source, self.directory)
@@ -116,6 +122,7 @@ class Compilation:
 
     @classmethod
     def from_db_entry(cls, entry):
+        # type: (Type[Compilation], Dict[str, str]) -> Iterable[Compilation]
         """ Parser method for compilation entry.
 
         From compilation database entry it creates the compilation object.
@@ -129,7 +136,12 @@ class Compilation:
         return cls.iter_from_execution(execution)
 
     @classmethod
-    def iter_from_execution(cls, execution, cc='cc', cxx='c++'):
+    def iter_from_execution(cls,        # type: Type[Compilation]
+                            execution,  # type: Execution
+                            cc='cc',    # type: str
+                            cxx='c++'   # type: str
+                            ):
+        # type: (...) -> Iterable[Compilation]
         """ Generator method for compilation entries.
 
         From a single compiler call it can generate zero or more entries.
@@ -149,7 +161,12 @@ class Compilation:
                 yield result
 
     @classmethod
-    def _split_compiler(cls, command, cc, cxx):
+    def _split_compiler(cls,        # type: Type[Compilation]
+                        command,    # type: List[str]
+                        cc,         # type: str
+                        cxx         # type: str
+                        ):
+        # type: (...) -> Tuple[str, List[str]]
         """ A predicate to decide the command is a compiler call or not.
 
         :param command:     the command to classify
@@ -243,6 +260,7 @@ class CompilationDatabase:
 
     @staticmethod
     def save(filename, iterator):
+        # type: (str, Iterable[Compilation]) -> None
         """ Saves compilations to given file.
 
         :param filename: the destination file name
@@ -254,6 +272,7 @@ class CompilationDatabase:
 
     @staticmethod
     def load(filename):
+        # type: (str) -> Iterable[Compilation]
         """ Load compilations from file.
 
         :param filename: the file to read from
@@ -266,6 +285,7 @@ class CompilationDatabase:
 
 
 def classify_source(filename, c_compiler=True):
+    # type: (str, bool) -> str
     """ Classify source file names and returns the presumed language,
     based on the file name extension.
 
@@ -297,7 +317,7 @@ def classify_source(filename, c_compiler=True):
 
 
 def get_mpi_call(wrapper):
-    # type: (str) -> list(str)
+    # type: (str) -> List[str]
     """ Provide information on how the underlying compiler would have been
     invoked without the MPI compiler wrapper. """
 
@@ -308,5 +328,5 @@ def get_mpi_call(wrapper):
                 return shell_split(output[0])
         except:
             pass
-        # Fail loud
-        raise RuntimeError("Could not determinate MPI flags.")
+    # Fail loud
+    raise RuntimeError("Could not determinate MPI flags.")

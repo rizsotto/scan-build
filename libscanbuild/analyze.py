@@ -367,12 +367,9 @@ def run_analyzer(opts, continuation=report_failure):
     requested, it calls the continuation to generate it. """
 
     def target():
+        # type: () -> str
         """ Creates output file name for reports. """
-        if opts['output_format'] in {
-                'plist',
-                'plist-html',
-                'plist-multi-file'
-                }:
+        if opts['output_format'].startswith('plist'):
             (handle, name) = tempfile.mkstemp(prefix='report-',
                                               suffix='.plist',
                                               dir=opts['output_dir'])
