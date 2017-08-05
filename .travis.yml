@@ -35,9 +35,6 @@ matrix:
         - TRAVIS_CLANG=clang-4.0
         - TYPECHECK=true
     - os: osx
-      osx_image: xcode6.4
-      language: generic
-    - os: osx
       osx_image: xcode7.3
       language: generic
     - os: osx
@@ -59,7 +56,6 @@ before_install:
   - uname
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       csrutil status || true;
-      command -v pip || { brew update && brew install python; };
     fi
 
 install:
