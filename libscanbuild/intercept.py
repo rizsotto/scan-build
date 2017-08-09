@@ -30,11 +30,11 @@ import sys
 import uuid
 import subprocess
 import argparse  # noqa: ignore=F401
-from typing import Iterable, Dict, Tuple  # noqa: ignore=F401
+from typing import Iterable, Dict, Tuple, List  # noqa: ignore=F401
 
 from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, run_command, Execution
+    wrapper_environment, run_build, run_command, Execution, shell_split
 from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.compilation import Compilation, CompilationDatabase
 
@@ -162,6 +162,39 @@ def intercept_compiler_wrapper(_, execution):
         logging.warning(message_prefix, 'io problem')
 
 
+def expand_cmd_with_response_files(cmd):
+    # type: (List[str]) -> List[str]
+    """ Expand's response file parameters into actual parameters
+
+    MSVC's cl and clang-cl has functionality to prevent too long command lines
+    by reading options from so called temporary "response" files. These files
+    are ascii encoded and can contain compiler and linker flags and/or
+    compilation units.
+
+    For example, QT's qmake generates nmake based makefiles where the response
+    file contains all compilation units. """
+
+    def is_response_file(param):
+        # type: (str) -> bool
+        """ Checks if the given command line argument is response file. """
+        return param[0] == '@' and os.path.isfile(param[1:])
+
+    def from_response_file(filename):
+        # type: (str) -> List[str]
+        """ Read and return command line argument list from response file.
+
+        Might throw IOException when file operations fails. """
+        with open(filename[1:], 'r') as file_handle:
+            return [arg.strip() for arg in shell_split(file_handle.read())]
+
+    def update_if_needed(arg):
+        # type: (str) -> List[str]
+        """ Returns [n,] thats either read from response or has single arg """
+        return from_response_file(arg) if is_response_file(arg) else [arg]
+
+    return [n for row in [update_if_needed(arg) for arg in cmd] for n in row]
+
+
 def write_exec_trace(filename, entry):
     # type: (str, Execution) -> None
     """ Write execution report file.
@@ -172,7 +205,8 @@ def write_exec_trace(filename, entry):
     :param filename:    path to the output execution trace file,
     :param entry:       the Execution object to append to that file. """
 
-    call = {'pid': entry.pid, 'cwd': entry.cwd, 'cmd': entry.cmd}
+    call = {'pid': entry.pid, 'cwd': entry.cwd,
+            'cmd': expand_cmd_with_response_files(entry.cmd)}
     with open(filename, 'w') as handler:
         json.dump(call, handler)
 
