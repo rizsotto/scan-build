@@ -5,8 +5,7 @@ build:
 
 environment:
   matrix:
-    # Pre-installed Python versions,
-    # See: http://www.appveyor.com/docs/installed-software#python
+    # Pre-installed Python versions <http://www.appveyor.com/docs/installed-software#python>
     - PYTHON: "C:\\Python27"
     - PYTHON: "C:\\Python27-x64"
     - PYTHON: "C:\\Python33"
@@ -15,6 +14,8 @@ environment:
     - PYTHON: "C:\\Python34-x64"
     - PYTHON: "C:\\Python35"
     - PYTHON: "C:\\Python35-x64"
+    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python36-x64"
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
@@ -27,10 +28,19 @@ install:
         Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
           throw "There are newer queued builds for this pull request, failing early." }
 
+  # Add LLVM to PATH <https://www.appveyor.com/docs/build-environment/#llvm>
+  - "SET PATH=C:\\Program Files\\LLVM\\bin;%PATH%"
+
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
   # the parent CMD process).
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\Program Files\\LLVM\\bin;%PATH%"
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+  # Add Qt5 to PATH <https://www.appveyor.com/docs/build-environment/#qt>
+  - "SET PATH=C:\\Qt\\5.8\\mingw53_32\\bin;%PATH%"
+
+  # Add the related MinGW (32 bit environment too)
+  - "SET PATH=C:\\MinGW\\bin;%PATH%"
 
   # Check Clang version
   - "clang.exe --version"
@@ -56,7 +66,7 @@ build_script:
 
 test_script:
   # Run the project tests
-  - "lit -DBINARIES=PATH -v tests"
+  - "lit -DUSE_INSTALLED=true -v tests"
 
 after_test:
   # If tests are successful, create binary packages for the project.
