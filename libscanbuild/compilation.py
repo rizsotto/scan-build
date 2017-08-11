@@ -3,7 +3,7 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-""" This module is responsible to parse a compiler invocation. """
+""" This module is responsible for parsing a compiler invocation. """
 
 import re
 import os
@@ -15,12 +15,13 @@ from libscanbuild import Execution, shell_split, run_command
 
 __all__ = ['classify_source', 'Compilation', 'CompilationDatabase']
 
-# Ignored compiler options map for compilation database creation.
-# The map is used in `_split_command` method. (Which does ignore and classify
-# parameters.) Please note, that these are not the only parameters which
-# might be ignored.
+# Map of ignored compiler option for the creation of a compilation database.
+# This map is used in _split_command method, which classifies the parameters
+# and ignores the selected ones. Please note that other parameters might be
+# ignored as well.
 #
-# Keys are the option name, value number of options to skip
+# Option names are mapped to the number of following arguments which should
+# be skipped.
 IGNORED_FLAGS = {
     # compiling only flag, ignored because the creator of compilation
     # database will explicitly set it.
@@ -58,28 +59,28 @@ IGNORED_FLAGS = {
 
 }  # type: Dict[str, int]
 
-# Known C/C++ compiler wrapper name patterns
+# Known C/C++ compiler wrapper name patterns.
 COMPILER_PATTERN_WRAPPER = re.compile(r'^(distcc|ccache)$')
 
-# Known MPI compiler wrapper name patterns
+# Known MPI compiler wrapper name patterns.
 COMPILER_PATTERNS_MPI_WRAPPER = re.compile(r'^mpi(cc|cxx|CC|c\+\+)$')
 
-# Known C compiler executable name patterns
-COMPILER_PATTERNS_CC = frozenset([
+# Known C compiler executable name patterns.
+COMPILER_PATTERNS_CC = (
     re.compile(r'^([^-]*-)*[mg]cc(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^([^-]*-)*clang(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^(|i)cc$'),
     re.compile(r'^(g|)xlc$'),
-])
+)
 
-# Known C++ compiler executable name patterns
-COMPILER_PATTERNS_CXX = frozenset([
+# Known C++ compiler executable name patterns.
+COMPILER_PATTERNS_CXX = (
     re.compile(r'^(c\+\+|cxx|CC)$'),
     re.compile(r'^([^-]*-)*[mg]\+\+(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^([^-]*-)*clang\+\+(-\d+(\.\d+){0,2})?$'),
     re.compile(r'^icpc$'),
     re.compile(r'^(g|)xl(C|c\+\+)$'),
-])
+)
 
 CompilationCommand = collections.namedtuple(
     'CompilationCommand', ['compiler', 'flags', 'files'])
@@ -87,8 +88,13 @@ CompilationCommand = collections.namedtuple(
 
 class Compilation:
     """ Represents a compilation of a single module. """
-    def __init__(self, compiler, flags, source, directory):
-        # type: (Compilation, str, List[str], str, str) -> None
+    def __init__(self,      # type: Compilation
+                 compiler,  # type: str
+                 flags,     # type: List[str]
+                 source,    # type: str
+                 directory  # type: str
+                 ):
+        # type: (...) -> None
         """ Constructor for a single compilation.
 
         This method just normalize the paths and initialize values. """
@@ -101,8 +107,7 @@ class Compilation:
 
     def __hash__(self):
         # type: (Compilation) -> int
-        return hash((self.compiler, self.source, self.directory,
-                     ':'.join(self.flags)))
+        return hash(str(self.as_dict()))
 
     def __eq__(self, other):
         # type: (Compilation, object) -> bool
@@ -173,7 +178,7 @@ class Compilation:
                         cxx         # type: str
                         ):
         # type: (...) -> Tuple[str, List[str]]
-        """ A predicate to decide the command is a compiler call or not.
+        """ A predicate to decide whether the command is a compiler call.
 
         :param command:     the command to classify
         :param cc:          user specified C compiler name
@@ -182,31 +187,36 @@ class Compilation:
                 (compiler_language, rest of the command) otherwise """
 
         def is_wrapper(cmd):
+            # type: (str) -> bool
             return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False
 
         def is_mpi_wrapper(cmd):
+            # type: (str) -> bool
             return True if COMPILER_PATTERNS_MPI_WRAPPER.match(cmd) else False
 
         def is_c_compiler(cmd):
+            # type: (str) -> bool
             return os.path.basename(cc) == cmd or \
                 any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
 
         def is_cxx_compiler(cmd):
+            # type: (str) -> bool
             return os.path.basename(cxx) == cmd or \
                 any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CXX)
 
         if command:  # not empty list will allow to index '0' and '1:'
-            executable = os.path.basename(command[0])
-            parameters = command[1:]
+            executable = os.path.basename(command[0])  # type: str
+            parameters = command[1:]  # type: List[str]
             # 'wrapper' 'parameters' and
             # 'wrapper' 'compiler' 'parameters' are valid.
-            # plus, a wrapper can wrap wrapper too.
+            # Additionally, a wrapper can wrap another wrapper.
             if is_wrapper(executable):
                 result = cls._split_compiler(parameters, cc, cxx)
+                # Compiler wrapper without compiler is a 'C' compiler.
                 return ('c', parameters) if result is None else result
             # MPI compiler wrappers add extra parameters
             elif is_mpi_wrapper(executable):
-                mpi_call = get_mpi_call(executable)
+                mpi_call = get_mpi_call(executable)  # type: List[str]
                 return cls._split_compiler(mpi_call + parameters, cc, cxx)
             # and 'compiler' 'parameters' is valid.
             elif is_c_compiler(executable):
@@ -247,7 +257,7 @@ class Compilation:
                     next(args)
             elif re.match(r'^-(l|L|Wl,).+', arg):
                 pass
-            # some parameters could look like filename, take as compile option
+            # some parameters look like a filename, take those explicitly
             elif arg in {'-D', '-I'}:
                 result.flags.extend([arg, next(args)])
             # parameter which looks source file is taken...

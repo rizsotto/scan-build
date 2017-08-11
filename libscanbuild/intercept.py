@@ -43,7 +43,7 @@ __all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
 TRACE_FILE_PREFIX = 'execution.'  # same as in ear.c
-WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
+WRAPPER_ONLY_PLATFORMS = ('win32', 'cygwin')
 
 
 @command_entry_point
