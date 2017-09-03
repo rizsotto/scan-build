@@ -29,14 +29,15 @@ import re
 import sys
 import uuid
 import subprocess
-import argparse  # noqa: ignore=F401
-from typing import Iterable, Dict, Tuple, List  # noqa: ignore=F401
 
 from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command, Execution, shell_split
 from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.compilation import Compilation, CompilationDatabase
+
+from typing import Iterable, Dict, Tuple, List  # noqa: ignore=F401
+import argparse  # noqa: ignore=F401
 
 __all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 

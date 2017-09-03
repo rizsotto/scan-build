@@ -10,8 +10,9 @@ import os
 import collections
 import logging
 import json
-from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
 from libscanbuild import Execution, shell_split, run_command
+
+from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
 
 __all__ = ['classify_source', 'Compilation', 'CompilationDatabase']
 

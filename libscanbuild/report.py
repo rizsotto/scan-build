@@ -19,12 +19,19 @@ import glob
 import json
 import logging
 import datetime
+import getpass
+import socket
+
 from libscanbuild.clang import get_version
+
+from typing import Dict, List, Callable, Any, Set, Generator, Iterator  # noqa: ignore=F401
+import argparse  # noqa: ignore=F401
 
 __all__ = ['document']
 
 
 def document(args):
+    # type: (argparse.Namespace) -> int
     """ Generates cover report and returns the number of bugs/crashes. """
 
     html_reports_available = args.output_format in {'html', 'plist-html'}
@@ -62,10 +69,8 @@ def document(args):
 
 
 def assemble_cover(args, prefix, fragments):
+    # type: (argparse.Namespace, str, List[str]) -> None
     """ Put together the fragments into a final report. """
-
-    import getpass
-    import socket
 
     if args.html_title is None:
         args.html_title = os.path.basename(prefix) + ' - analyzer results'
@@ -161,6 +166,7 @@ def bug_summary(output_dir, bug_counter):
 
 
 def bug_report(output_dir, prefix):
+    # type: (str, str) -> str
     """ Creates a fragment from the analyzer reports. """
 
     pretty = prettify_bug(prefix, output_dir)
@@ -208,6 +214,7 @@ def bug_report(output_dir, prefix):
 
 
 def crash_report(output_dir, prefix):
+    # type: (str, str) -> str
     """ Creates a fragment from the compiler crashes. """
 
     pretty = prettify_crash(prefix, output_dir)
@@ -246,14 +253,15 @@ def crash_report(output_dir, prefix):
 
 
 def read_crashes(output_dir):
+    # type: (str) -> Iterator[Dict[str, Any]]
     """ Generate a unique sequence of crashes from given output directory. """
 
-    return (parse_crash(filename)
-            for filename in glob.iglob(os.path.join(output_dir, 'failures',
-                                                    '*.info.txt')))
+    pattern = os.path.join(output_dir, 'failures', '*.info.txt')  # type: str
+    return (parse_crash(filename) for filename in glob.iglob(pattern))
 
 
 def read_bugs(output_dir, html):
+    # type: (str, bool) -> Iterator[Dict[str, Any]]
     """ Generate a unique sequence of bugs from given output directory.
 
     Duplicates can be in a project if the same module was compiled multiple
@@ -261,7 +269,7 @@ def read_bugs(output_dir, html):
     the final report (cover) only once. """
 
     parser = parse_bug_html if html else parse_bug_plist
-    pattern = '*.html' if html else '*.plist'
+    pattern = '*.html' if html else '*.plist'  # type: str
 
     duplicate = duplicate_check(
         lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
@@ -275,6 +283,7 @@ def read_bugs(output_dir, html):
 
 
 def parse_bug_plist(filename):
+    # type: (str) -> Generator[Dict[str, Any], None, None]
     """ Returns the generator of bugs from a single .plist file. """
 
     content = plistlib.readPlist(filename)
@@ -295,6 +304,7 @@ def parse_bug_plist(filename):
 
 
 def parse_bug_html(filename):
+    # type: (str) -> Generator[Dict[str, Any], None, None]
     """ Parse out the bug information from HTML output. """
 
     patterns = [re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
@@ -333,6 +343,7 @@ def parse_bug_html(filename):
 
 
 def parse_crash(filename):
+    # type: (str) -> Dict[str, Any]
     """ Parse out the crash information from the report file. """
 
     match = re.match(r'(.*)\.info\.txt', filename)
@@ -350,11 +361,13 @@ def parse_crash(filename):
 
 
 def category_type_name(bug):
+    # type: (Dict[str, Any]) -> str
     """ Create a new bug attribute from bug by category and type.
 
     The result will be used as CSS class selector in the final report. """
 
     def smash(key):
+        # type: (str) -> str
         """ Make value ready to be HTML attribute value. """
 
         return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
@@ -363,6 +376,7 @@ def category_type_name(bug):
 
 
 def duplicate_check(hash_function):
+    # type: (Callable[[Any], str]) -> Callable[[Dict[str, Any]], bool]
     """ Workaround to detect duplicate dictionary values.
 
     Python `dict` type has no `hash` method, which is required by the `set`
@@ -375,23 +389,25 @@ def duplicate_check(hash_function):
     This method is a factory method, which returns a predicate. """
 
     def predicate(entry):
+        # type: (Dict[str, Any]) -> bool
         """ The predicate which calculates and stores the hash of the given
         entries. The entry type has to work with the given hash function.
 
         :param entry: the questioned entry,
         :return: true/false depends the hash value is already seen or not.
         """
-        entry_hash = hash_function(entry)
+        entry_hash = hash_function(entry)  # type: str
         if entry_hash not in state:
             state.add(entry_hash)
             return False
         return True
 
-    state = set()
+    state = set()  # type: Set[str]
     return predicate
 
 
 def create_counters():
+    # type () -> Callable[[Dict[str, Any]], None] FIXME
     """ Create counters for bug statistics.
 
     Two entries are maintained: 'total' is an integer, represents the
@@ -401,6 +417,7 @@ def create_counters():
     and 'label'. """
 
     def predicate(bug):
+        # type (Dict[str, Any]) -> None FIXME
         bug_category = bug['bug_category']
         bug_type = bug['bug_type']
         current_category = predicate.categories.get(bug_category, dict())
@@ -414,13 +431,15 @@ def create_counters():
         predicate.categories.update({bug_category: current_category})
         predicate.total += 1
 
-    predicate.total = 0
-    predicate.categories = dict()
+    predicate.total = 0  # type: int
+    predicate.categories = dict()  # type: Dict[str, Any]
     return predicate
 
 
 def prettify_bug(prefix, output_dir):
+    # type: (str, str) -> Callable[[Dict[str, Any]], Dict[str, str]]
     def predicate(bug):
+        # type: (Dict[str, Any]) -> Dict[str, str]
         """ Make safe this values to embed into HTML. """
 
         bug['bug_type_class'] = category_type_name(bug)
@@ -435,7 +454,9 @@ def prettify_bug(prefix, output_dir):
 
 
 def prettify_crash(prefix, output_dir):
+    # type: (str, str) -> Callable[[Dict[str, str]], Dict[str, str]]
     def predicate(crash):
+        # type: (Dict[str, str]) -> Dict[str, str]
         """ Make safe this values to embed into HTML. """
 
         encode_value(crash, 'source', lambda x: escape(chop(prefix, x)))
@@ -449,6 +470,7 @@ def prettify_crash(prefix, output_dir):
 
 
 def copy_resource_files(output_dir):
+    # type: (str) -> None
     """ Copy the javascript and css files to the report directory. """
 
     this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -457,6 +479,7 @@ def copy_resource_files(output_dir):
 
 
 def encode_value(container, key, encode):
+    # type: (Dict[str, Any], str, Callable[[Any], Any]) -> None
     """ Run 'encode' on 'container[key]' value and update it. """
 
     if key in container:
@@ -465,12 +488,14 @@ def encode_value(container, key, encode):
 
 
 def chop(prefix, filename):
+    # type: (str, str) -> str
     """ Create 'filename' from '/prefix/filename' """
 
     return filename if not prefix else os.path.relpath(filename, prefix)
 
 
 def escape(text):
+    # type: (str) -> str
     """ Paranoid HTML escape method. (Python version independent) """
 
     escape_table = {
@@ -484,6 +509,7 @@ def escape(text):
 
 
 def reindent(text, indent):
+    # type: (str, int) -> str
     """ Utility function to format html output and keep indentation. """
 
     result = ''
@@ -494,6 +520,7 @@ def reindent(text, indent):
 
 
 def comment(name, opts=None):
+    # type: (str, Dict[str, str]) -> str
     """ Utility function to format meta information as comment. """
 
     attributes = ''
@@ -505,6 +532,7 @@ def comment(name, opts=None):
 
 
 def commonprefix_from(filename):
+    # type: (str) -> str
     """ Create file prefix from a compilation database entries. """
 
     with open(filename, 'r') as handle:
@@ -512,6 +540,7 @@ def commonprefix_from(filename):
 
 
 def commonprefix(files):
+    # type: (Iterator[str]) -> str
     """ Fixed version of os.path.commonprefix.
 
     :param files: list of file names.

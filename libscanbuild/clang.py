@@ -9,9 +9,10 @@ Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper. """
 
 import re
+from libscanbuild import shell_split, run_command
+
 from typing import List, Set, FrozenSet, Callable   # noqa: ignore=F401
 from typing import Iterable, Tuple, Dict            # noqa: ignore=F401
-from libscanbuild import shell_split, run_command
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
 

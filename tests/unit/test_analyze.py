@@ -239,7 +239,7 @@ class AnalyzerTest(unittest.TestCase):
             'source': 'test.java',
             'language': 'java'
         }
-        self.assertIsNone(sut.language_check(input, spy.call))
+        self.assertEquals(dict(), sut.language_check(input, spy.call))
         self.assertIsNone(spy.arg)
 
     def test_set_language_sets_flags(self):
@@ -283,7 +283,7 @@ class AnalyzerTest(unittest.TestCase):
         def stop(archs):
             spy = Spy()
             input = {'flags': [], 'arch_list': archs}
-            self.assertIsNone(sut.arch_check(input, spy.call))
+            self.assertEqual(dict(), sut.arch_check(input, spy.call))
             self.assertIsNone(spy.arg)
 
         stop(['ppc'])
