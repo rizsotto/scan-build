@@ -14,6 +14,7 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.rst').read(),
     zip_safe=False,
+    install_requires=['typing'],
     packages=['libscanbuild', 'libear'],
     package_data={'libscanbuild': ['resources/*'],
                   'libear': ['config.h.in', 'ear.c']},
