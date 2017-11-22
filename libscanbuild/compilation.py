@@ -10,9 +10,11 @@ import os
 import collections
 import logging
 import json
+import subprocess
+from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
+
 from libscanbuild import Execution, shell_split, run_command
 
-from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
 
 __all__ = ['classify_source', 'Compilation', 'CompilationDatabase']
 
@@ -343,7 +345,7 @@ def get_mpi_call(wrapper):
             output = run_command([wrapper] + query_flags)
             if output:
                 return shell_split(output[0])
-        except:
+        except subprocess.CalledProcessError:
             pass
     # Fail loud
     raise RuntimeError("Could not determinate MPI flags.")

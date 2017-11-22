@@ -18,10 +18,11 @@ import sys
 import argparse
 import logging
 import tempfile
+from typing import Tuple, Dict  # noqa: ignore=F401
+
 from libscanbuild import reconfigure_logging
 from libscanbuild.clang import get_checkers
 
-from typing import Tuple, Dict  # noqa: ignore=F401
 
 __all__ = ['parse_args_for_intercept_build', 'parse_args_for_analyze_build',
            'parse_args_for_scan_build']

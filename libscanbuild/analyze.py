@@ -23,6 +23,8 @@ import subprocess
 import platform
 import contextlib
 import datetime
+import argparse  # noqa: ignore=F401
+from typing import Any, Dict, List, Callable, Iterable, Generator  # noqa: ignore=F401
 
 from libscanbuild import command_entry_point, wrapper_entry_point, \
     wrapper_environment, run_build, run_command
@@ -33,10 +35,7 @@ from libscanbuild.report import document
 from libscanbuild.compilation import Compilation, classify_source, \
     CompilationDatabase
 from libscanbuild.clang import get_version, get_arguments
-
-from typing import Any, Dict, List, Callable, Iterable, Generator  # noqa: ignore=F401
 from libscanbuild import Execution  # noqa: ignore=F401
-import argparse  # noqa: ignore=F401
 
 __all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
 

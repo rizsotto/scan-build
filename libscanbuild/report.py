@@ -20,11 +20,10 @@ import logging
 import datetime
 import getpass
 import socket
+import argparse  # noqa: ignore=F401
+from typing import Dict, List, Callable, Any, Set, Generator, Iterator  # noqa: ignore=F401
 
 from libscanbuild.clang import get_version
-
-from typing import Dict, List, Callable, Any, Set, Generator, Iterator  # noqa: ignore=F401
-import argparse  # noqa: ignore=F401
 
 __all__ = ['document']
 
@@ -267,8 +266,8 @@ def read_bugs(output_dir, html):
     times with different compiler options. These would be better to show in
     the final report (cover) only once. """
 
-    def empty(f):
-        return 0 == os.stat(f).st_size
+    def empty(file_name):
+        return os.stat(file_name).st_size == 0
 
     duplicate = duplicate_check(
         lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
