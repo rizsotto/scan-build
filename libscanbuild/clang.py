@@ -10,6 +10,9 @@ a subset of that, it makes sense to create a function specific wrapper. """
 
 import subprocess
 import re
+from typing import List, Set, FrozenSet, Callable   # noqa: ignore=F401
+from typing import Iterable, Tuple, Dict            # noqa: ignore=F401
+
 from libscanbuild import shell_split, run_command
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers', 'is_ctu_capable',
@@ -20,6 +23,7 @@ ACTIVE_CHECKER_PATTERN = re.compile(r'^-analyzer-checker=(.*)$')
 
 
 def get_version(clang):
+    # type: (str) -> str
     """ Returns the compiler version as string.
 
     :param clang:   the compiler we are using
@@ -31,6 +35,7 @@ def get_version(clang):
 
 
 def get_arguments(command, cwd):
+    # type: (List[str], str) -> List[str]
     """ Capture Clang invocation.
 
     :param command: the compilation command
@@ -50,6 +55,7 @@ def get_arguments(command, cwd):
 
 
 def get_active_checkers(clang, plugins):
+    # type: (str, List[str]) -> FrozenSet[str]
     """ Get the active checker list.
 
     :param clang:   the compiler we are using
@@ -62,6 +68,7 @@ def get_active_checkers(clang, plugins):
     information. """
 
     def get_active_checkers_for(language):
+        # type: (str) -> List[str]
         """ Returns a list of active checkers for the given language. """
 
         load_args = [arg
@@ -72,26 +79,29 @@ def get_active_checkers(clang, plugins):
                 for arg in get_arguments(cmd, '.')
                 if ACTIVE_CHECKER_PATTERN.match(arg)]
 
-    result = set()
+    result = set()  # type: Set[str]
     for language in ['c', 'c++', 'objective-c', 'objective-c++']:
         result.update(get_active_checkers_for(language))
     return frozenset(result)
 
 
 def is_active(checkers):
+    # type: (Iterable[str]) -> Callable[[str], bool]
     """ Returns a method, which classifies the checker active or not,
     based on the received checker name list. """
 
     def predicate(checker):
+        # type: (str) -> bool
         """ Returns True if the given checker is active. """
 
-        return any(pattern.match(checker) for pattern in predicate.patterns)
+        return any(pattern.match(checker) for pattern in patterns)
 
-    predicate.patterns = [re.compile(r'^' + a + r'(\.|$)') for a in checkers]
+    patterns = [re.compile(r'^' + a + r'(\.|$)') for a in checkers]
     return predicate
 
 
 def parse_checkers(stream):
+    # type: (List[str]) -> Iterable[Tuple[str, str]]
     """ Parse clang -analyzer-checker-help output.
 
     Below the line 'CHECKERS:' are there the name description pairs.
@@ -130,6 +140,7 @@ def parse_checkers(stream):
 
 
 def get_checkers(clang, plugins):
+    # type: (str, List[str]) -> Dict[str, Tuple[str, bool]]
     """ Get all the available checkers from default and from the plugins.
 
     :param clang:   the compiler we are using

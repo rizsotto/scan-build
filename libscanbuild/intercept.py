@@ -29,10 +29,12 @@ import re
 import sys
 import uuid
 import subprocess
+import argparse  # noqa: ignore=F401
+from typing import Iterable, Dict, Tuple, List  # noqa: ignore=F401
 
 from libear import build_libear, temporary_directory
 from libscanbuild import command_entry_point, wrapper_entry_point, \
-    wrapper_environment, run_build, run_command, Execution
+    wrapper_environment, run_build, run_command, Execution, shell_split
 from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.compilation import Compilation, CompilationDatabase
 
@@ -41,11 +43,12 @@ __all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
 TRACE_FILE_PREFIX = 'execution.'  # same as in ear.c
-WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
+WRAPPER_ONLY_PLATFORMS = ('win32', 'cygwin')
 
 
 @command_entry_point
 def intercept_build():
+    # type: () -> int
     """ Entry point for 'intercept-build' command. """
 
     args = parse_args_for_intercept_build()
@@ -64,6 +67,7 @@ def intercept_build():
 
 
 def capture(args):
+    # type: (argparse.Namespace) -> Tuple[int, Iterable[Compilation]]
     """ Implementation of compilation database generation.
 
     :param args:    the parsed and validated command line arguments
@@ -81,6 +85,7 @@ def capture(args):
 
 
 def compilations(exec_calls, cc, cxx):
+    # type: (Iterable[Execution], str, str) -> Iterable[Compilation]
     """ Needs to filter out commands which are not compiler calls. And those
     compiler calls shall be compilation (not pre-processing or linking) calls.
     Plus needs to find the source file name from the arguments.
@@ -96,6 +101,7 @@ def compilations(exec_calls, cc, cxx):
 
 
 def setup_environment(args, destination):
+    # type: (argparse.Namespace, str) -> Dict[str, str]
     """ Sets up the environment for the build command.
 
     In order to capture the sub-commands (executed by the build process),
@@ -134,6 +140,7 @@ def setup_environment(args, destination):
 @command_entry_point
 @wrapper_entry_point
 def intercept_compiler_wrapper(_, execution):
+    # type: (int, Execution) -> None
     """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
 
     It does generate execution report into target directory.
@@ -155,7 +162,41 @@ def intercept_compiler_wrapper(_, execution):
         logging.warning(message_prefix, 'io problem')
 
 
+def expand_cmd_with_response_files(cmd):
+    # type: (List[str]) -> List[str]
+    """ Expand's response file parameters into actual parameters
+
+    MSVC's cl and clang-cl has functionality to prevent too long command lines
+    by reading options from so called temporary "response" files. These files
+    are ascii encoded and can contain compiler and linker flags and/or
+    compilation units.
+
+    For example, QT's qmake generates nmake based makefiles where the response
+    file contains all compilation units. """
+
+    def is_response_file(param):
+        # type: (str) -> bool
+        """ Checks if the given command line argument is response file. """
+        return param[0] == '@' and os.path.isfile(param[1:])
+
+    def from_response_file(filename):
+        # type: (str) -> List[str]
+        """ Read and return command line argument list from response file.
+
+        Might throw IOException when file operations fails. """
+        with open(filename[1:], 'r') as file_handle:
+            return [arg.strip() for arg in shell_split(file_handle.read())]
+
+    def update_if_needed(arg):
+        # type: (str) -> List[str]
+        """ Returns [n,] thats either read from response or has single arg """
+        return from_response_file(arg) if is_response_file(arg) else [arg]
+
+    return [n for row in [update_if_needed(arg) for arg in cmd] for n in row]
+
+
 def write_exec_trace(filename, entry):
+    # type: (str, Execution) -> None
     """ Write execution report file.
 
     This method shall be sync with the execution report writer in interception
@@ -164,12 +205,14 @@ def write_exec_trace(filename, entry):
     :param filename:    path to the output execution trace file,
     :param entry:       the Execution object to append to that file. """
 
-    call = {'pid': entry.pid, 'cwd': entry.cwd, 'cmd': entry.cmd}
+    call = {'pid': entry.pid, 'cwd': entry.cwd,
+            'cmd': expand_cmd_with_response_files(entry.cmd)}
     with open(filename, 'w') as handler:
         json.dump(call, handler)
 
 
 def parse_exec_trace(filename):
+    # type: (str) -> Execution
     """ Parse execution report file.
 
     Given filename points to a file which contains the basic report
@@ -188,6 +231,7 @@ def parse_exec_trace(filename):
 
 
 def exec_trace_files(directory):
+    # type: (str) -> Iterable[str]
     """ Generates exec trace file names.
 
     :param directory:   path to directory which contains the trace files.
@@ -200,6 +244,7 @@ def exec_trace_files(directory):
 
 
 def is_preload_disabled(platform):
+    # type: (str) -> bool
     """ Library-based interposition will fail silently if SIP is enabled,
     so this should be detected. You can detect whether SIP is enabled on
     Darwin by checking whether (1) there is a binary called 'csrutil' in

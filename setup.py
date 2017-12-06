@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='scan-build',
-    version='2.0.7',
+    version='2.0.10',
     author='László Nagy',
     author_email='rizsotto@gmail.com',
     keywords=['Clang', 'scan-build', 'static analyzer'],
@@ -14,6 +14,7 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.rst').read(),
     zip_safe=False,
+    install_requires=['typing'],
     packages=['libscanbuild', 'libear'],
     package_data={'libscanbuild': ['resources/*'],
                   'libear': ['config.h.in', 'ear.c']},

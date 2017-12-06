@@ -15,6 +15,8 @@ import shlex
 import subprocess
 import sys
 
+from typing import List, Any, Dict, Callable  # noqa: ignore=F401
+
 ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
 
 Execution = collections.namedtuple('Execution', ['pid', 'cwd', 'cmd'])
@@ -24,9 +26,11 @@ CtuConfig = collections.namedtuple('CtuConfig', ['collect', 'analyze', 'dir',
 
 
 def shell_split(string):
+    # type: (str) -> List[str]
     """ Takes a command string and returns as a list. """
 
     def unescape(arg):
+        # type: (str) -> str
         """ Gets rid of the escaping characters. """
 
         if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] == '"':
@@ -37,9 +41,10 @@ def shell_split(string):
 
 
 def run_build(command, *args, **kwargs):
+    # type: (...) -> int
     """ Run and report build command execution
 
-    :param command: array of tokens
+    :param command: list of tokens
     :return: exit code of the process
     """
     environment = kwargs.get('env', os.environ)
@@ -50,6 +55,7 @@ def run_build(command, *args, **kwargs):
 
 
 def run_command(command, cwd=None):
+    # type: (List[str], str) -> List[str]
     """ Run a given command and report the execution.
 
     :param command: array of tokens
@@ -57,6 +63,7 @@ def run_command(command, cwd=None):
     :return: output of the command
     """
     def decode_when_needed(result):
+        # type: (Any) -> str
         """ check_output returns bytes or string depend on python version """
         if not isinstance(result, str):
             return result.decode('utf-8')
@@ -99,6 +106,7 @@ def reconfigure_logging(verbose_level):
 
 
 def command_entry_point(function):
+    # type: (Callable[[], int]) -> Callable[[], int]
     """ Decorator for command entry methods.
 
     The decorator initialize/shutdown logging and guard on programming
@@ -108,7 +116,8 @@ def command_entry_point(function):
     be the exit code of the process. """
 
     @functools.wraps(function)
-    def wrapper(*args, **kwargs):
+    def wrapper():
+        # type: () -> int
         """ Do housekeeping tasks and execute the wrapped method. """
 
         try:
@@ -117,7 +126,7 @@ def command_entry_point(function):
                                 stream=sys.stdout)
             # this hack to get the executable name as %(name)
             logging.getLogger().name = os.path.basename(sys.argv[0])
-            return function(*args, **kwargs)
+            return function()
         except KeyboardInterrupt:
             logging.warning('Keyboard interrupt')
             return 130  # signal received exit code for bash
@@ -137,6 +146,7 @@ def command_entry_point(function):
 
 
 def wrapper_entry_point(function):
+    # type: (Callable[[int, Execution], None]) -> Callable[[], int]
     """ Implements compiler wrapper base functionality.
 
     A compiler wrapper executes the real compiler, then implement some
@@ -153,14 +163,16 @@ def wrapper_entry_point(function):
     :param execution:    the command executed by the wrapper. """
 
     def is_cxx_wrapper():
+        # type: () -> bool
         """ Find out was it a C++ compiler call. Compiler wrapper names
         contain the compiler type. C++ compiler wrappers ends with `c++`,
         but might have `.exe` extension on windows. """
 
         wrapper_command = os.path.basename(sys.argv[0])
-        return re.match(r'(.+)c\+\+(.*)', wrapper_command)
+        return True if re.match(r'(.+)c\+\+(.*)', wrapper_command) else False
 
     def run_compiler(executable):
+        # type: (List[str]) -> int
         """ Execute compilation with the real compiler. """
 
         command = executable + sys.argv[1:]
@@ -171,6 +183,7 @@ def wrapper_entry_point(function):
 
     @functools.wraps(function)
     def wrapper():
+        # type: () -> int
         """ It executes the compilation and calls the wrapped method. """
 
         # get relevant parameters from environment
@@ -196,6 +209,7 @@ def wrapper_entry_point(function):
 
 
 def wrapper_environment(args):
+    # type: (...) -> Dict[str, str]
     """ Set up environment for interpose compiler wrapper."""
 
     return {
