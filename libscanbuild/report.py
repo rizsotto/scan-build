@@ -326,17 +326,16 @@ def parse_bug_html(filename):
         'bug_path_length': 1
     }
 
-    with open(filename) as handler:
-        for line in handler.readlines():
-            # do not read the file further
-            if endsign.match(line):
+    for line in safe_readlines(filename):
+        # do not read the file further
+        if endsign.match(line):
+            break
+        # search for the right lines
+        for regex in patterns:
+            match = regex.match(line.strip())
+            if match:
+                bug.update(match.groupdict())
                 break
-            # search for the right lines
-            for regex in patterns:
-                match = regex.match(line.strip())
-                if match:
-                    bug.update(match.groupdict())
-                    break
 
     encode_value(bug, 'bug_line', int)
     encode_value(bug, 'bug_path_length', int)
@@ -350,16 +349,15 @@ def parse_crash(filename):
 
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
-    with open(filename, mode='rb') as handler:
-        # this is a workaround to fix windows read '\r\n' as new lines.
-        lines = [line.decode().rstrip() for line in handler.readlines()]
-        return {
-            'source': lines[0],
-            'problem': lines[1],
-            'file': name,
-            'info': name + '.info.txt',
-            'stderr': name + '.stderr.txt'
-        }
+    lines = list(safe_readlines(filename))
+
+    return {
+        'source': lines[0],
+        'problem': lines[1],
+        'file': name,
+        'info': name + '.info.txt',
+        'stderr': name + '.stderr.txt'
+    }
 
 
 def category_type_name(bug):
@@ -478,6 +476,16 @@ def copy_resource_files(output_dir):
     this_dir = os.path.dirname(os.path.realpath(__file__))
     for resource in os.listdir(os.path.join(this_dir, 'resources')):
         shutil.copy(os.path.join(this_dir, 'resources', resource), output_dir)
+
+
+def safe_readlines(filename):
+    # type: (str) -> Iterator[str]
+    """ Read and return an iterator of lines from file. """
+
+    with open(filename, mode='rb') as handler:
+        for line in handler.readlines():
+            # this is a workaround to fix windows read '\r\n' as new lines.
+            yield line.decode(errors='ignore').rstrip()
 
 
 def encode_value(container, key, encode):
