@@ -31,3 +31,5 @@ v2.0.8 2017-08-09 -- MPI compiler wrappers are expanded
 v2.0.9 2017-09-03 -- Bug fix
 
 v2.0.10 2017-10-03 -- Add typing as dependency
+
+v2.0.11 2018-01-07 -- Fix decoding error at report generation
