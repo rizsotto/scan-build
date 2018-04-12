@@ -408,7 +408,7 @@ def run_analyzer(opts, continuation=report_failure):
         message = 'failed to execute "{0}"'.format(opts['clang'])
         return {'error_output': message, 'exit_code': 127}
     except subprocess.CalledProcessError as ex:
-        logging.warning('analysis failed: %s', exc_info=True)
+        logging.warning('analysis failed', exc_info=True)
         result = {'error_output': ex.output, 'exit_code': ex.returncode}
         if opts.get('output_failures', False):
             opts.update(result)
