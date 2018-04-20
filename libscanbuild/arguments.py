@@ -248,6 +248,13 @@ def create_analyze_parser(from_build_command):
         static analysis. One can override this behavior with this option by
         using the 'clang' packaged with Xcode (on OS X) or from the PATH.""")
     advanced.add_argument(
+        '--analyzer-target',
+        dest='analyzer_target',
+        metavar='<target triple name for analysis>',
+        help="""This provides target triple information to clang static analyzer.
+        It only changes the target for analysis but doesn't change the target
+        of a real compiler given by --use-cc and --use-c++ options.""")
+    advanced.add_argument(
         '--no-failure-reports',
         '-no-failure-reports',
         dest='output_failures',
@@ -404,7 +411,12 @@ def parser_add_compilers(parser):
         your default compiler.
 
         If you need '%(prog)s' to use a specific compiler for *compilation*
-        then you can use this option to specify a path to that compiler.""")
+        then you can use this option to specify a path to that compiler.
+
+        If the given compiler is a cross compiler, you may also need to provide
+        --analyzer-target option to properly analyze the source code because
+        static analyzer runs as if the code is compiled for the host machine by
+        default.""")
     parser.add_argument(
         '--use-c++',
         metavar='<path>',

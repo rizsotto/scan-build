@@ -164,6 +164,7 @@ def analyze_parameters(args):
         'output_format': args.output_format,
         'output_failures': args.output_failures,
         'direct_args': direct_args(args),
+        'analyzer_target': args.analyzer_target,
         'force_debug': args.force_debug,
         'excludes': args.excludes
     }
@@ -486,6 +487,20 @@ def arch_check(opts, continuation=language_check):
     return continuation(opts)
 
 
+@require(['analyzer_target', 'flags'])
+def target_check(opts, continuation=arch_check):
+    # type: (...) -> Dict[str, Any]
+    """ Do run analyzer through the given target triple """
+
+    target = opts.pop("analyzer_target")
+    if target is not None:
+        opts.update({'flags': ['-target', target] + opts['flags']})
+        logging.debug("analysis, target triple is %s", target)
+    else:
+        logging.debug("analysis, default target triple")
+    return continuation(opts)
+
+
 # To have good results from static analyzer certain compiler options shall be
 # omitted. The compiler flag filtering only affects the static analyzer run.
 #
@@ -513,7 +528,7 @@ IGNORED_FLAGS = {
 
 
 @require(['flags'])
-def classify_parameters(opts, continuation=arch_check):
+def classify_parameters(opts, continuation=target_check):
     # type: (...) -> Dict[str, Any]
     """ Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing. """
