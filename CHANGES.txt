@@ -35,3 +35,5 @@ v2.0.10 2017-10-03 -- Add typing as dependency
 v2.0.11 2018-01-07 -- Fix decoding error at report generation
 
 v2.0.12 2018-04-13 -- Fix log message bug
+
+v2.0.13 2018-04-21 -- Add support for static analysis of cross compilation
