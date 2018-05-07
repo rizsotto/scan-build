@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup
+import sys
+
+install_requires = []
+if sys.version_info[0] == 2:
+    install_requires.append('typing')
 
 setup(
     name='scan-build',
@@ -14,7 +19,7 @@ setup(
     description='static code analyzer wrapper for Clang.',
     long_description=open('README.rst').read(),
     zip_safe=False,
-    install_requires=['typing'],
+    install_requires=install_requires,
     packages=['libscanbuild', 'libear'],
     package_data={'libscanbuild': ['resources/*'],
                   'libear': ['config.h.in', 'ear.c']},
