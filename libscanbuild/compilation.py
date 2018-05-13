@@ -12,6 +12,7 @@ import logging
 import json
 import subprocess
 from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
+from typing import Optional  # noqa: ignore=F401
 
 from libscanbuild import Execution, shell_split, run_command
 
@@ -180,7 +181,7 @@ class Compilation:
                         cc,         # type: str
                         cxx         # type: str
                         ):
-        # type: (...) -> Tuple[str, List[str]]
+        # type: (...) -> Optional[Tuple[str, List[str]]]
         """ A predicate to decide whether the command is a compiler call.
 
         :param command:     the command to classify
@@ -304,7 +305,7 @@ class CompilationDatabase:
 
 
 def classify_source(filename, c_compiler=True):
-    # type: (str, bool) -> str
+    # type: (str, bool) -> Optional[str]
     """ Classify source file names and returns the presumed language,
     based on the file name extension.
 

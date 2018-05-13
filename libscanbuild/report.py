@@ -289,7 +289,7 @@ def parse_bug_plist(filename):
     """ Returns the generator of bugs from a single .plist file. """
 
     content = plistlib.readPlist(filename)
-    files = content.get('files')
+    files = content.get('files', [])
     for bug in content.get('diagnostics', []):
         if len(files) <= int(bug['location']['file']):
             logging.warning('Parsing bug from "%s" failed', filename)
@@ -355,8 +355,8 @@ def parse_crash(filename):
         'source': lines[0],
         'problem': lines[1],
         'file': name,
-        'info': name + '.info.txt',
-        'stderr': name + '.stderr.txt'
+        'info': '{}.info.txt'.format(name),
+        'stderr': '{}.stderr.txt'.format(name)
     }
 
 

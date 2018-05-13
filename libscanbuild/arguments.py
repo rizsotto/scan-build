@@ -251,9 +251,10 @@ def create_analyze_parser(from_build_command):
         '--analyzer-target',
         dest='analyzer_target',
         metavar='<target triple name for analysis>',
-        help="""This provides target triple information to clang static analyzer.
-        It only changes the target for analysis but doesn't change the target
-        of a real compiler given by --use-cc and --use-c++ options.""")
+        help="""This provides target triple information to clang static
+        analyzer. It only changes the target for analysis but doesn't change
+        the target of a real compiler given by --use-cc and --use-c++
+        options.""")
     advanced.add_argument(
         '--no-failure-reports',
         '-no-failure-reports',

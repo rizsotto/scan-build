@@ -73,9 +73,10 @@ def get_active_checkers(clang, plugins):
                      for plugin in plugins
                      for arg in ['-Xclang', '-load', '-Xclang', plugin]]
         cmd = [clang, '--analyze'] + load_args + ['-x', language, '-']
-        return [ACTIVE_CHECKER_PATTERN.match(arg).group(1)
-                for arg in get_arguments(cmd, '.')
-                if ACTIVE_CHECKER_PATTERN.match(arg)]
+        return [candidate.group(1)
+                for candidate in (ACTIVE_CHECKER_PATTERN.match(arg)
+                                  for arg in get_arguments(cmd, '.'))
+                if candidate]
 
     result = set()  # type: Set[str]
     for language in ['c', 'c++', 'objective-c', 'objective-c++']:

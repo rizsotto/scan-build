@@ -56,13 +56,13 @@ install:
   - pip --version
   - pip install --upgrade pip
   - pip install -r requirements.txt
-  - pip install lit pep8 flake8 pylint nose coverage coveralls
+  - pip install lit pycodestyle==2.3.1 flake8 pylint nose coverage coveralls
   - if [[ "$TYPECHECK" ]]; then
       pip install mypy;
     fi
 
 script:
-  - pep8 --show-source --show-pep8 libscanbuild
+  - pycodestyle --show-source --show-pep8 libscanbuild
   - flake8 --verbose libscanbuild
   - if [[ "$TYPECHECK" ]]; then
       mypy libscanbuild;

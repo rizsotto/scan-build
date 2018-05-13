@@ -1,5 +1,5 @@
-# REQUIRES: pep8
-# RUN: pep8 --show-source --show-pep8 ../libscanbuild
-# RUN: pep8 --show-source --show-pep8 ../libear
-# RUN: pep8 --show-source --show-pep8 ./unit
-# RUN: pep8 --show-source --show-pep8 ./functional/tools
+# REQUIRES: pycodestyle
+# RUN: pycodestyle --show-source --show-pep8 ../libscanbuild
+# RUN: pycodestyle --show-source --show-pep8 ../libear
+# RUN: pycodestyle --show-source --show-pep8 ./unit
+# RUN: pycodestyle --show-source --show-pep8 ./functional/tools
