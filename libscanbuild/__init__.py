@@ -14,7 +14,7 @@ import re
 import shlex
 import subprocess
 import sys
-from pprint import pformat
+import pprint
 
 from typing import List, Any, Dict, Callable  # noqa: ignore=F401
 
@@ -45,7 +45,7 @@ def run_build(command, *args, **kwargs):
     :param command: list of tokens
     :return: exit code of the process
     """
-    environment = pformat(kwargs.get('env', os.environ), indent=1, width=80)
+    environment = pprint.pformat(kwargs.get('env', os.environ), indent=1, width=80)
     logging.debug('run build %s, in environment: \n%s', command, environment)
     exit_code = subprocess.call(command, *args, **kwargs)
     logging.debug('build finished with exit code: %d', exit_code)
