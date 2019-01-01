@@ -184,7 +184,7 @@ class ReportFailureTest(unittest.TestCase):
                 'source': filename,
                 'output_dir': tmp_dir,
                 'language': 'c',
-                'error_output': error_msg,
+                'error_output': [error_msg],
                 'exit_code': 13
             }
             sut.report_failure(opts)
