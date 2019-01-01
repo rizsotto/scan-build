@@ -3,37 +3,37 @@ language: python
 matrix:
   include:
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: false
       python: 2.7
       env:
-        - TRAVIS_CLANG=clang-6.0
+        - TRAVIS_CLANG=clang-7
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: false
       python: 3.4
       env:
-        - TRAVIS_CLANG=clang-6.0
+        - TRAVIS_CLANG=clang-7
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: false
       python: 3.5
       env:
-        - TRAVIS_CLANG=clang-6.0
+        - TRAVIS_CLANG=clang-7
         - TYPECHECK=true
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: false
       python: 3.6
       env:
-        - TRAVIS_CLANG=clang-6.0
+        - TRAVIS_CLANG=clang-7
         - TYPECHECK=true
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: false
       python: 3.7
       env:
-        - TRAVIS_CLANG=clang-6.0
+        - TRAVIS_CLANG=clang-7
         - TYPECHECK=true
     - os: osx
       osx_image: xcode7.3
@@ -45,10 +45,10 @@ matrix:
 addons:
   apt:
     sources:
-      - llvm-toolchain-trusty-6.0
+      - llvm-toolchain-xenial-7
       - ubuntu-toolchain-r-test
     packages:
-      - clang-6.0
+      - clang-7
       - cmake
       - scons
       - qt4-qmake
