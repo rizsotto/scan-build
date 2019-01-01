@@ -269,8 +269,8 @@ def read_bugs(output_dir, html):
     def empty(file_name):
         return os.stat(file_name).st_size == 0
 
-    duplicate = duplicate_check(
-        lambda bug: '{bug_line}.{bug_path_length}:{bug_file}'.format(**bug))
+    hash_str = '{bug_line}.{bug_path_length}/{bug_type}:{bug_file}'
+    duplicate = duplicate_check(lambda bug: hash_str.format(**bug))
 
     # get the right parser for the job.
     parser = parse_bug_html if html else parse_bug_plist
