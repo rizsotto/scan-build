@@ -27,8 +27,8 @@ class ShellSplitTest(unittest.TestCase):
 
     def test_shell_escaping(self):
         self.assertEqual(['clang', '-c', 'file.c', '-Dv=space value'],
-                         sut.shell_split('clang -c file.c -Dv="space value"'))
-        self.assertEqual(['clang', '-c', 'file.c', '-Dv=\"quote'],
-                         sut.shell_split('clang -c file.c -Dv=\\\"quote'))
+                         sut.shell_split(r'clang -c file.c -Dv="space value"'))
+        self.assertEqual(['clang', '-c', 'file.c', '-Dv="quote'],
+                         sut.shell_split(r'clang -c file.c -Dv=\"quote'))
         self.assertEqual(['clang', '-c', 'file.c', '-Dv=(word)'],
-                         sut.shell_split('clang -c file.c -Dv=\(word\)'))
+                         sut.shell_split(r'clang -c file.c -Dv=\(word\)'))
