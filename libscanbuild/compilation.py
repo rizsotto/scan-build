@@ -348,7 +348,7 @@ def get_mpi_call(wrapper):
             output = run_command([wrapper] + query_flags)
             if output:
                 return shell_split(output[0])
-        except subprocess.CalledProcessError:
+        except (OSError, subprocess.CalledProcessError):
             pass
     # Fail loud
     raise RuntimeError("Could not determinate MPI flags.")
