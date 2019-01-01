@@ -21,8 +21,7 @@ import datetime
 import getpass
 import socket
 import argparse  # noqa: ignore=F401
-from typing import Dict, List, Callable, Any, Set, Generator, Iterator  # noqa: ignore=F401
-
+from typing import Dict, List, Tuple, Callable, Any, Set, Generator, Iterator, Optional  # noqa: ignore=F401
 from libscanbuild.clang import get_version
 
 __all__ = ['document']
@@ -35,7 +34,7 @@ def document(args):
     html_reports_available = args.output_format in {'html', 'plist-html'}
 
     logging.debug('count crashes and bugs')
-    crash_count = sum(1 for _ in read_crashes(args.output))
+    crash_count = sum(1 for _ in Crash.read(args.output))
     bug_counter = create_counters()
     for bug in read_bugs(args.output, html_reports_available):
         bug_counter(bug)
@@ -215,9 +214,6 @@ def crash_report(output_dir, prefix):
     # type: (str, str) -> str
     """ Creates a fragment from the compiler crashes. """
 
-    pretty = prettify_crash(prefix, output_dir)
-    crashes = (pretty(crash) for crash in read_crashes(output_dir))
-
     name = os.path.join(output_dir, 'crashes.html.fragment')
     with open(name, 'w') as handle:
         indent = 4
@@ -234,7 +230,8 @@ def crash_report(output_dir, prefix):
         |    </tr>
         |  </thead>
         |  <tbody>""", indent))
-        for current in crashes:
+        for crash in Crash.read(output_dir):
+            current = crash.pretty(prefix, output_dir)
             handle.write(reindent("""
         |    <tr>
         |      <td>{problem}</td>
@@ -250,12 +247,77 @@ def crash_report(output_dir, prefix):
     return name
 
 
-def read_crashes(output_dir):
-    # type: (str) -> Iterator[Dict[str, Any]]
-    """ Generate a unique sequence of crashes from given output directory. """
+class Crash:
+    def __init__(self,
+                 source,    # type: str
+                 problem,   # type: str
+                 file,      # type: str
+                 info,      # type: str
+                 stderr     # type: str
+                 ):
+        # type: (...) -> None
+        self.source = source
+        self.problem = problem
+        self.file = file
+        self.info = info
+        self.stderr = stderr
 
-    pattern = os.path.join(output_dir, 'failures', '*.info.txt')  # type: str
-    return (parse_crash(filename) for filename in glob.iglob(pattern))
+    def pretty(self, prefix, output_dir):
+        # type: (Crash, str, str) -> Dict[str, str]
+        """ Make safe this values to embed into HTML. """
+
+        return {
+            'source':   escape(chop(prefix, self.source)),
+            'problem':  escape(self.problem),
+            'file':     escape(chop(output_dir, self.file)),
+            'info':     escape(chop(output_dir, self.info)),
+            'stderr':   escape(chop(output_dir, self.stderr))
+        }
+
+    @classmethod
+    def _parse_info_file(cls, filename):
+        # type: (str) -> Optional[Tuple[str, str]]
+        """ Parse out the crash information from the report file. """
+
+        lines = list(safe_readlines(filename))
+        return None if len(lines) < 2 else (lines[0], lines[1])
+
+    @classmethod
+    def read(cls, output_dir):
+        # type: (str) -> Iterator[Crash]
+        """ Generate a unique sequence of crashes from given directory. """
+
+        pattern = os.path.join(output_dir, 'failures', '*.info.txt')
+        for info_filename in glob.iglob(pattern):
+            base_filename = info_filename[0:-len('.info.txt')]
+            stderr_filename = "{}.stderr.txt".format(base_filename)
+
+            source_and_problem = cls._parse_info_file(info_filename)
+            if source_and_problem is not None:
+                yield Crash(
+                    source=source_and_problem[0],
+                    problem=source_and_problem[1],
+                    file=base_filename,
+                    info=info_filename,
+                    stderr=stderr_filename)
+
+
+class Bug:
+    def __init__(self):
+        # type: (...) -> None
+        super().__init__()
+
+    def __eq__(self, o):
+        # type: (Bug, object) -> bool
+        return super().__eq__(o)
+
+    def __hash__(self):
+        # type: (Bug) -> int
+        return super().__hash__()
+
+    def __format__(self, format_spec):
+        # type: (Bug, str) -> str
+        return super().__format__(format_spec)
 
 
 def read_bugs(output_dir, html):
@@ -341,23 +403,6 @@ def parse_bug_html(filename):
     encode_value(bug, 'bug_path_length', int)
 
     yield bug
-
-
-def parse_crash(filename):
-    # type: (str) -> Dict[str, Any]
-    """ Parse out the crash information from the report file. """
-
-    match = re.match(r'(.*)\.info\.txt', filename)
-    name = match.group(1) if match else None
-    lines = list(safe_readlines(filename))
-
-    return {
-        'source': lines[0],
-        'problem': lines[1],
-        'file': name,
-        'info': '{}.info.txt'.format(name),
-        'stderr': '{}.stderr.txt'.format(name)
-    }
 
 
 def category_type_name(bug):
@@ -449,22 +494,6 @@ def prettify_bug(prefix, output_dir):
         encode_value(bug, 'bug_type', escape)
         encode_value(bug, 'report_file', lambda x: escape(chop(output_dir, x)))
         return bug
-
-    return predicate
-
-
-def prettify_crash(prefix, output_dir):
-    # type: (str, str) -> Callable[[Dict[str, str]], Dict[str, str]]
-    def predicate(crash):
-        # type: (Dict[str, str]) -> Dict[str, str]
-        """ Make safe this values to embed into HTML. """
-
-        encode_value(crash, 'source', lambda x: escape(chop(prefix, x)))
-        encode_value(crash, 'problem', escape)
-        encode_value(crash, 'file', lambda x: escape(chop(output_dir, x)))
-        encode_value(crash, 'info', lambda x: escape(chop(output_dir, x)))
-        encode_value(crash, 'stderr', lambda x: escape(chop(output_dir, x)))
-        return crash
 
     return predicate
 

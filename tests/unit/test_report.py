@@ -9,7 +9,6 @@ import libscanbuild.report as sut
 import unittest
 import os
 import os.path
-import glob
 
 IS_WINDOWS = os.getenv('windows')
 
@@ -24,13 +23,13 @@ def run_bug_parse(content):
             return bug
 
 
-def run_crash_parse(content, prefix):
+def write_crash(content, prefix):
     with libear.temporary_directory() as tmp_dir:
         file_name = os.path.join(tmp_dir, prefix + '.info.txt')
         with open(file_name, 'w') as handle:
             lines = (line + os.linesep for line in content)
             handle.writelines(lines)
-        return sut.parse_crash(file_name)
+        return file_name
 
 
 class ParseFileTest(unittest.TestCase):
@@ -69,15 +68,13 @@ class ParseFileTest(unittest.TestCase):
             "Some very serious Error",
             "bla",
             "bla-bla"]
-        result = run_crash_parse(content, 'file.i')
-        self.assertEqual(result['source'], content[0].rstrip())
-        self.assertEqual(result['problem'], content[1].rstrip())
-        self.assertEqual(os.path.basename(result['file']),
-                         'file.i')
-        self.assertEqual(os.path.basename(result['info']),
-                         'file.i.info.txt')
-        self.assertEqual(os.path.basename(result['stderr']),
-                         'file.i.stderr.txt')
+        with libear.temporary_directory() as tmp_dir:
+            file_name = os.path.join(tmp_dir, 'file.i.info.txt')
+            with open(file_name, 'w') as handle:
+                handle.write(os.linesep.join(content))
+            source, problem = sut.Crash._parse_info_file(file_name)
+            self.assertEqual(source, content[0].rstrip())
+            self.assertEqual(problem, content[1].rstrip())
 
     def test_parse_real_crash(self):
         import libscanbuild.analyze as sut2
@@ -97,17 +94,14 @@ class ParseFileTest(unittest.TestCase):
                 'exit_code': 13
             }
             sut2.report_failure(opts)
-            # find the info file
-            pp_files = glob.glob(os.path.join(tmp_dir, 'failures', '*.i'))
-            self.assertIsNot(pp_files, [])
-            pp_file = pp_files[0]
-            # read the failure report back
-            result = sut.parse_crash(pp_file + '.info.txt')
-            self.assertEqual(result['source'], filename)
-            self.assertEqual(result['problem'], 'Other Error')
-            self.assertEqual(result['file'], pp_file)
-            self.assertEqual(result['info'], pp_file + '.info.txt')
-            self.assertEqual(result['stderr'], pp_file + '.stderr.txt')
+            # verify
+            crashes = list(sut.Crash.read(tmp_dir))
+            self.assertEqual(1, len(crashes))
+            crash = crashes[0]
+            self.assertEqual(filename, crash.source)
+            self.assertEqual('Other Error', crash.problem)
+            self.assertEqual(crash.file + '.info.txt', crash.info)
+            self.assertEqual(crash.file + '.stderr.txt', crash.stderr)
 
 
 class ReportMethodTest(unittest.TestCase):
