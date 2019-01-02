@@ -23,15 +23,6 @@ def run_bug_parse(content):
             return bug
 
 
-def write_crash(content, prefix):
-    with libear.temporary_directory() as tmp_dir:
-        file_name = os.path.join(tmp_dir, prefix + '.info.txt')
-        with open(file_name, 'w') as handle:
-            lines = (line + os.linesep for line in content)
-            handle.writelines(lines)
-        return file_name
-
-
 class ParseFileTest(unittest.TestCase):
 
     def test_parse_bug(self):
@@ -48,19 +39,18 @@ class ParseFileTest(unittest.TestCase):
             "<!-- REPORTHEADER -->",
             "some tails"]
         result = run_bug_parse(content)
-        self.assertEqual(result['bug_category'], 'Logic error')
-        self.assertEqual(result['bug_path_length'], 4)
-        self.assertEqual(result['bug_line'], 5)
-        self.assertEqual(result['bug_description'], 'Division by zero')
-        self.assertEqual(result['bug_type'], 'Division by zero')
-        self.assertEqual(result['bug_file'], 'xx')
+        self.assertEqual(result.category, 'Logic error')
+        self.assertEqual(result.path_length, 4)
+        self.assertEqual(result.line, 5)
+        self.assertEqual(result.type, 'Division by zero')
+        self.assertEqual(result.file, 'xx')
 
     def test_parse_bug_empty(self):
         content = []
         result = run_bug_parse(content)
-        self.assertEqual(result['bug_category'], 'Other')
-        self.assertEqual(result['bug_path_length'], 1)
-        self.assertEqual(result['bug_line'], 0)
+        self.assertEqual(result.category, 'Other')
+        self.assertEqual(result.path_length, 1)
+        self.assertEqual(result.line, 0)
 
     def test_parse_crash(self):
         content = [

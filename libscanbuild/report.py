@@ -15,6 +15,7 @@ import sys
 import shutil
 import plistlib
 import glob
+import itertools
 import json
 import logging
 import datetime
@@ -166,8 +167,8 @@ def bug_report(output_dir, prefix):
     # type: (str, str) -> str
     """ Creates a fragment from the analyzer reports. """
 
-    pretty = prettify_bug(prefix, output_dir)
-    bugs = (pretty(bug) for bug in read_bugs(output_dir, True))
+    # pretty = prettify_bug(prefix, output_dir)
+    # bugs = (pretty(bug) for bug in read_bugs(output_dir, True))
 
     name = os.path.join(output_dir, 'bugs.html.fragment')
     with open(name, 'w') as handle:
@@ -191,7 +192,8 @@ def bug_report(output_dir, prefix):
         |  </thead>
         |  <tbody>""", indent))
         handle.write(comment('REPORTBUGCOL'))
-        for current in bugs:
+        for bug in read_bugs(output_dir, True):
+            current = bug.pretty(prefix, output_dir)
             handle.write(reindent("""
         |    <tr class="{bug_type_class}">
         |      <td class="DESC">{bug_category}</td>
@@ -303,25 +305,66 @@ class Crash:
 
 
 class Bug:
-    def __init__(self):
+    def __init__(self,
+                 report,     # type: str
+                 attributes  # type: Dict[str, str]
+                 ):
         # type: (...) -> None
-        super().__init__()
+
+        self.file = attributes.get('bug_file', '')
+        self.line = int(attributes.get('bug_line', '0'))
+        self.path_length = int(attributes.get('bug_path_length', '1'))
+        self.category = attributes.get('bug_category', 'Other')
+        self.type = attributes.get('bug_type', '')
+        self.function = attributes.get('bug_function', 'n/a')
+        self.report = report
 
     def __eq__(self, o):
         # type: (Bug, object) -> bool
-        return super().__eq__(o)
+
+        return isinstance(object, Bug) and \
+               object.line == self.line and \
+               object.path_length == self.path_length and \
+               object.type == self.type and \
+               object.file == self.file
 
     def __hash__(self):
         # type: (Bug) -> int
-        return super().__hash__()
 
-    def __format__(self, format_spec):
-        # type: (Bug, str) -> str
-        return super().__format__(format_spec)
+        return hash(self.line) +\
+               hash(self.path_length) +\
+               hash(self.type) +\
+               hash(self.file)
+
+    def type_class(self):
+        # type: (Bug) -> str
+
+        def smash(key):
+            # type: (str) -> str
+            """ Make value ready to be HTML attribute value. """
+
+            return key.lower().replace(' ', '_').replace("'", '')
+
+        return '_'.join(['bt', smash(self.category), smash(self.type)])
+
+    def pretty(self, prefix, output_dir):
+        # type: (Bug, str, str) -> Dict[str, str]
+        """ Make safe this values to embed into HTML. """
+
+        return {
+            'bug_file':         escape(chop(prefix, self.file)),
+            'bug_line':         str(self.line),
+            'bug_path_length':  str(self.path_length),
+            'bug_category':     escape(self.category),
+            'bug_type':         escape(self.type),
+            'bug_type_class':   escape(self.type_class()),
+            'bug_function':     escape(self.function),
+            'report_file':      escape(chop(output_dir, self.report))
+        }
 
 
 def read_bugs(output_dir, html):
-    # type: (str, bool) -> Generator[Dict[str, Any], None, None]
+    # type: (str, bool) -> Generator[Bug, None, None]
     """ Generate a unique sequence of bugs from given output directory.
 
     Duplicates can be in a project if the same module was compiled multiple
@@ -331,23 +374,29 @@ def read_bugs(output_dir, html):
     def empty(file_name):
         return os.stat(file_name).st_size == 0
 
-    hash_str = '{bug_line}.{bug_path_length}/{bug_type}:{bug_file}'
-    duplicate = duplicate_check(lambda bug: hash_str.format(**bug))
-
     # get the right parser for the job.
     parser = parse_bug_html if html else parse_bug_plist
     # get the input files, which are not empty.
     pattern = os.path.join(output_dir, '*.html' if html else '*.plist')
-    bug_files = (file for file in glob.iglob(pattern) if not empty(file))
+    bug_generators = (parser(file)
+                      for file in glob.iglob(pattern) if not empty(file))
 
-    for bug_file in bug_files:
-        for bug in parser(bug_file):
-            if not duplicate(bug):
-                yield bug
+    return unique_bugs(itertools.chain.from_iterable(bug_generators))
+
+
+def unique_bugs(generator):
+    # type: (Iterator[Bug]) -> Generator[Bug, None, None]
+    """ Remove duplicates from bug stream """
+
+    state = set()  # type: Set[Bug]
+    for item in generator:
+        if item not in state:
+            state.add(item)
+            yield item
 
 
 def parse_bug_plist(filename):
-    # type: (str) -> Generator[Dict[str, Any], None, None]
+    # type: (str) -> Generator[Bug, None, None]
     """ Returns the generator of bugs from a single .plist file. """
 
     content = plistlib.readPlist(filename)
@@ -357,18 +406,17 @@ def parse_bug_plist(filename):
             logging.warning('Parsing bug from "%s" failed', filename)
             continue
 
-        yield {
-            'result': filename,
+        yield Bug(filename, {
             'bug_type': bug['type'],
             'bug_category': bug['category'],
-            'bug_line': int(bug['location']['line']),
-            'bug_path_length': int(bug['location']['col']),
+            'bug_line': bug['location']['line'],
+            'bug_path_length': bug['location']['col'],
             'bug_file': files[int(bug['location']['file'])]
-        }
+        })
 
 
 def parse_bug_html(filename):
-    # type: (str) -> Generator[Dict[str, Any], None, None]
+    # type: (str) -> Generator[Bug, None, None]
     """ Parse out the bug information from HTML output. """
 
     patterns = [re.compile(r'<!-- BUGTYPE (?P<bug_type>.*) -->$'),
@@ -376,18 +424,10 @@ def parse_bug_html(filename):
                 re.compile(r'<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$'),
                 re.compile(r'<!-- BUGLINE (?P<bug_line>.*) -->$'),
                 re.compile(r'<!-- BUGCATEGORY (?P<bug_category>.*) -->$'),
-                re.compile(r'<!-- BUGDESC (?P<bug_description>.*) -->$'),
                 re.compile(r'<!-- FUNCTIONNAME (?P<bug_function>.*) -->$')]
     endsign = re.compile(r'<!-- BUGMETAEND -->')
 
-    bug = {
-        'report_file': filename,
-        'bug_function': 'n/a',  # compatibility with < clang-3.5
-        'bug_category': 'Other',
-        'bug_line': 0,
-        'bug_path_length': 1
-    }
-
+    bug = dict()
     for line in safe_readlines(filename):
         # do not read the file further
         if endsign.match(line):
@@ -399,60 +439,11 @@ def parse_bug_html(filename):
                 bug.update(match.groupdict())
                 break
 
-    encode_value(bug, 'bug_line', int)
-    encode_value(bug, 'bug_path_length', int)
-
-    yield bug
-
-
-def category_type_name(bug):
-    # type: (Dict[str, Any]) -> str
-    """ Create a new bug attribute from bug by category and type.
-
-    The result will be used as CSS class selector in the final report. """
-
-    def smash(key):
-        # type: (str) -> str
-        """ Make value ready to be HTML attribute value. """
-
-        return bug.get(key, '').lower().replace(' ', '_').replace("'", '')
-
-    return escape('bt_' + smash('bug_category') + '_' + smash('bug_type'))
-
-
-def duplicate_check(hash_function):
-    # type: (Callable[[Any], str]) -> Callable[[Dict[str, Any]], bool]
-    """ Workaround to detect duplicate dictionary values.
-
-    Python `dict` type has no `hash` method, which is required by the `set`
-    type to store elements.
-
-    This solution still not store the `dict` as value in a `set`. Instead
-    it calculate a `string` hash and store that. Therefore it can only say
-    that hash is already taken or not.
-
-    This method is a factory method, which returns a predicate. """
-
-    def predicate(entry):
-        # type: (Dict[str, Any]) -> bool
-        """ The predicate which calculates and stores the hash of the given
-        entries. The entry type has to work with the given hash function.
-
-        :param entry: the questioned entry,
-        :return: true/false depends the hash value is already seen or not.
-        """
-        entry_hash = hash_function(entry)  # type: str
-        if entry_hash not in state:
-            state.add(entry_hash)
-            return False
-        return True
-
-    state = set()  # type: Set[str]
-    return predicate
+    yield Bug(filename, bug)
 
 
 def create_counters():
-    # type () -> Callable[[Dict[str, Any]], None] FIXME
+    # type () -> Callable[[Bug], None]
     """ Create counters for bug statistics.
 
     Two entries are maintained: 'total' is an integer, represents the
@@ -462,39 +453,20 @@ def create_counters():
     and 'label'. """
 
     def predicate(bug):
-        # type (Dict[str, Any]) -> None FIXME
-        bug_category = bug['bug_category']
-        bug_type = bug['bug_type']
-        current_category = predicate.categories.get(bug_category, dict())
-        current_type = current_category.get(bug_type, {
-            'bug_type': bug_type,
-            'bug_type_class': category_type_name(bug),
+        # type (Bug) -> None
+        current_category = predicate.categories.get(bug.category, dict())
+        current_type = current_category.get(bug.type, {
+            'bug_type': bug.type,
+            'bug_type_class': bug.type_class(),
             'bug_count': 0
         })
         current_type.update({'bug_count': current_type['bug_count'] + 1})
-        current_category.update({bug_type: current_type})
-        predicate.categories.update({bug_category: current_category})
+        current_category.update({bug.type: current_type})
+        predicate.categories.update({bug.category: current_category})
         predicate.total += 1
 
     predicate.total = 0  # type: int
     predicate.categories = dict()  # type: Dict[str, Any]
-    return predicate
-
-
-def prettify_bug(prefix, output_dir):
-    # type: (str, str) -> Callable[[Dict[str, Any]], Dict[str, str]]
-    def predicate(bug):
-        # type: (Dict[str, Any]) -> Dict[str, str]
-        """ Make safe this values to embed into HTML. """
-
-        bug['bug_type_class'] = category_type_name(bug)
-
-        encode_value(bug, 'bug_file', lambda x: escape(chop(prefix, x)))
-        encode_value(bug, 'bug_category', escape)
-        encode_value(bug, 'bug_type', escape)
-        encode_value(bug, 'report_file', lambda x: escape(chop(output_dir, x)))
-        return bug
-
     return predicate
 
 
@@ -515,15 +487,6 @@ def safe_readlines(filename):
         for line in handler.readlines():
             # this is a workaround to fix windows read '\r\n' as new lines.
             yield line.decode(errors='ignore').rstrip()
-
-
-def encode_value(container, key, encode):
-    # type: (Dict[str, Any], str, Callable[[Any], Any]) -> None
-    """ Run 'encode' on 'container[key]' value and update it. """
-
-    if key in container:
-        value = encode(container[key])
-        container.update({key: value})
 
 
 def chop(prefix, filename):
