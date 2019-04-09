@@ -159,8 +159,8 @@ def wrapper_entry_point(function):
 
     The :param function: will receive the following arguments:
 
-    :param result:       the exit code of the compilation.
-    :param execution:    the command executed by the wrapper. """
+    :result:       the exit code of the compilation.
+    :execution:    the command executed by the wrapper. """
 
     def is_cxx_wrapper():
         # type: () -> bool

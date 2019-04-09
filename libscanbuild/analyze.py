@@ -100,7 +100,7 @@ def need_analyzer(args):
     when compiler wrappers are used. That's the moment when build setup
     check the compiler and capture the location for the build process. """
 
-    return len(args) > 0 and not re.search('configure|autogen', args[0])
+    return len(args) > 0 and not re.search(r'configure|autogen', args[0])
 
 
 def analyze_parameters(args):
@@ -579,7 +579,7 @@ def exclude(opts, continuation=classify_parameters):
         relative = os.path.relpath(entry, directory).split(os.sep)
         return len(relative) > 0 and relative[0] != os.pardir
 
-    if any(contains(dir, opts['source']) for dir in opts['excludes']):
+    if any(contains(entry, opts['source']) for entry in opts['excludes']):
         logging.debug('skip analysis, file requested to exclude')
         return dict()
     return continuation(opts)

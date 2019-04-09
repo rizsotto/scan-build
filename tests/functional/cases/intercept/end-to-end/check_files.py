@@ -14,9 +14,9 @@ def main():
     parser.add_argument('input', type=argparse.FileType('r'))
     args = parser.parse_args()
     # file is open, parse the json content
-    input = json.load(args.input)
+    entries = json.load(args.input)
     # just get file names
-    result = set([os.path.basename(entry['file']) for entry in input])
+    result = set([os.path.basename(entry['file']) for entry in entries])
     return 0 if result == EXPECTED else 1
 
 

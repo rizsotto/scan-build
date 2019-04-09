@@ -15,7 +15,7 @@ import contextlib
 import logging
 import subprocess
 
-__all__ = ['build_libear']
+__all__ = ['build_libear', 'temporary_directory']
 
 
 def build_libear(compiler, dst_dir):
