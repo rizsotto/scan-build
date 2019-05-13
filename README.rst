@@ -40,8 +40,6 @@ It's available from `the Python Package Index`_ ::
 
     $ pip install scan-build
 
-Or check out the sources and add the directory ``bin`` to your ``PATH`` environment.
-
 
 Portability
 -----------
