@@ -41,3 +41,5 @@ v2.0.13 2018-04-21 -- Add support for static analysis of cross compilation
 v2.0.14 2018-07-24 -- Fix typing module import
 
 v2.0.15 2019-01-01 -- Bug fix: report hash function includes bug type
+
+v2.0.16 2019-05-14 -- Minor improvements
