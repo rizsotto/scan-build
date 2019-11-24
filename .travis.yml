@@ -3,41 +3,38 @@ language: python
 matrix:
   include:
     - os: linux
-      dist: xenial
+      dist: bionic
       sudo: false
       python: 2.7
       env:
-        - TRAVIS_CLANG=clang-7
+        - TRAVIS_CLANG=clang-8
     - os: linux
-      dist: xenial
-      sudo: false
-      python: 3.4
-      env:
-        - TRAVIS_CLANG=clang-7
-    - os: linux
-      dist: xenial
+      dist: bionic
       sudo: false
       python: 3.5
       env:
-        - TRAVIS_CLANG=clang-7
-        - TYPECHECK=true
+        - TRAVIS_CLANG=clang-8
     - os: linux
-      dist: xenial
+      dist: bionic
       sudo: false
       python: 3.6
       env:
-        - TRAVIS_CLANG=clang-7
+        - TRAVIS_CLANG=clang-8
         - TYPECHECK=true
     - os: linux
-      dist: xenial
+      dist: bionic
       sudo: false
       python: 3.7
       env:
-        - TRAVIS_CLANG=clang-7
+        - TRAVIS_CLANG=clang-8
         - TYPECHECK=true
-    - os: osx
-      osx_image: xcode7.3
-      language: generic
+    - os: linux
+      dist: bionic
+      sudo: false
+      python: 3.8
+      env:
+        - TRAVIS_CLANG=clang-8
+        - TYPECHECK=true
     - os: osx
       osx_image: xcode8
       language: generic
@@ -45,10 +42,10 @@ matrix:
 addons:
   apt:
     sources:
-      - llvm-toolchain-xenial-7
+      - llvm-toolchain-bionic-8
       - ubuntu-toolchain-r-test
     packages:
-      - clang-7
+      - clang-8
       - cmake
       - scons
       - qt4-qmake
