@@ -322,11 +322,11 @@ class Bug:
     def __eq__(self, o):
         # type: (Bug, object) -> bool
 
-        return isinstance(object, Bug) and \
-               object.line == self.line and \
-               object.path_length == self.path_length and \
-               object.type == self.type and \
-               object.file == self.file
+        return isinstance(o, Bug) and \
+               o.line == self.line and \
+               o.path_length == self.path_length and \
+               o.type == self.type and \
+               o.file == self.file
 
     def __hash__(self):
         # type: (Bug) -> int
