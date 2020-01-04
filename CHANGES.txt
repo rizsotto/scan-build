@@ -45,3 +45,5 @@ v2.0.15 2019-01-01 -- Bug fix: report hash function includes bug type
 v2.0.16 2019-05-14 -- Minor improvements
 
 v2.0.17 2019-07-10 -- Bug fix: typing package requirement fix
+
+v2.0.18 2020-01-04 -- Bug fix: duplication of report entries
