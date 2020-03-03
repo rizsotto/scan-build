@@ -116,6 +116,8 @@ class ReportMethodTest(unittest.TestCase):
         self.assertEqual('lib\\file',
                          sut.chop('c:\\prefix\\', 'c:\\prefix\\lib\\file'))
         self.assertEqual('c:\\prefix\\file', sut.chop('', 'c:\\prefix\\file'))
+        self.assertEqual('c:\\prefix\\file',
+                         sut.chop('e:\\prefix', 'c:\\prefix\\file'))
 
     @unittest.skipIf(not IS_WINDOWS, 'windows has different path patterns')
     def test_chop_when_cwd_on_windows(self):

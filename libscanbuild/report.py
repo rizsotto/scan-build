@@ -492,8 +492,13 @@ def safe_readlines(filename):
 def chop(prefix, filename):
     # type: (str, str) -> str
     """ Create 'filename' from '/prefix/filename' """
-
-    return filename if not prefix else os.path.relpath(filename, prefix)
+    result = filename
+    if prefix:
+        try:
+            result = os.path.relpath(filename, prefix)
+        except ValueError:
+            pass
+    return result
 
 
 def escape(text):
