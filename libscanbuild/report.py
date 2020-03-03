@@ -548,15 +548,12 @@ def commonprefix(files):
     :param files: list of file names.
     :return: the longest path prefix that is a prefix of all files. """
     result = None
-    try:
-        for current in files:
-            if result is not None:
-                result = os.path.commonprefix([result, current])
-            else:
-                result = current
-    except ValueError:
-        result = None
-                
+    for current in files:
+        if result is not None:
+            result = os.path.commonprefix([result, current])
+        else:
+            result = current
+
     if result is None:
         return ''
     elif not os.path.isdir(result):
