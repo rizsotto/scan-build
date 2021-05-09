@@ -399,20 +399,21 @@ def parse_bug_plist(filename):
     # type: (str) -> Generator[Bug, None, None]
     """ Returns the generator of bugs from a single .plist file. """
 
-    content = plistlib.readPlist(filename)
-    files = content.get('files', [])
-    for bug in content.get('diagnostics', []):
-        if len(files) <= int(bug['location']['file']):
-            logging.warning('Parsing bug from "%s" failed', filename)
-            continue
+    with open(filename, 'rb') as handle:
+        content = plistlib.load(handle)
+        files = content.get('files', [])
+        for bug in content.get('diagnostics', []):
+            if len(files) <= int(bug['location']['file']):
+                logging.warning('Parsing bug from "%s" failed', filename)
+                continue
 
-        yield Bug(filename, {
-            'bug_type': bug['type'],
-            'bug_category': bug['category'],
-            'bug_line': bug['location']['line'],
-            'bug_path_length': bug['location']['col'],
-            'bug_file': files[int(bug['location']['file'])]
-        })
+            yield Bug(filename, {
+                'bug_type': bug['type'],
+                'bug_category': bug['category'],
+                'bug_line': bug['location']['line'],
+                'bug_path_length': bug['location']['col'],
+                'bug_file': files[int(bug['location']['file'])]
+            })
 
 
 def parse_bug_html(filename):
