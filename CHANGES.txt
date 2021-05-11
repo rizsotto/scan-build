@@ -49,3 +49,5 @@ v2.0.17 2019-07-10 -- Bug fix: typing package requirement fix
 v2.0.18 2020-01-04 -- Bug fix: duplication of report entries
 
 v2.0.19 2020-02-23 -- Bug fix: 3.5.0 python needs typing as dependency
+
+v2.0.20 2021-05-11 -- Bug fix: 3.9.0 python has no plistlib.readPlist
