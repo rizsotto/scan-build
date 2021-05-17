@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup
+import setuptools
 
-setup(
+with open("README.rst", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+
+setuptools.setup(
     name='scan-build',
     version='2.0.20',
     author='László Nagy',
@@ -12,9 +16,10 @@ setup(
     url='https://github.com/rizsotto/scan-build',
     license='LICENSE.txt',
     description='static code analyzer wrapper for Clang.',
-    long_description=open('README.rst').read(),
+    long_description=long_description,
+    long_description_content_type="text/x-rst",
     zip_safe=False,
-    install_requires=['typing; python_version < "3.5"'],
+    python_requires=">=3.6",
     packages=['libscanbuild', 'libear'],
     package_data={'libscanbuild': ['resources/*'],
                   'libear': ['config.h.in', 'ear.c']},
@@ -42,4 +47,5 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Quality Assurance"
-    ])
+    ]
+)
