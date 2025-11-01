@@ -3,200 +3,213 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
+import json
+import os
+import tempfile
 import unittest
 
 import clanganalyzer.compilation as sut
 
 
-class CompilerTest(unittest.TestCase):
-    def assert_c_compiler(self, command, cc="nope", cxx="nope++"):
-        value = sut.Compilation._split_compiler(command, cc, cxx)
-        self.assertIsNotNone(value)
-        self.assertEqual(value[0], "c")
+class CompilationEntryTest(unittest.TestCase):
+    def test_from_db_entry_with_arguments(self):
+        """Test parsing compilation database entry with 'arguments' field."""
+        entry_data = {
+            "directory": "/home/user/project",
+            "file": "src/main.c",
+            "arguments": ["gcc", "-c", "-Wall", "src/main.c"],
+        }
 
-    def assert_cxx_compiler(self, command, cc="nope", cxx="nope++"):
-        value = sut.Compilation._split_compiler(command, cc, cxx)
-        self.assertIsNotNone(value)
-        self.assertEqual(value[0], "c++")
+        entry = sut.CompilationEntry.from_db_entry(entry_data)
 
-    def assert_not_compiler(self, command):
-        value = sut.Compilation._split_compiler(command, "nope", "nope")
-        self.assertIsNone(value)
+        self.assertEqual(entry.directory, "/home/user/project")
+        self.assertEqual(entry.file, "src/main.c")
+        self.assertEqual(entry.arguments, ["gcc", "-c", "-Wall", "src/main.c"])
 
-    def test_compiler_call(self):
-        self.assert_c_compiler(["cc"])
-        self.assert_cxx_compiler(["CC"])
-        self.assert_cxx_compiler(["c++"])
-        self.assert_cxx_compiler(["cxx"])
+    def test_from_db_entry_with_command(self):
+        """Test parsing compilation database entry with 'command' field."""
+        entry_data = {"directory": "/home/user/project", "file": "src/main.cpp", "command": "g++ -c -std=c++17 src/main.cpp"}
 
-    def test_clang_compiler_call(self):
-        self.assert_c_compiler(["clang"])
-        self.assert_c_compiler(["clang-3.6"])
-        self.assert_cxx_compiler(["clang++"])
-        self.assert_cxx_compiler(["clang++-3.5.1"])
+        entry = sut.CompilationEntry.from_db_entry(entry_data)
 
-    def test_gcc_compiler_call(self):
-        self.assert_c_compiler(["gcc"])
-        self.assert_cxx_compiler(["g++"])
+        self.assertEqual(entry.directory, "/home/user/project")
+        self.assertEqual(entry.file, "src/main.cpp")
+        self.assertEqual(entry.arguments, ["g++", "-c", "-std=c++17", "src/main.cpp"])
 
-    def test_intel_compiler_call(self):
-        self.assert_c_compiler(["icc"])
-        self.assert_cxx_compiler(["icpc"])
+    def test_from_db_entry_with_quoted_command(self):
+        """Test parsing compilation database entry with quoted arguments in command."""
+        entry_data = {
+            "directory": "/home/user/project",
+            "file": "src/test.c",
+            "command": 'gcc -DVERSION="1.0.0" -c src/test.c',
+        }
 
-    def test_aix_compiler_call(self):
-        self.assert_c_compiler(["xlc"])
-        self.assert_cxx_compiler(["xlc++"])
-        self.assert_cxx_compiler(["xlC"])
-        self.assert_c_compiler(["gxlc"])
-        self.assert_cxx_compiler(["gxlc++"])
+        entry = sut.CompilationEntry.from_db_entry(entry_data)
 
-    # def test_open_mpi_compiler_call(self):
-    #     self.assert_c_compiler(['mpicc'])
-    #     self.assert_cxx_compiler(['mpiCC'])
-    #     self.assert_cxx_compiler(['mpicxx'])
-    #     self.assert_cxx_compiler(['mpic++'])
-
-    def test_compiler_call_with_path(self):
-        self.assert_c_compiler(["/usr/local/bin/gcc"])
-        self.assert_cxx_compiler(["/usr/local/bin/g++"])
-        self.assert_c_compiler(["/usr/local/bin/clang"])
-
-    def test_cross_compiler_call(self):
-        self.assert_cxx_compiler(["armv7_neno-linux-gnueabi-g++"])
-
-    def test_compiler_wrapper_call(self):
-        self.assert_c_compiler(["distcc"])
-        self.assert_c_compiler(["distcc", "cc"])
-        self.assert_cxx_compiler(["distcc", "c++"])
-        self.assert_c_compiler(["ccache"])
-        self.assert_c_compiler(["ccache", "cc"])
-        self.assert_cxx_compiler(["ccache", "c++"])
-
-    def test_non_compiler_call(self):
-        self.assert_not_compiler([])
-        self.assert_not_compiler([""])
-        self.assert_not_compiler(["ld"])
-        self.assert_not_compiler(["as"])
-        self.assert_not_compiler(["/usr/local/bin/compiler"])
-
-    def test_specific_compiler_call(self):
-        self.assert_c_compiler(["nope"], cc="nope")
-        self.assert_c_compiler(["./nope"], cc="nope")
-        self.assert_c_compiler(["/path/nope"], cc="nope")
-        self.assert_cxx_compiler(["nope++"], cxx="nope++")
-        self.assert_cxx_compiler(["./nope++"], cxx="nope++")
-        self.assert_cxx_compiler(["/path/nope++"], cxx="nope++")
-
-    def assert_arguments_equal(self, expected, command):
-        value = sut.Compilation._split_compiler(command, "nope", "nope")
-        self.assertIsNotNone(value)
-        self.assertEqual(expected, value[1])
-
-    def test_argument_split(self):
-        arguments = ["-c", "file.c"]
-        self.assert_arguments_equal(arguments, ["distcc"] + arguments)
-        self.assert_arguments_equal(arguments, ["distcc", "cc"] + arguments)
-        self.assert_arguments_equal(arguments, ["distcc", "c++"] + arguments)
-        self.assert_arguments_equal(arguments, ["ccache"] + arguments)
-        self.assert_arguments_equal(arguments, ["ccache", "cc"] + arguments)
-        self.assert_arguments_equal(arguments, ["ccache", "c++"] + arguments)
+        self.assertEqual(entry.directory, "/home/user/project")
+        self.assertEqual(entry.file, "src/test.c")
+        self.assertEqual(entry.arguments, ["gcc", "-DVERSION=1.0.0", "-c", "src/test.c"])
 
 
-class SplitTest(unittest.TestCase):
-    def assert_compilation(self, command):
-        result = sut.Compilation._split_command(command, "nope", "nope")
-        self.assertIsNotNone(result)
+class CompilationTest(unittest.TestCase):
+    def test_c_compilation(self):
+        """Test creation of C compilation from entry."""
+        entry = sut.CompilationEntry(directory="/project", file="main.c", arguments=["gcc", "-Wall", "-O2", "main.c"])
 
-    def assert_non_compilation(self, command):
-        result = sut.Compilation._split_command(command, "nope", "nope")
-        self.assertIsNone(result)
+        compilation = sut.Compilation.from_entry(entry)
 
-    def test_action(self):
-        self.assert_compilation(["clang", "source.c"])
-        self.assert_compilation(["clang", "-c", "source.c"])
-        self.assert_compilation(["clang", "-c", "source.c", "-MF", "a.d"])
+        self.assertEqual(compilation.compiler, "c")
+        self.assertEqual(compilation.flags, ["-Wall", "-O2", "main.c"])
+        self.assertEqual(compilation.directory, "/project")
+        self.assertEqual(compilation.source, "/project/main.c")
 
-        self.assert_non_compilation(["clang", "-E", "source.c"])
-        self.assert_non_compilation(["clang", "-c", "-E", "source.c"])
-        self.assert_non_compilation(["clang", "-c", "-M", "source.c"])
-        self.assert_non_compilation(["clang", "-c", "-MM", "source.c"])
+    def test_cpp_compilation(self):
+        """Test creation of C++ compilation from entry."""
+        entry = sut.CompilationEntry(
+            directory="/project", file="main.cpp", arguments=["g++", "-std=c++17", "-Wall", "main.cpp"]
+        )
 
-    def assert_source_files(self, expected, command):
-        result = sut.Compilation._split_command(command, "nope", "nope")
-        self.assertIsNotNone(result)
-        self.assertEqual(expected, result.files)
+        compilation = sut.Compilation.from_entry(entry)
 
-    def test_source_file(self):
-        self.assert_source_files(["src.c"], ["clang", "src.c"])
-        self.assert_source_files(["src.c"], ["clang", "-c", "src.c"])
-        self.assert_source_files(["src.C"], ["clang", "-x", "c", "src.C"])
-        self.assert_source_files(["src.cpp"], ["clang++", "-c", "src.cpp"])
-        self.assert_source_files(["s1.c", "s2.c"], ["clang", "-c", "s1.c", "s2.c"])
-        self.assert_source_files(["s1.c", "s2.c"], ["cc", "s1.c", "s2.c", "-ldp", "-o", "a.out"])
-        self.assert_source_files(["src.c"], ["clang", "-c", "-I", "./include", "src.c"])
-        self.assert_source_files(["src.c"], ["clang", "-c", "-I", "/opt/inc", "src.c"])
-        self.assert_source_files(["src.c"], ["clang", "-c", "-Dconfig=file.c", "src.c"])
+        self.assertEqual(compilation.compiler, "c++")
+        self.assertEqual(compilation.flags, ["-std=c++17", "-Wall", "main.cpp"])
+        self.assertEqual(compilation.directory, "/project")
+        self.assertEqual(compilation.source, "/project/main.cpp")
 
-        self.assert_non_compilation(["cc", "this.o", "that.o", "-o", "a.out"])
-        self.assert_non_compilation(["cc", "this.o", "-lthat", "-o", "a.out"])
+    def test_clang_cpp_compilation(self):
+        """Test C++ detection with clang++."""
+        entry = sut.CompilationEntry(directory="/project", file="test.cc", arguments=["clang++", "-O3", "test.cc"])
 
-    def assert_flags(self, expected, flags):
-        command = ["clang", "-c", "src.c"] + flags
-        result = sut.Compilation._split_command(command, "nope", "nope")
-        self.assertIsNotNone(result)
-        self.assertEqual(expected, result.flags)
+        compilation = sut.Compilation.from_entry(entry)
 
-    def test_filter_flags(self):
-        def same(expected):
-            self.assert_flags(expected, expected)
+        self.assertEqual(compilation.compiler, "c++")
+        self.assertEqual(compilation.flags, ["-O3", "test.cc"])
 
-        def filtered(flags):
-            self.assert_flags([], flags)
+    def test_absolute_file_path(self):
+        """Test handling of absolute file paths."""
+        entry = sut.CompilationEntry(directory="/project", file="/absolute/path/to/file.c", arguments=["gcc", "file.c"])
 
-        same([])
-        same(["-I", "/opt/me/include", "-DNDEBUG", "-ULIMITS"])
-        same(["-O", "-O2"])
-        same(["-m32", "-mmms"])
-        same(["-Wall", "-Wno-unused", "-g", "-funroll-loops"])
+        compilation = sut.Compilation.from_entry(entry)
 
-        filtered([])
-        filtered(["-lclien", "-L/opt/me/lib", "-L", "/opt/you/lib"])
-        filtered(["-static"])
-        filtered(["-MD", "-MT", "something"])
-        filtered(["-MMD", "-MF", "something"])
+        self.assertEqual(compilation.source, "/absolute/path/to/file.c")
+
+    def test_empty_arguments(self):
+        """Test handling of empty arguments list."""
+        entry = sut.CompilationEntry(directory="/project", file="empty.c", arguments=[])
+
+        compilation = sut.Compilation.from_entry(entry)
+
+        self.assertEqual(compilation.compiler, "c")
+        self.assertEqual(compilation.flags, [])
+
+    def test_equality(self):
+        """Test compilation equality comparison."""
+        entry1 = sut.CompilationEntry("/project", "main.c", ["gcc", "main.c"])
+        entry2 = sut.CompilationEntry("/project", "main.c", ["gcc", "main.c"])
+        entry3 = sut.CompilationEntry("/project", "other.c", ["gcc", "other.c"])
+
+        comp1 = sut.Compilation.from_entry(entry1)
+        comp2 = sut.Compilation.from_entry(entry2)
+        comp3 = sut.Compilation.from_entry(entry3)
+
+        self.assertEqual(comp1, comp2)
+        self.assertNotEqual(comp1, comp3)
+        self.assertNotEqual(comp1, "not a compilation")
+
+    def test_as_dict(self):
+        """Test conversion to dictionary."""
+        entry = sut.CompilationEntry(directory="/project", file="main.c", arguments=["gcc", "-Wall", "main.c"])
+
+        compilation = sut.Compilation.from_entry(entry)
+        result = compilation.as_dict()
+
+        expected = {"source": "/project/main.c", "directory": "/project", "compiler": "c", "flags": ["-Wall", "main.c"]}
+
+        self.assertEqual(result, expected)
+
+
+class CompilationDatabaseTest(unittest.TestCase):
+    def test_load_simple_database(self):
+        """Test loading a simple compilation database."""
+        database_content = [
+            {"directory": "/project", "file": "main.c", "arguments": ["gcc", "-c", "main.c"]},
+            {"directory": "/project", "file": "utils.cpp", "command": "g++ -std=c++11 -c utils.cpp"},
+        ]
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(database_content, f)
+            temp_path = f.name
+
+        try:
+            compilations = list(sut.CompilationDatabase.load(temp_path))
+
+            self.assertEqual(len(compilations), 2)
+
+            # Check first compilation (C)
+            comp1 = compilations[0]
+            self.assertEqual(comp1.compiler, "c")
+            self.assertEqual(comp1.source, "/project/main.c")
+            self.assertEqual(comp1.flags, ["-c", "main.c"])
+
+            # Check second compilation (C++)
+            comp2 = compilations[1]
+            self.assertEqual(comp2.compiler, "c++")
+            self.assertEqual(comp2.source, "/project/utils.cpp")
+            self.assertEqual(comp2.flags, ["-std=c++11", "-c", "utils.cpp"])
+
+        finally:
+            os.unlink(temp_path)
+
+    def test_load_empty_database(self):
+        """Test loading an empty compilation database."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump([], f)
+            temp_path = f.name
+
+        try:
+            compilations = list(sut.CompilationDatabase.load(temp_path))
+            self.assertEqual(len(compilations), 0)
+        finally:
+            os.unlink(temp_path)
 
 
 class SourceClassifierTest(unittest.TestCase):
-    def assert_non_source(self, filename):
-        result = sut.classify_source(filename)
-        self.assertIsNone(result)
-
-    def assert_c_source(self, filename, force):
-        result = sut.classify_source(filename, force)
-        self.assertEqual("c", result)
-
-    def assert_cxx_source(self, filename, force):
-        result = sut.classify_source(filename, force)
-        self.assertEqual("c++", result)
-
     def test_sources(self):
-        self.assert_non_source("file.o")
-        self.assert_non_source("file.exe")
-        self.assert_non_source("/path/file.o")
-        self.assert_non_source("clang")
+        """Test source file classification by extension."""
+        tests = [
+            ("header.h", None),
+            ("impl.c", "c"),
+            ("impl.cc", "c++"),
+            ("impl.cpp", "c++"),
+            ("impl.cxx", "c++"),
+            ("impl.C", "c++"),
+            ("impl.c++", "c++"),
+            ("preprocessed.i", "c-cpp-output"),
+            ("preprocessed.ii", "c++-cpp-output"),
+            ("objc.m", "objective-c"),
+            ("objcpp.mm", "objective-c++"),
+            ("template.txx", "c++"),
+            ("unknown.xyz", None),
+        ]
 
-        self.assert_c_source("file.c", True)
-        self.assert_cxx_source("file.c", False)
+        for filename, expected in tests:
+            with self.subTest(filename=filename):
+                result = sut.classify_source(filename)
+                self.assertEqual(result, expected)
 
-        self.assert_cxx_source("file.cxx", True)
-        self.assert_cxx_source("file.cxx", False)
-        self.assert_cxx_source("file.c++", True)
-        self.assert_cxx_source("file.c++", False)
-        self.assert_cxx_source("file.cpp", True)
-        self.assert_cxx_source("file.cpp", False)
+    def test_c_compiler_context(self):
+        """Test source classification with C compiler context."""
+        # With C compiler context, .i files are C preprocessed output
+        result = sut.classify_source("test.i", c_compiler=True)
+        self.assertEqual(result, "c-cpp-output")
 
-        self.assert_c_source("/path/file.c", True)
-        self.assert_c_source("./path/file.c", True)
-        self.assert_c_source("../path/file.c", True)
-        self.assert_c_source("/file.c", True)
-        self.assert_c_source("./file.c", True)
+        # With C++ compiler context, .i files are C++ preprocessed output
+        result = sut.classify_source("test.i", c_compiler=False)
+        self.assertEqual(result, "c++-cpp-output")
+
+        # .c files change meaning based on compiler context
+        result = sut.classify_source("test.c", c_compiler=True)
+        self.assertEqual(result, "c")
+
+        result = sut.classify_source("test.c", c_compiler=False)
+        self.assertEqual(result, "c++")
