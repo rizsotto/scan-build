@@ -222,7 +222,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language_stops_on_not_supported(self):
         spy = Spy()
         input = {"compiler": "c", "flags": [], "source": "test.java", "language": "java"}
-        self.assertEquals(dict(), sut.language_check(input, spy.call))
+        self.assertEqual(dict(), sut.language_check(input, spy.call))
         self.assertIsNone(spy.arg)
 
     def test_set_language_sets_flags(self):
