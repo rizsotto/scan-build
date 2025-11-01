@@ -1,7 +1,4 @@
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# SPDX-License-Identifier: MIT
 """This module is responsible for the Clang executable.
 
 Since Clang command line interface is so rich, but this project is using only

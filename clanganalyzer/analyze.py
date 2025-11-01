@@ -1,7 +1,4 @@
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# SPDX-License-Identifier: MIT
 """This module implements the 'clanganalyzer' command API.
 
 To run the static analyzer against a project goes like this:

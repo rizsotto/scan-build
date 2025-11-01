@@ -1,7 +1,4 @@
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# SPDX-License-Identifier: MIT
 """This module is responsible to generate 'index.html' for the report.
 
 The input for this step is the output directory, where individual reports

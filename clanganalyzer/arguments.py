@@ -1,7 +1,4 @@
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# SPDX-License-Identifier: MIT
 """This module parses and validates arguments for command-line interfaces.
 
 It uses argparse module to create the command line parser. (This library is
