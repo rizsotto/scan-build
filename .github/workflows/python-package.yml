@@ -2,9 +2,9 @@ name: Python package
 
 on:
   push:
-    branches: [master, main, devel]
+    branches: [master, devel]
   pull_request:
-    branches: [master, main]
+    branches: [master]
 
 jobs:
   test:
@@ -63,7 +63,7 @@ jobs:
 
       - name: Type check with ty
         run: |
-          uv run ty clanganalyzer
+          uv run ty check clanganalyzer
 
       - name: Test with pytest
         run: |
