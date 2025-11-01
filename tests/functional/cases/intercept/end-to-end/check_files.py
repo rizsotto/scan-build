@@ -15,7 +15,7 @@ def main():
     # file is open, parse the json content
     entries = json.load(args.input)
     # just get file names
-    result = set([os.path.basename(entry["file"]) for entry in entries])
+    result = {os.path.basename(entry["file"]) for entry in entries}
     return 0 if result == EXPECTED else 1
 
 

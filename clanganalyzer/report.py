@@ -484,7 +484,7 @@ def parse_bug_html(filename: str) -> Generator[Bug, None, None]:
     ]
     endsign = re.compile(r"<!-- BUGMETAEND -->")
 
-    bug = dict()
+    bug = {}
     for line in safe_readlines(filename):
         # do not read the file further
         if endsign.match(line):
@@ -507,7 +507,7 @@ class BugCounter:
         self.categories: dict[str, Any] = {}
 
     def __call__(self, bug: Bug) -> None:
-        current_category = self.categories.get(bug.category, dict())
+        current_category = self.categories.get(bug.category, {})
         current_type = current_category.get(
             bug.type, {"bug_type": bug.type, "bug_type_class": bug.type_class(), "bug_count": 0}
         )

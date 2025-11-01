@@ -278,8 +278,7 @@ class CompilationDatabase:
 
         with open(filename) as handle:
             for entry in json.load(handle):
-                for compilation in Compilation.from_db_entry(entry):
-                    yield compilation
+                yield from Compilation.from_db_entry(entry)
 
 
 def classify_source(filename: str, c_compiler: bool = True) -> str | None:

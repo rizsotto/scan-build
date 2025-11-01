@@ -12,7 +12,6 @@ It also implements basic validation methods, related to the command.
 Validations are mostly calling specific help methods, or mangling values.
 """
 
-
 import argparse
 import logging
 import os
@@ -53,7 +52,7 @@ def normalize_args_for_analyze(args: argparse.Namespace, from_build_command: boo
         args.plugins = []
 
     # make exclude directory list unique and absolute.
-    uniq_excludes = set(os.path.abspath(entry) for entry in args.excludes)
+    uniq_excludes = {os.path.abspath(entry) for entry in args.excludes}
     args.excludes = list(uniq_excludes)
 
     # because shared codes for all tools, some common used methods are

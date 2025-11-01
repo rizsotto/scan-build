@@ -222,7 +222,7 @@ class AnalyzerTest(unittest.TestCase):
     def test_set_language_stops_on_not_supported(self):
         spy = Spy()
         input = {"compiler": "c", "flags": [], "source": "test.java", "language": "java"}
-        self.assertEqual(dict(), sut.language_check(input, spy.call))
+        self.assertEqual({}, sut.language_check(input, spy.call))
         self.assertIsNone(spy.arg)
 
     def test_set_language_sets_flags(self):
@@ -266,7 +266,7 @@ class AnalyzerTest(unittest.TestCase):
         def stop(archs):
             spy = Spy()
             input = {"flags": [], "arch_list": archs}
-            self.assertEqual(dict(), sut.arch_check(input, spy.call))
+            self.assertEqual({}, sut.arch_check(input, spy.call))
             self.assertIsNone(spy.arg)
 
         stop(["ppc"])
@@ -283,27 +283,33 @@ def method_with_expecteds(opts):
     return 0
 
 
+class TestException(Exception):
+    """Test-specific exception for testing exception handling."""
+
+    pass
+
+
 @sut.require([])
 def method_exception_from_inside(opts):
-    raise Exception("here is one")
+    raise TestException("here is one")
 
 
 class RequireDecoratorTest(unittest.TestCase):
     def test_method_without_expecteds(self):
-        self.assertEqual(method_without_expecteds(dict()), 0)
+        self.assertEqual(method_without_expecteds({}), 0)
         self.assertEqual(method_without_expecteds({}), 0)
         self.assertEqual(method_without_expecteds({"this": 2}), 0)
         self.assertEqual(method_without_expecteds({"that": 3}), 0)
 
     def test_method_with_expecteds(self):
-        self.assertRaises(AssertionError, method_with_expecteds, dict())
+        self.assertRaises(AssertionError, method_with_expecteds, {})
         self.assertRaises(AssertionError, method_with_expecteds, {})
         self.assertRaises(AssertionError, method_with_expecteds, {"this": 2})
         self.assertRaises(AssertionError, method_with_expecteds, {"that": 3})
         self.assertEqual(method_with_expecteds({"this": 0, "that": 3}), 0)
 
     def test_method_exception_not_caught(self):
-        self.assertRaises(Exception, method_exception_from_inside, dict())
+        self.assertRaises(TestException, method_exception_from_inside, {})
 
 
 class ReportDirectoryTest(unittest.TestCase):

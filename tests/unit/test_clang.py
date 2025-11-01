@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 import clanganalyzer.clang as sut
+from clanganalyzer.clang import ClangCompilationError
 
 
 class ClangGetVersion(unittest.TestCase):
@@ -32,7 +33,7 @@ class ClangGetArgumentsTest(unittest.TestCase):
             self.assertTrue('var="this is it"' in result)
 
     def test_get_clang_arguments_fails(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(ClangCompilationError):
             sut.get_arguments(["clang", "-x", "c", "notexist.c"], ".")
 
     def test_get_clang_arguments_fails_badly(self):

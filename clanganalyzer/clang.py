@@ -12,7 +12,14 @@ from collections.abc import Callable, Iterable
 
 from clanganalyzer import run_command, shell_split
 
-__all__ = ["get_version", "get_arguments", "get_checkers"]
+
+class ClangCompilationError(Exception):
+    """Raised when Clang compilation fails."""
+
+    pass
+
+
+__all__ = ["get_version", "get_arguments", "get_checkers", "ClangCompilationError"]
 
 # regex for activated checker
 ACTIVE_CHECKER_PATTERN = re.compile(r"^-analyzer-checker=(.*)$")
@@ -44,7 +51,7 @@ def get_arguments(command: list[str], cwd: str) -> list[str]:
     # Don't check if finding last line fails, would throw exception anyway.
     last_line = output[-1]
     if re.search(r"clang(.*): error:", last_line):
-        raise Exception(last_line)
+        raise ClangCompilationError(last_line)
     return shell_split(last_line)
 
 

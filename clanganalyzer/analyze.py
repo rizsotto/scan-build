@@ -335,10 +335,10 @@ def language_check(
 
     if language is None:
         logging.debug("skip analysis, language not known")
-        return dict()
+        return {}
     elif language not in accepted:
         logging.debug("skip analysis, language not supported")
-        return dict()
+        return {}
 
     logging.debug("analysis, language: %s", language)
     opts.update({"language": language, "flags": ["-x", language] + opts["flags"]})
@@ -368,7 +368,7 @@ def arch_check(
             opts.update({"flags": ["-arch", current] + opts["flags"]})
             return continuation(opts)
         logging.debug("skip analysis, found not supported arch")
-        return dict()
+        return {}
     logging.debug("analysis, on default arch")
     return continuation(opts)
 
@@ -471,5 +471,5 @@ def exclude(
 
     if any(contains(entry, opts["source"]) for entry in opts["excludes"]):
         logging.debug("skip analysis, file requested to exclude")
-        return dict()
+        return {}
     return continuation(opts)
