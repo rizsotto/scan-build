@@ -26,7 +26,7 @@ from collections.abc import Callable, Generator, Iterable
 from typing import Any
 
 from clanganalyzer import run_command
-from clanganalyzer.arguments import parse_args_for_analyze_build
+from clanganalyzer.arguments import parse_args
 from clanganalyzer.clang import get_arguments, get_version
 from clanganalyzer.compilation import Compilation, CompilationDatabase, classify_source
 from clanganalyzer.report import document
@@ -80,7 +80,7 @@ def command_entry_point(function: Callable[[], int]) -> Callable[[], int]:
 def analyze_build() -> int:
     """Entry point for clanganalyzer command."""
 
-    args = parse_args_for_analyze_build()
+    args = parse_args()
     # will re-assign the report directory as new output
     with report_directory(args.output, args.keep_empty) as args.output:
         # run the analyzer against a compilation db

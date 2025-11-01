@@ -20,6 +20,27 @@ import tempfile
 
 from clanganalyzer.clang import get_checkers
 
+# Default values
+DEFAULT_OUTPUT_DIR = tempfile.gettempdir()
+DEFAULT_CDB_FILE = "compile_commands.json"
+
+__all__ = ["parse_args"]
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments for clanganalyzer."""
+
+    parser = create_parser()
+    args = parser.parse_args()
+
+    reconfigure_logging(args.verbose)
+    logging.debug("Raw arguments %s", sys.argv)
+
+    normalize_args(args)
+    validate_args(parser, args)
+    logging.debug("Parsed arguments: %s", args)
+    return args
+
 
 def reconfigure_logging(verbose_level: int) -> None:
     """Reconfigure logging level and format based on verbosity.
@@ -48,29 +69,7 @@ def reconfigure_logging(verbose_level: int) -> None:
     root.handlers = [handler]
 
 
-# Default values
-DEFAULT_OUTPUT_DIR = tempfile.gettempdir()
-DEFAULT_CDB_FILE = "compile_commands.json"
-
-__all__ = ["parse_args_for_analyze_build"]
-
-
-def parse_args_for_analyze_build() -> argparse.Namespace:
-    """Parse and validate command-line arguments for clanganalyzer."""
-
-    parser = create_analyze_parser()
-    args = parser.parse_args()
-
-    reconfigure_logging(args.verbose)
-    logging.debug("Raw arguments %s", sys.argv)
-
-    normalize_args_for_analyze(args)
-    validate_args_for_analyze(parser, args)
-    logging.debug("Parsed arguments: %s", args)
-    return args
-
-
-def normalize_args_for_analyze(args: argparse.Namespace) -> None:
+def normalize_args(args: argparse.Namespace) -> None:
     """Normalize parsed arguments for clanganalyzer.
 
     :param args: Parsed argument object. (Will be mutated.)"""
@@ -103,10 +102,10 @@ def normalize_args_for_analyze(args: argparse.Namespace) -> None:
         args.disable_checker = flattened
 
 
-def validate_args_for_analyze(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Command line parsing is done by the argparse module, but semantic
     validation still needs to be done. This method is doing it for
-    clanganalyzer commands.
+    clanganalyzer.
 
     :param parser: The command line parser object.
     :param args: Parsed argument object.
@@ -123,8 +122,8 @@ def validate_args_for_analyze(parser: argparse.ArgumentParser, args: argparse.Na
         parser.error(message="compilation database is missing")
 
 
-def create_analyze_parser() -> argparse.ArgumentParser:
-    """Creates a parser for command-line arguments to 'analyze'."""
+def create_parser() -> argparse.ArgumentParser:
+    """Creates a parser for command-line arguments."""
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
