@@ -548,10 +548,10 @@ def safe_readlines(filename: str) -> Iterator[str]:
 
 def chop(prefix: str, filename: str) -> str:
     """Create 'filename' from '/prefix/filename'"""
-    result = filename
+    result: str = filename
     if prefix:
         try:
-            result = os.path.relpath(filename, prefix)
+            result = str(os.path.relpath(filename, prefix))
         except ValueError:
             pass
     return result
