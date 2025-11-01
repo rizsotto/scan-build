@@ -26,6 +26,7 @@ from clanganalyzer import run_command
 from clanganalyzer.arguments import parse_args
 from clanganalyzer.clang import get_arguments, get_version
 from clanganalyzer.compilation import Compilation, CompilationDatabase, classify_source
+from clanganalyzer.config import get_disabled_architectures, get_ignored_flags, get_supported_languages
 from clanganalyzer.report import document
 
 __all__ = ["analyze_build"]
@@ -362,9 +363,7 @@ def language_check(
     """Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation."""
 
-    accepted = frozenset(
-        {"c", "c++", "objective-c", "objective-c++", "c-cpp-output", "c++-cpp-output", "objective-c-cpp-output"}
-    )
+    accepted = get_supported_languages()
 
     # language can be given as a parameter...
     language = opts.pop("language")
@@ -391,7 +390,7 @@ def arch_check(
 ) -> dict[str, Any]:
     """Do run analyzer through one of the given architectures."""
 
-    disabled = frozenset({"ppc", "ppc64"})
+    disabled = get_disabled_architectures()
 
     received_list = opts.pop("arch_list")
     if received_list:
@@ -428,32 +427,6 @@ def target_check(
     return continuation(opts)
 
 
-# To have good results from static analyzer certain compiler options shall be
-# omitted. The compiler flag filtering only affects the static analyzer run.
-#
-# Keys are the option name, value number of options to skip
-IGNORED_FLAGS = {
-    "-c": 0,  # compile option will be overwritten
-    "-fsyntax-only": 0,  # static analyzer option will be overwritten
-    "-o": 1,  # will set up own output file
-    # flags below are inherited from the perl implementation.
-    "-g": 0,
-    "-save-temps": 0,
-    "-install_name": 1,
-    "-exported_symbols_list": 1,
-    "-current_version": 1,
-    "-compatibility_version": 1,
-    "-init": 1,
-    "-e": 1,
-    "-seg1addr": 1,
-    "-bundle_loader": 1,
-    "-multiply_defined": 1,
-    "-sectorder": 3,
-    "--param": 1,
-    "--serialize-diagnostics": 1,
-}
-
-
 @require(["flags"])
 def classify_parameters(
     opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = target_check
@@ -478,8 +451,8 @@ def classify_parameters(
         elif arg == "-x":
             result["language"] = next(args)
         # ignore some flags
-        elif arg in IGNORED_FLAGS:
-            count = IGNORED_FLAGS[arg]
+        elif arg in get_ignored_flags():
+            count = get_ignored_flags()[arg]
             for _ in range(count):
                 next(args)
         # we don't care about extra warnings, but we should suppress ones
