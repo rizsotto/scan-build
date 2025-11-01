@@ -50,7 +50,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
-    "ty>=0.1.0",
+    "ty>=0.0",
     "lit>=17.0",
 ]
 test = [
@@ -60,7 +60,7 @@ test = [
 ]
 lint = [
     "ruff>=0.1.0",
-    "ty>=0.1.0",
+    "ty>=0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

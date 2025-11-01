@@ -17,26 +17,24 @@ def diff(lhs, rhs):
     right = {smooth(entry): entry for entry in rhs}
     for key in left.keys():
         if key not in right:
-            yield '> {}'.format(left[key])
+            yield "> {}".format(left[key])
     for key in right.keys():
         if key not in left:
-            yield '< {}'.format(right[key])
+            yield "< {}".format(right[key])
 
 
 def smooth(entry):
-    directory = os.path.normpath(entry['directory'])
-    source = entry['file'] if os.path.isabs(entry['file']) else \
-        os.path.normpath(os.path.join(directory, entry['file']))
-    arguments = entry['command'].split() if 'command' in entry else \
-        entry['arguments']
-    return '-'.join([source[::-1]] + arguments)
+    directory = os.path.normpath(entry["directory"])
+    source = entry["file"] if os.path.isabs(entry["file"]) else os.path.normpath(os.path.join(directory, entry["file"]))
+    arguments = entry["command"].split() if "command" in entry else entry["arguments"]
+    return "-".join([source[::-1]] + arguments)
 
 
 def main():
-    """ Semantically diff two compilation databases. """
+    """Semantically diff two compilation databases."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('left', type=argparse.FileType('r'))
-    parser.add_argument('right', type=argparse.FileType('r'))
+    parser.add_argument("left", type=argparse.FileType("r"))
+    parser.add_argument("right", type=argparse.FileType("r"))
     args = parser.parse_args()
     # files are open, parse the json content
     lhs = json.load(args.left)

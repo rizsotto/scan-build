@@ -24,7 +24,7 @@ class TemporaryDirectoryTest(unittest.TestCase):
             with sut.temporary_directory() as tmpdir:
                 self.assertTrue(os.path.isdir(tmpdir))
                 dir_name = tmpdir
-                raise RuntimeError('message')
+                raise RuntimeError("message")
         except Exception:
             self.assertIsNotNone(dir_name)
             self.assertFalse(os.path.exists(dir_name))
