@@ -17,8 +17,9 @@ import re
 import shutil
 import socket
 import sys
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterable, Iterator
 from dataclasses import dataclass, field
+from typing import TextIO
 
 from clanganalyzer.clang import get_version
 from clanganalyzer.compilation import CompilationDatabase
@@ -110,15 +111,12 @@ def assemble_cover(args: argparse.Namespace, prefix: str, fragments: list[str]) 
         )
 
 
-def bug_summary(output_dir: str, bug_counter: "BugCounter") -> str:
-    """Bug summary is a HTML table to give a better overview of the bugs."""
-
-    name = os.path.join(output_dir, "summary.html.fragment")
-    with open(name, "w") as handle:
-        indent = 4
-        _ = handle.write(
-            reindent(
-                f"""
+def _write_bug_summary(handle: TextIO, bug_counter: "BugCounter") -> None:
+    """Write bug summary HTML table to a file-like object."""
+    indent = 4
+    _ = handle.write(
+        reindent(
+            f"""
         |<h2>Bug Summary</h2>
         |<table>
         |  <thead>
@@ -139,23 +137,23 @@ def bug_summary(output_dir: str, bug_counter: "BugCounter") -> str:
         |        </center>
         |      </td>
         |    </tr>""",
-                indent,
-            )
+            indent,
         )
-        for category, types in bug_counter.categories.items():
-            _ = handle.write(
-                reindent(
-                    f"""
+    )
+    for category, types in bug_counter.categories.items():
+        _ = handle.write(
+            reindent(
+                f"""
         |    <tr>
         |      <th>{category}</th><th colspan=2></th>
         |    </tr>""",
-                    indent,
-                )
+                indent,
             )
-            for bug_type in types.values():
-                _ = handle.write(
-                    reindent(
-                        f"""
+        )
+        for bug_type in types.values():
+            _ = handle.write(
+                reindent(
+                    f"""
         |    <tr>
         |      <td class="SUMM_DESC">{bug_type.bug_type}</td>
         |      <td class="Q">{bug_type.bug_count}</td>
@@ -166,30 +164,35 @@ def bug_summary(output_dir: str, bug_counter: "BugCounter") -> str:
         |        </center>
         |      </td>
         |    </tr>""",
-                        indent,
-                    )
+                    indent,
                 )
-        _ = handle.write(
-            reindent(
-                """
+            )
+    _ = handle.write(
+        reindent(
+            """
         |  </tbody>
         |</table>""",
-                indent,
-            )
+            indent,
         )
-        _ = handle.write(comment("SUMMARYBUGEND"))
+    )
+    _ = handle.write(comment("SUMMARYBUGEND"))
+
+
+def bug_summary(output_dir: str, bug_counter: "BugCounter") -> str:
+    """Bug summary is a HTML table to give a better overview of the bugs."""
+
+    name = os.path.join(output_dir, "summary.html.fragment")
+    with open(name, "w") as handle:
+        _write_bug_summary(handle, bug_counter)
     return name
 
 
-def bug_report(output_dir: str, prefix: str) -> str:
-    """Creates a fragment from the analyzer reports."""
-
-    name = os.path.join(output_dir, "bugs.html.fragment")
-    with open(name, "w") as handle:
-        indent = 4
-        _ = handle.write(
-            reindent(
-                """
+def _write_bug_report(handle: TextIO, prefix: str, output_dir: str, bugs: Iterable["Bug"]) -> None:
+    """Write bug report HTML table to a file-like object."""
+    indent = 4
+    _ = handle.write(
+        reindent(
+            """
         |<h2>Reports</h2>
         |<table class="sortable" style="table-layout:automatic">
         |  <thead>
@@ -207,16 +210,16 @@ def bug_report(output_dir: str, prefix: str) -> str:
         |    </tr>
         |  </thead>
         |  <tbody>""",
-                indent,
-            )
+            indent,
         )
-        _ = handle.write(comment("REPORTBUGCOL"))
-        formatter = BugFormatter(prefix, output_dir)
-        for bug in BugParser.read_bugs(output_dir, True):
-            current = formatter.format(bug)
-            _ = handle.write(
-                reindent(
-                    f"""
+    )
+    _ = handle.write(comment("REPORTBUGCOL"))
+    formatter = BugFormatter(prefix, output_dir)
+    for bug in bugs:
+        current = formatter.format(bug)
+        _ = handle.write(
+            reindent(
+                f"""
         |    <tr class="{current.type_class}">
         |      <td class="DESC">{current.category}</td>
         |      <td class="DESC">{current.type}</td>
@@ -226,31 +229,37 @@ def bug_report(output_dir: str, prefix: str) -> str:
         |      <td class="Q">{current.path_length}</td>
         |      <td><a href="{current.report}#EndPath">View Report</a></td>
         |    </tr>""",
-                    indent,
-                )
-            )
-            _ = handle.write(comment("REPORTBUG", vars(current)))
-        _ = handle.write(
-            reindent(
-                """
-        |  </tbody>
-        |</table>""",
                 indent,
             )
         )
-        _ = handle.write(comment("REPORTBUGEND"))
+        _ = handle.write(comment("REPORTBUG", vars(current)))
+    _ = handle.write(
+        reindent(
+            """
+        |  </tbody>
+        |</table>""",
+            indent,
+        )
+    )
+    _ = handle.write(comment("REPORTBUGEND"))
+
+
+def bug_report(output_dir: str, prefix: str) -> str:
+    """Creates a fragment from the analyzer reports."""
+
+    name = os.path.join(output_dir, "bugs.html.fragment")
+    bugs = BugParser.read_bugs(output_dir, True)
+    with open(name, "w") as handle:
+        _write_bug_report(handle, prefix, output_dir, bugs)
     return name
 
 
-def crash_report(output_dir: str, prefix: str) -> str:
-    """Creates a fragment from the compiler crashes."""
-
-    name = os.path.join(output_dir, "crashes.html.fragment")
-    with open(name, "w") as handle:
-        indent = 4
-        _ = handle.write(
-            reindent(
-                """
+def _write_crash_report(handle: TextIO, prefix: str, output_dir: str, crashes: Iterable["Crash"]) -> None:
+    """Write crash report HTML table to a file-like object."""
+    indent = 4
+    _ = handle.write(
+        reindent(
+            """
         |<h2>Analyzer Failures</h2>
         |<p>The analyzer had problems processing the following files:</p>
         |<table>
@@ -263,34 +272,43 @@ def crash_report(output_dir: str, prefix: str) -> str:
         |    </tr>
         |  </thead>
         |  <tbody>""",
-                indent,
-            )
+            indent,
         )
-        formatter = CrashFormatter(prefix, output_dir)
-        for crash in CrashReader.read(output_dir):
-            current = formatter.format(crash)
-            _ = handle.write(
-                reindent(
-                    f"""
+    )
+    formatter = CrashFormatter(prefix, output_dir)
+    for crash in crashes:
+        current = formatter.format(crash)
+        _ = handle.write(
+            reindent(
+                f"""
         |    <tr>
         |      <td>{current.problem}</td>
         |      <td>{current.source}</td>
         |      <td><a href="{current.file}">preprocessor output</a></td>
         |      <td><a href="{current.stderr}">analyzer std err</a></td>
         |    </tr>""",
-                    indent,
-                )
-            )
-            _ = handle.write(comment("REPORTPROBLEM", vars(current)))
-        _ = handle.write(
-            reindent(
-                """
-        |  </tbody>
-        |</table>""",
                 indent,
             )
         )
-        _ = handle.write(comment("REPORTCRASHES"))
+        _ = handle.write(comment("REPORTPROBLEM", vars(current)))
+    _ = handle.write(
+        reindent(
+            """
+        |  </tbody>
+        |</table>""",
+            indent,
+        )
+    )
+    _ = handle.write(comment("REPORTCRASHES"))
+
+
+def crash_report(output_dir: str, prefix: str) -> str:
+    """Creates a fragment from the compiler crashes."""
+
+    name = os.path.join(output_dir, "crashes.html.fragment")
+    crashes = CrashReader.read(output_dir)
+    with open(name, "w") as handle:
+        _write_crash_report(handle, prefix, output_dir, crashes)
     return name
 
 
@@ -310,8 +328,13 @@ class CrashReader:
     def _parse_info_file(cls, filename: str) -> tuple[str, str] | None:
         """Parse out the crash information from the report file."""
 
-        lines = list(safe_readlines(filename))
-        return None if len(lines) < 2 else (lines[0], lines[1])
+        lines_iter = safe_readlines(filename)
+        try:
+            first_line = next(lines_iter)
+            second_line = next(lines_iter)
+            return (first_line, second_line)
+        except StopIteration:
+            return None
 
     @classmethod
     def read(cls, output_dir: str) -> Iterator[Crash]:
