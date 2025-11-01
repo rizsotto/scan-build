@@ -3,7 +3,7 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-"""This module implements the 'analyze-build' command API.
+"""This module implements the 'clanganalyzer' command API.
 
 To run the static analyzer against a project goes like this:
 
@@ -25,11 +25,11 @@ import datetime
 import argparse  # noqa: ignore=F401
 from typing import Any, Dict, List, Callable, Iterable, Generator  # noqa: ignore=F401
 
-from libscanbuild import command_entry_point, run_command
-from libscanbuild.arguments import parse_args_for_analyze_build
-from libscanbuild.report import document
-from libscanbuild.compilation import Compilation, classify_source, CompilationDatabase
-from libscanbuild.clang import get_version, get_arguments
+from clanganalyzer import command_entry_point, run_command
+from clanganalyzer.arguments import parse_args_for_analyze_build
+from clanganalyzer.report import document
+from clanganalyzer.compilation import Compilation, classify_source, CompilationDatabase
+from clanganalyzer.clang import get_version, get_arguments
 
 __all__ = ["analyze_build"]
 
@@ -37,7 +37,7 @@ __all__ = ["analyze_build"]
 @command_entry_point
 def analyze_build():
     # type: () -> int
-    """Entry point for analyze-build command."""
+    """Entry point for clanganalyzer command."""
 
     args = parse_args_for_analyze_build()
     # will re-assign the report directory as new output
@@ -138,7 +138,7 @@ def report_directory(hint, keep):
     hint -- could specify the parent directory of the output directory.
     keep -- a boolean value to keep or delete the empty report directory."""
 
-    stamp_format = "analyze-build-%Y-%m-%d-%H-%M-%S-%f-"
+    stamp_format = "clanganalyzer-%Y-%m-%d-%H-%M-%S-%f-"
     stamp = datetime.datetime.now().strftime(stamp_format)
     parent_dir = os.path.abspath(hint)
     if not os.path.exists(parent_dir):

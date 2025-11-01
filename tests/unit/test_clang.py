@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 import tempfile
-import libscanbuild.clang as sut
+import clanganalyzer.clang as sut
 import unittest
 import os.path
 

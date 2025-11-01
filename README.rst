@@ -14,11 +14,11 @@
         :target: https://gitter.im/rizsotto/scan-build?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
 
-scan-build
-==========
+clanganalyzer
+=============
 
 A package designed to run the clang static analyzer against projects
-with existing compilation databases. The analyze-build tool runs the
+with existing compilation databases. The clanganalyzer tool runs the
 clang static analyzer against a compilation database.
 
 
@@ -27,11 +27,11 @@ How to get
 
 It's available from `the Python Package Index`_ and can be installed using pip or uv::
 
-    $ pip install scan-build
+    $ pip install clanganalyzer
 
 Or using uv (recommended)::
 
-    $ uv add scan-build
+    $ uv add clanganalyzer
 
 For development::
 
@@ -59,7 +59,7 @@ How to use
 To run the Clang static analyzer against a project with an existing
 compilation database goes like this::
 
-    $ analyze-build
+    $ clanganalyzer
 
 Use ``--help`` to know more about the command.
 
@@ -67,7 +67,7 @@ Use ``--help`` to know more about the command.
 Prerequisites
 -------------
 
-The ``analyze-build`` tool requires:
+The ``clanganalyzer`` tool requires:
 
 1. An existing compilation database (``compile_commands.json``) for your project
 2. The clang static analyzer to be available on your system
@@ -91,7 +91,7 @@ Development
 To set up a development environment::
 
     $ git clone https://github.com/rizsotto/scan-build.git
-    $ cd scan-build
+    $ cd clanganalyzer
     $ uv sync --all-extras
 
 To run tests::
@@ -122,5 +122,5 @@ See LICENSE.TXT for details.
 
 
 .. _compilation database: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-.. _the Python Package Index: https://pypi.python.org/pypi/scan-build
+.. _the Python Package Index: https://pypi.python.org/pypi/clanganalyzer
 .. _issue tracker: https://github.com/rizsotto/scan-build/issues

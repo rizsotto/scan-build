@@ -14,7 +14,7 @@ import subprocess
 from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
 from typing import Optional  # noqa: ignore=F401
 
-from libscanbuild import Execution, shell_split, run_command
+from clanganalyzer import Execution, shell_split, run_command
 
 
 __all__ = ["classify_source", "Compilation", "CompilationDatabase"]

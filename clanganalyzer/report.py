@@ -23,7 +23,7 @@ import getpass
 import socket
 import argparse  # noqa: ignore=F401
 from typing import Dict, List, Tuple, Any, Set, Generator, Iterator, Optional  # noqa: ignore=F401
-from libscanbuild.clang import get_version
+from clanganalyzer.clang import get_version
 
 __all__ = ["document"]
 

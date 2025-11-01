@@ -22,8 +22,8 @@ import logging
 import tempfile
 from typing import Tuple, Dict  # noqa: ignore=F401
 
-from libscanbuild import reconfigure_logging
-from libscanbuild.clang import get_checkers
+from clanganalyzer import reconfigure_logging
+from clanganalyzer.clang import get_checkers
 
 
 __all__ = ["parse_args_for_analyze_build"]
@@ -31,7 +31,7 @@ __all__ = ["parse_args_for_analyze_build"]
 
 def parse_args_for_analyze_build():
     # type: () -> argparse.Namespace
-    """Parse and validate command-line arguments for analyze-build."""
+    """Parse and validate command-line arguments for clanganalyzer."""
 
     from_build_command = False
     parser = create_analyze_parser(from_build_command)
@@ -48,7 +48,7 @@ def parse_args_for_analyze_build():
 
 def normalize_args_for_analyze(args, from_build_command):
     # type: (argparse.Namespace, bool) -> None
-    """Normalize parsed arguments for analyze-build.
+    """Normalize parsed arguments for clanganalyzer.
 
     :param args: Parsed argument object. (Will be mutated.)
     :param from_build_command: Boolean value tells is the command suppose
@@ -76,7 +76,7 @@ def validate_args_for_analyze(parser, args, from_build_command):
     # type: (argparse.ArgumentParser, argparse.Namespace, bool) -> None
     """Command line parsing is done by the argparse module, but semantic
     validation still needs to be done. This method is doing it for
-    analyze-build commands.
+    clanganalyzer commands.
 
     :param parser: The command line parser object.
     :param args: Parsed argument object.
@@ -103,7 +103,7 @@ def create_analyze_parser(from_build_command):
 
     if from_build_command:
         # from_build_command mode is no longer supported
-        parser.error("Build command mode is not supported. Use analyze-build with a compilation database instead.")
+        parser.error("Build command mode is not supported. Use clanganalyzer with a compilation database instead.")
     else:
         parser_add_cdb(parser)
 

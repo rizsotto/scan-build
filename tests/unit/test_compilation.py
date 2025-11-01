@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libscanbuild.compilation as sut
+import clanganalyzer.compilation as sut
 import unittest
 
 

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "scan-build"
+name = "clanganalyzer"
 version = "2.0.20"
 description = "static code analyzer tool for Clang with compilation database support."
 readme = "README.rst"
@@ -37,7 +37,7 @@ Repository = "https://github.com/rizsotto/scan-build"
 Issues = "https://github.com/rizsotto/scan-build/issues"
 
 [project.scripts]
-analyze-build = "libscanbuild.analyze:analyze_build"
+clanganalyzer = "clanganalyzer.analyze:analyze_build"
 
 [project.optional-dependencies]
 dev = [
@@ -58,14 +58,14 @@ lint = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["libscanbuild"]
+packages = ["clanganalyzer"]
 
 [tool.hatch.build.targets.wheel.sources]
-"libscanbuild" = "libscanbuild"
+"clanganalyzer" = "clanganalyzer"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/libscanbuild",
+    "/clanganalyzer",
     "/tests",
     "/README.rst",
     "/LICENSE.txt",
@@ -92,7 +92,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["libscanbuild"]
+known-first-party = ["clanganalyzer"]
 
 [tool.ty]
 python_version = "3.10"
@@ -114,7 +114,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.coverage.run]
-source = ["libscanbuild"]
+source = ["clanganalyzer"]
 omit = [
     "*/tests/*",
     "*/test_*",

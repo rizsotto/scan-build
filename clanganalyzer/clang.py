@@ -12,7 +12,7 @@ import re
 from typing import List, Set, FrozenSet, Callable  # noqa: ignore=F401
 from typing import Iterable, Tuple, Dict  # noqa: ignore=F401
 
-from libscanbuild import shell_split, run_command
+from clanganalyzer import shell_split, run_command
 
 __all__ = ["get_version", "get_arguments", "get_checkers"]
 

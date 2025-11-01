@@ -5,7 +5,7 @@
 # License. See LICENSE.TXT for details.
 
 import tempfile
-import libscanbuild.report as sut
+import clanganalyzer.report as sut
 import unittest
 import os
 import os.path
@@ -63,7 +63,7 @@ class ParseFileTest(unittest.TestCase):
             self.assertEqual(problem, content[1].rstrip())
 
     def test_parse_real_crash(self):
-        import libscanbuild.analyze as sut2
+        import clanganalyzer.analyze as sut2
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filename = os.path.join(tmpdir, "test.c")

@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libscanbuild.analyze as sut
+import clanganalyzer.analyze as sut
 import tempfile
 import unittest
 import os
@@ -309,7 +309,7 @@ class RequireDecoratorTest(unittest.TestCase):
 class ReportDirectoryTest(unittest.TestCase):
     # Test that successive report directory names ascend in lexicographic
     # order. This is required so that report directories from two runs of
-    # analyze-build can be easily matched up to compare results.
+    # clanganalyzer can be easily matched up to compare results.
     @unittest.skipIf(IS_WINDOWS, "windows has low resolution timer")
     def test_directory_name_comparison(self):
         with (
