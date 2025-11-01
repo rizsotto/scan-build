@@ -19,7 +19,7 @@ import shutil
 import socket
 import sys
 from collections.abc import Generator, Iterator
-from typing import Any
+from dataclasses import dataclass, field
 
 from clanganalyzer.clang import get_version
 
@@ -32,9 +32,9 @@ def document(args: argparse.Namespace) -> int:
     html_reports_available = args.output_format in {"html", "plist-html"}
 
     logging.debug("count crashes and bugs")
-    crash_count = sum(1 for _ in Crash.read(args.output))
-    bug_counter = create_counters()
-    for bug in read_bugs(args.output, html_reports_available):
+    crash_count = sum(1 for _ in CrashReader.read(args.output))
+    bug_counter = BugCounter()
+    for bug in BugParser.read_bugs(args.output, html_reports_available):
         bug_counter(bug)
     result = crash_count + bug_counter.total
 
@@ -45,7 +45,7 @@ def document(args: argparse.Namespace) -> int:
         # common prefix for source files to have sorter path
         prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
         # assemble the cover from multiple fragments
-        fragments = []
+        fragments: list[str] = []
         try:
             if bug_counter.total:
                 fragments.append(bug_summary(args.output, bug_counter))
@@ -66,54 +66,44 @@ def document(args: argparse.Namespace) -> int:
 def assemble_cover(args: argparse.Namespace, prefix: str, fragments: list[str]) -> None:
     """Put together the fragments into a final report."""
 
-    if args.html_title is None:
-        args.html_title = os.path.basename(prefix) + " - analyzer results"
+    html_title = args.html_title if args.html_title else os.path.basename(prefix) + " - analyzer results"
+    user_name = getpass.getuser()
+    host_name = socket.gethostname()
+    cmd_args = " ".join(sys.argv)
+    clang_version = get_version(args.clang)
+    date = datetime.datetime.today().strftime("%c")
 
     with open(os.path.join(args.output, "index.html"), "w") as handle:
         indent = 0
-        handle.write(
+        _ = handle.write(
             reindent(
-                """
+                f"""
         |<!DOCTYPE html>
         |<html>
         |  <head>
-        |    <title>{html_title}</title>
+        |    <title>{args.html_title}</title>
         |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
         |    <script type='text/javascript' src="sorttable.js"></script>
         |    <script type='text/javascript' src='selectable.js'></script>
-        |  </head>""",
-                indent,
-            ).format(html_title=args.html_title)
-        )
-        handle.write(comment("SUMMARYENDHEAD"))
-        handle.write(
-            reindent(
-                """
+        |  </head>
+        |<!-- SUMMARYENDHEAD -->
         |  <body>
         |    <h1>{html_title}</h1>
         |    <table>
         |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
-        |      <tr><th>Working Directory:</th><td>{current_dir}</td></tr>
+        |      <tr><th>Working Directory:</th><td>{prefix}</td></tr>
         |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
         |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
         |      <tr><th>Date:</th><td>{date}</td></tr>
         |    </table>""",
                 indent,
-            ).format(
-                html_title=args.html_title,
-                user_name=getpass.getuser(),
-                host_name=socket.gethostname(),
-                current_dir=prefix,
-                cmd_args=" ".join(sys.argv),
-                clang_version=get_version(args.clang),
-                date=datetime.datetime.today().strftime("%c"),
             )
         )
         for fragment in fragments:
             # copy the content of fragments
             with open(fragment) as input_handle:
                 shutil.copyfileobj(input_handle, handle)
-        handle.write(
+        _ = handle.write(
             reindent(
                 """
         |  </body>
@@ -123,15 +113,15 @@ def assemble_cover(args: argparse.Namespace, prefix: str, fragments: list[str]) 
         )
 
 
-def bug_summary(output_dir, bug_counter):
+def bug_summary(output_dir: str, bug_counter: "BugCounter") -> str:
     """Bug summary is a HTML table to give a better overview of the bugs."""
 
     name = os.path.join(output_dir, "summary.html.fragment")
     with open(name, "w") as handle:
         indent = 4
-        handle.write(
+        _ = handle.write(
             reindent(
-                """
+                f"""
         |<h2>Bug Summary</h2>
         |<table>
         |  <thead>
@@ -141,16 +131,10 @@ def bug_summary(output_dir, bug_counter):
         |      <td class="sorttable_nosort">Display?</td>
         |    </tr>
         |  </thead>
-        |  <tbody>""",
-                indent,
-            )
-        )
-        handle.write(
-            reindent(
-                """
+        |  <tbody>
         |    <tr style="font-weight:bold">
         |      <td class="SUMM_DESC">All Bugs</td>
-        |      <td class="Q">{0}</td>
+        |      <td class="Q">{bug_counter.total}</td>
         |      <td>
         |        <center>
         |          <input checked type="checkbox" id="AllBugsCheck"
@@ -159,36 +143,36 @@ def bug_summary(output_dir, bug_counter):
         |      </td>
         |    </tr>""",
                 indent,
-            ).format(bug_counter.total)
+            )
         )
         for category, types in bug_counter.categories.items():
-            handle.write(
+            _ = handle.write(
                 reindent(
-                    """
+                    f"""
         |    <tr>
-        |      <th>{0}</th><th colspan=2></th>
+        |      <th>{category}</th><th colspan=2></th>
         |    </tr>""",
                     indent,
-                ).format(category)
+                )
             )
             for bug_type in types.values():
-                handle.write(
+                _ = handle.write(
                     reindent(
-                        """
+                        f"""
         |    <tr>
-        |      <td class="SUMM_DESC">{bug_type}</td>
-        |      <td class="Q">{bug_count}</td>
+        |      <td class="SUMM_DESC">{bug_type.bug_type}</td>
+        |      <td class="Q">{bug_type.bug_count}</td>
         |      <td>
         |        <center>
         |          <input checked type="checkbox"
-        |                 onClick="ToggleDisplay(this,'{bug_type_class}');"/>
+        |                 onClick="ToggleDisplay(this,'{bug_type.bug_type_class}');"/>
         |        </center>
         |      </td>
         |    </tr>""",
                         indent,
-                    ).format(**bug_type)
+                    )
                 )
-        handle.write(
+        _ = handle.write(
             reindent(
                 """
         |  </tbody>
@@ -196,20 +180,17 @@ def bug_summary(output_dir, bug_counter):
                 indent,
             )
         )
-        handle.write(comment("SUMMARYBUGEND"))
+        _ = handle.write(comment("SUMMARYBUGEND"))
     return name
 
 
 def bug_report(output_dir: str, prefix: str) -> str:
     """Creates a fragment from the analyzer reports."""
 
-    # pretty = prettify_bug(prefix, output_dir)
-    # bugs = (pretty(bug) for bug in read_bugs(output_dir, True))
-
     name = os.path.join(output_dir, "bugs.html.fragment")
     with open(name, "w") as handle:
         indent = 4
-        handle.write(
+        _ = handle.write(
             reindent(
                 """
         |<h2>Reports</h2>
@@ -232,26 +213,27 @@ def bug_report(output_dir: str, prefix: str) -> str:
                 indent,
             )
         )
-        handle.write(comment("REPORTBUGCOL"))
-        for bug in read_bugs(output_dir, True):
-            current = bug.pretty(prefix, output_dir)
-            handle.write(
+        _ = handle.write(comment("REPORTBUGCOL"))
+        formatter = BugFormatter(prefix, output_dir)
+        for bug in BugParser.read_bugs(output_dir, True):
+            current = formatter.format(bug)
+            _ = handle.write(
                 reindent(
-                    """
-        |    <tr class="{bug_type_class}">
-        |      <td class="DESC">{bug_category}</td>
-        |      <td class="DESC">{bug_type}</td>
-        |      <td>{bug_file}</td>
-        |      <td class="DESC">{bug_function}</td>
-        |      <td class="Q">{bug_line}</td>
-        |      <td class="Q">{bug_path_length}</td>
-        |      <td><a href="{report_file}#EndPath">View Report</a></td>
+                    f"""
+        |    <tr class="{current.type_class}">
+        |      <td class="DESC">{current.category}</td>
+        |      <td class="DESC">{current.type}</td>
+        |      <td>{current.file}</td>
+        |      <td class="DESC">{current.function}</td>
+        |      <td class="Q">{current.line}</td>
+        |      <td class="Q">{current.path_length}</td>
+        |      <td><a href="{current.report}#EndPath">View Report</a></td>
         |    </tr>""",
                     indent,
-                ).format(**current)
+                )
             )
-            handle.write(comment("REPORTBUG", {"id": current["report_file"]}))
-        handle.write(
+            _ = handle.write(comment("REPORTBUG", vars(current)))
+        _ = handle.write(
             reindent(
                 """
         |  </tbody>
@@ -259,7 +241,7 @@ def bug_report(output_dir: str, prefix: str) -> str:
                 indent,
             )
         )
-        handle.write(comment("REPORTBUGEND"))
+        _ = handle.write(comment("REPORTBUGEND"))
     return name
 
 
@@ -269,7 +251,7 @@ def crash_report(output_dir: str, prefix: str) -> str:
     name = os.path.join(output_dir, "crashes.html.fragment")
     with open(name, "w") as handle:
         indent = 4
-        handle.write(
+        _ = handle.write(
             reindent(
                 """
         |<h2>Analyzer Failures</h2>
@@ -287,22 +269,23 @@ def crash_report(output_dir: str, prefix: str) -> str:
                 indent,
             )
         )
-        for crash in Crash.read(output_dir):
-            current = crash.pretty(prefix, output_dir)
-            handle.write(
+        formatter = CrashFormatter(prefix, output_dir)
+        for crash in CrashReader.read(output_dir):
+            current = formatter.format(crash)
+            _ = handle.write(
                 reindent(
-                    """
+                    f"""
         |    <tr>
-        |      <td>{problem}</td>
-        |      <td>{source}</td>
-        |      <td><a href="{file}">preprocessor output</a></td>
-        |      <td><a href="{stderr}">analyzer std err</a></td>
+        |      <td>{current.problem}</td>
+        |      <td>{current.source}</td>
+        |      <td><a href="{current.file}">preprocessor output</a></td>
+        |      <td><a href="{current.stderr}">analyzer std err</a></td>
         |    </tr>""",
                     indent,
-                ).format(**current)
+                )
             )
-            handle.write(comment("REPORTPROBLEM", current))
-        handle.write(
+            _ = handle.write(comment("REPORTPROBLEM", vars(current)))
+        _ = handle.write(
             reindent(
                 """
         |  </tbody>
@@ -310,35 +293,21 @@ def crash_report(output_dir: str, prefix: str) -> str:
                 indent,
             )
         )
-        handle.write(comment("REPORTCRASHES"))
+        _ = handle.write(comment("REPORTCRASHES"))
     return name
 
 
+@dataclass
 class Crash:
-    def __init__(
-        self,
-        source: str,
-        problem: str,
-        file: str,
-        info: str,
-        stderr: str,
-    ) -> None:
-        self.source = source
-        self.problem = problem
-        self.file = file
-        self.info = info
-        self.stderr = stderr
+    source: str
+    problem: str
+    file: str
+    info: str
+    stderr: str
 
-    def pretty(self, prefix: str, output_dir: str) -> dict[str, str]:
-        """Make safe this values to embed into HTML."""
 
-        return {
-            "source": escape(chop(prefix, self.source)),
-            "problem": escape(self.problem),
-            "file": escape(chop(output_dir, self.file)),
-            "info": escape(chop(output_dir, self.info)),
-            "stderr": escape(chop(output_dir, self.stderr)),
-        }
+class CrashReader:
+    """Reads crash information from files and creates Crash instances."""
 
     @classmethod
     def _parse_info_file(cls, filename: str) -> tuple[str, str] | None:
@@ -348,7 +317,7 @@ class Crash:
         return None if len(lines) < 2 else (lines[0], lines[1])
 
     @classmethod
-    def read(cls, output_dir: str) -> Iterator["Crash"]:
+    def read(cls, output_dir: str) -> Iterator[Crash]:
         """Generate a unique sequence of crashes from given directory."""
 
         pattern = os.path.join(output_dir, "failures", "*.info.txt")
@@ -367,19 +336,35 @@ class Crash:
                 )
 
 
+class CrashFormatter:
+    """Formats Crash instances for safe HTML rendering."""
+
+    def __init__(self, prefix: str, output_dir: str):
+        """Initialize formatter with prefix and output directory."""
+        self.prefix: str = prefix
+        self.output_dir: str = output_dir
+
+    def format(self, crash: Crash) -> Crash:
+        """Create a new Crash instance with escaped and chopped attributes."""
+        return Crash(
+            source=escape(chop(self.prefix, crash.source)),
+            problem=escape(crash.problem),
+            file=escape(chop(self.output_dir, crash.file)),
+            info=escape(chop(self.output_dir, crash.info)),
+            stderr=escape(chop(self.output_dir, crash.stderr)),
+        )
+
+
+@dataclass(eq=False)
 class Bug:
-    def __init__(
-        self,
-        report: str,
-        attributes: dict[str, str],
-    ) -> None:
-        self.file = attributes.get("bug_file", "")
-        self.line = int(attributes.get("bug_line", "0"))
-        self.path_length = int(attributes.get("bug_path_length", "1"))
-        self.category = attributes.get("bug_category", "Other")
-        self.type = attributes.get("bug_type", "")
-        self.function = attributes.get("bug_function", "n/a")
-        self.report = report
+    file: str
+    line: int
+    path_length: int
+    category: str
+    type: str
+    function: str
+    report: str
+    type_class: str = ""
 
     def __eq__(self, o: object) -> bool:
         return (
@@ -391,139 +376,163 @@ class Bug:
         )
 
     def __hash__(self) -> int:
-        return hash(self.line) + hash(self.path_length) + hash(self.type) + hash(self.file)
-
-    def type_class(self) -> str:
-        def smash(key: str) -> str:
-            """Make value ready to be HTML attribute value."""
-
-            return key.lower().replace(" ", "_").replace("'", "")
-
-        return "_".join(["bt", smash(self.category), smash(self.type)])
-
-    def pretty(self, prefix: str, output_dir: str) -> dict[str, str]:
-        """Make safe this values to embed into HTML."""
-
-        return {
-            "bug_file": escape(chop(prefix, self.file)),
-            "bug_line": str(self.line),
-            "bug_path_length": str(self.path_length),
-            "bug_category": escape(self.category),
-            "bug_type": escape(self.type),
-            "bug_type_class": escape(self.type_class()),
-            "bug_function": escape(self.function),
-            "report_file": escape(chop(output_dir, self.report)),
-        }
+        return hash((self.line, self.path_length, self.type, self.file))
 
 
-def read_bugs(output_dir: str, html: bool) -> Generator[Bug, None, None]:
-    """Generate a unique sequence of bugs from given output directory.
+class BugParser:
+    """Parses bug information from files and creates Bug instances."""
 
-    Duplicates can be in a project if the same module was compiled multiple
-    times with different compiler options. These would be better to show in
-    the final report (cover) only once."""
-
-    def empty(file_name):
-        return os.stat(file_name).st_size == 0
-
-    # get the right parser for the job.
-    parser = parse_bug_html if html else parse_bug_plist
-    # get the input files, which are not empty.
-    pattern = os.path.join(output_dir, "*.html" if html else "*.plist")
-    bug_generators = (parser(file) for file in glob.iglob(pattern) if not empty(file))
-
-    return unique_bugs(itertools.chain.from_iterable(bug_generators))
-
-
-def unique_bugs(generator: Iterator[Bug]) -> Generator[Bug, None, None]:
-    """Remove duplicates from bug stream"""
-
-    state: set[Bug] = set()
-    for item in generator:
-        if item not in state:
-            state.add(item)
-            yield item
-
-
-def parse_bug_plist(filename: str) -> Generator[Bug, None, None]:
-    """Returns the generator of bugs from a single .plist file."""
-
-    with open(filename, "rb") as handle:
-        content = plistlib.load(handle)
-        files = content.get("files", [])
-        for bug in content.get("diagnostics", []):
-            if len(files) <= int(bug["location"]["file"]):
-                logging.warning('Parsing bug from "%s" failed', filename)
-                continue
-
-            yield Bug(
-                filename,
-                {
-                    "bug_type": bug["type"],
-                    "bug_category": bug["category"],
-                    "bug_line": bug["location"]["line"],
-                    "bug_path_length": bug["location"]["col"],
-                    "bug_file": files[int(bug["location"]["file"])],
-                },
-            )
-
-
-def parse_bug_html(filename: str) -> Generator[Bug, None, None]:
-    """Parse out the bug information from HTML output."""
-
-    patterns = [
-        re.compile(r"<!-- BUGTYPE (?P<bug_type>.*) -->$"),
-        re.compile(r"<!-- BUGFILE (?P<bug_file>.*) -->$"),
-        re.compile(r"<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$"),
-        re.compile(r"<!-- BUGLINE (?P<bug_line>.*) -->$"),
-        re.compile(r"<!-- BUGCATEGORY (?P<bug_category>.*) -->$"),
-        re.compile(r"<!-- FUNCTIONNAME (?P<bug_function>.*) -->$"),
-    ]
-    endsign = re.compile(r"<!-- BUGMETAEND -->")
-
-    bug = {}
-    for line in safe_readlines(filename):
-        # do not read the file further
-        if endsign.match(line):
-            break
-        # search for the right lines
-        for regex in patterns:
-            match = regex.match(line.strip())
-            if match:
-                bug.update(match.groupdict())
-                break
-
-    yield Bug(filename, bug)
-
-
-class BugCounter:
-    """Counters for bug statistics."""
-
-    def __init__(self) -> None:
-        self.total = 0
-        self.categories: dict[str, Any] = {}
-
-    def __call__(self, bug: Bug) -> None:
-        current_category = self.categories.get(bug.category, {})
-        current_type = current_category.get(
-            bug.type, {"bug_type": bug.type, "bug_type_class": bug.type_class(), "bug_count": 0}
+    @staticmethod
+    def from_attributes(report: str, attributes: dict[str, str]) -> Bug:
+        """Create a Bug instance from a report path and attributes dictionary."""
+        return Bug(
+            file=attributes.get("bug_file", ""),
+            line=int(attributes.get("bug_line", "0")),
+            path_length=int(attributes.get("bug_path_length", "1")),
+            category=attributes.get("bug_category", "Other"),
+            type=attributes.get("bug_type", ""),
+            function=attributes.get("bug_function", "n/a"),
+            report=report,
         )
-        current_type.update({"bug_count": current_type["bug_count"] + 1})
-        current_category.update({bug.type: current_type})
-        self.categories.update({bug.category: current_category})
-        self.total += 1
+
+    @staticmethod
+    def parse_bug_plist(filename: str) -> Generator[Bug, None, None]:
+        """Returns the generator of bugs from a single .plist file."""
+
+        with open(filename, "rb") as handle:
+            content = plistlib.load(handle)
+            files = content.get("files", [])
+            for bug in content.get("diagnostics", []):
+                if len(files) <= int(bug["location"]["file"]):
+                    logging.warning('Parsing bug from "%s" failed', filename)
+                    continue
+
+                yield BugParser.from_attributes(
+                    filename,
+                    {
+                        "bug_type": bug["type"],
+                        "bug_category": bug["category"],
+                        "bug_line": bug["location"]["line"],
+                        "bug_path_length": bug["location"]["col"],
+                        "bug_file": files[int(bug["location"]["file"])],
+                    },
+                )
+
+    @staticmethod
+    def parse_bug_html(filename: str) -> Generator[Bug, None, None]:
+        """Parse out the bug information from HTML output."""
+
+        patterns = [
+            re.compile(r"<!-- BUGTYPE (?P<bug_type>.*) -->$"),
+            re.compile(r"<!-- BUGFILE (?P<bug_file>.*) -->$"),
+            re.compile(r"<!-- BUGPATHLENGTH (?P<bug_path_length>.*) -->$"),
+            re.compile(r"<!-- BUGLINE (?P<bug_line>.*) -->$"),
+            re.compile(r"<!-- BUGCATEGORY (?P<bug_category>.*) -->$"),
+            re.compile(r"<!-- FUNCTIONNAME (?P<bug_function>.*) -->$"),
+        ]
+        endsign = re.compile(r"<!-- BUGMETAEND -->")
+
+        bug = {}
+        for line in safe_readlines(filename):
+            # do not read the file further
+            if endsign.match(line):
+                break
+            # search for the right lines
+            for regex in patterns:
+                match = regex.match(line.strip())
+                if match:
+                    bug.update(match.groupdict())
+                    break
+
+        yield BugParser.from_attributes(filename, bug)
+
+    @staticmethod
+    def read_bugs(output_dir: str, html: bool) -> Generator[Bug, None, None]:
+        """Generate a unique sequence of bugs from given output directory.
+
+        Duplicates can be in a project if the same module was compiled multiple
+        times with different compiler options. These would be better to show in
+        the final report (cover) only once."""
+
+        def empty(file_name: str):
+            return os.stat(file_name).st_size == 0
+
+        # get the right parser for the job.
+        parser = BugParser.parse_bug_html if html else BugParser.parse_bug_plist
+        # get the input files, which are not empty.
+        pattern = os.path.join(output_dir, "*.html" if html else "*.plist")
+        files = (file for file in glob.iglob(pattern) if not empty(file))
+        # do the parsing job.
+        return BugParser.unique_bugs(itertools.chain.from_iterable(parser(filename) for filename in files))
+
+    @staticmethod
+    def unique_bugs(generator: Iterator[Bug]) -> Generator[Bug, None, None]:
+        """Make unique generator from a given input generator."""
+
+        state: set[Bug] = set()
+        for item in generator:
+            if item not in state:
+                state.add(item)
+                yield item
 
 
-def create_counters() -> BugCounter:
-    """Create counters for bug statistics.
+class BugFormatter:
+    """Formats Bug instances for safe HTML rendering."""
+
+    def __init__(self, prefix: str, output_dir: str):
+        """Initialize formatter with prefix and output directory."""
+        self.prefix: str = prefix
+        self.output_dir: str = output_dir
+
+    def format(self, bug: Bug) -> Bug:
+        """Create a new Bug instance with escaped and chopped attributes."""
+
+        type_class = "_".join(["bt", to_css_class(bug.category), to_css_class(bug.type)])
+
+        return Bug(
+            file=escape(chop(self.prefix, bug.file)),
+            line=bug.line,
+            path_length=bug.path_length,
+            category=escape(bug.category),
+            type=escape(bug.type),
+            function=escape(bug.function),
+            report=escape(chop(self.output_dir, bug.report)),
+            type_class=type_class,
+        )
+
+
+@dataclass
+class BugCounter:
+    """Counters for bug statistics.
 
     Two entries are maintained: 'total' is an integer, represents the
     number of bugs. The 'categories' is a two level categorisation of bug
     counters. The first level is 'bug category' the second is 'bug type'.
-    Each entry in this classification is a dictionary of 'count', 'type'
-    and 'label'."""
+    Each entry in this classification contains type and count information."""
 
-    return BugCounter()
+    @dataclass
+    class CountPerType:
+        """Counter for a specific bug type."""
+
+        bug_type: str
+        bug_type_class: str
+        bug_count: int = 0
+
+    total: int = 0
+    categories: dict[str, dict[str, "BugCounter.CountPerType"]] = field(default_factory=dict)
+
+    def __call__(self, bug: Bug) -> None:
+        if bug.category not in self.categories:
+            self.categories[bug.category] = {}
+
+        current_category = self.categories[bug.category]
+
+        if bug.type not in current_category:
+            type_class = "_".join(["bt", to_css_class(bug.category), to_css_class(bug.type)])
+            current_category[bug.type] = BugCounter.CountPerType(bug_type=bug.type, bug_type_class=type_class)
+
+        current_category[bug.type].bug_count += 1
+        self.total += 1
 
 
 def copy_resource_files(output_dir: str) -> None:
@@ -554,6 +563,11 @@ def chop(prefix: str, filename: str) -> str:
     return result
 
 
+def to_css_class(text: str) -> str:
+    """Convert text to a valid CSS class name."""
+    return text.lower().replace(" ", "_").replace("'", "").replace("&", "_")
+
+
 def escape(text: str) -> str:
     """Paranoid HTML escape method."""
 
@@ -564,20 +578,20 @@ def escape(text: str) -> str:
 def reindent(text: str, indent: int) -> str:
     """Utility function to format html output and keep indentation."""
 
-    result = ""
+    result: str = ""
     for line in text.splitlines():
         if line.strip():
-            result += " " * indent + line.split("|")[1] + os.linesep
+            result += (" " * indent) + line.split("|")[1] + os.linesep
     return result
 
 
 def comment(name: str, opts: dict[str, str] | None = None) -> str:
     """Utility function to format meta information as comment."""
 
-    attributes = ""
     if opts:
-        for key, value in opts.items():
-            attributes += f' {key}="{value}"'
+        attributes = "".join(f' {key}="{value}"' for key, value in opts.items())
+    else:
+        attributes = ""
 
     return f"<!-- {name}{attributes} -->{os.linesep}"
 

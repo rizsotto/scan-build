@@ -16,7 +16,7 @@ def run_bug_parse(content):
         with open(file_name, "w") as handle:
             lines = (line + os.linesep for line in content)
             handle.writelines(lines)
-        for bug in sut.parse_bug_html(file_name):
+        for bug in sut.BugParser.parse_bug_html(file_name):
             return bug
 
 
@@ -55,7 +55,7 @@ class ParseFileTest(unittest.TestCase):
             file_name = os.path.join(tmpdir, "file.i.info.txt")
             with open(file_name, "w") as handle:
                 handle.write(os.linesep.join(content))
-            source, problem = sut.Crash._parse_info_file(file_name)
+            source, problem = sut.CrashReader._parse_info_file(file_name)
             self.assertEqual(source, content[0].rstrip())
             self.assertEqual(problem, content[1].rstrip())
 
@@ -79,7 +79,7 @@ class ParseFileTest(unittest.TestCase):
             }
             sut2.report_failure(opts)
             # verify
-            crashes = list(sut.Crash.read(tmpdir))
+            crashes = list(sut.CrashReader.read(tmpdir))
             self.assertEqual(1, len(crashes))
             crash = crashes[0]
             self.assertEqual(filename, crash.source)
@@ -154,3 +154,134 @@ class GetPrefixFromCompilationDatabaseTest(unittest.TestCase):
     @unittest.skipIf(not IS_WINDOWS, "windows has different path patterns")
     def test_with_single_file_on_windows(self):
         self.assertEqual(sut.commonprefix(["z:\\tmp\\a.c"]), "z:\\tmp")
+
+
+class CrashFormatterTest(unittest.TestCase):
+    def test_format_crash(self):
+        crash = sut.Crash(
+            source="/path/to/source.c",
+            problem="Division by zero",
+            file="/output/dir/file.i",
+            info="/output/dir/file.i.info.txt",
+            stderr="/output/dir/file.i.stderr.txt",
+        )
+
+        formatter = sut.CrashFormatter("/path", "/output/dir")
+        formatted = formatter.format(crash)
+
+        self.assertEqual(formatted.source, "to/source.c")
+        self.assertEqual(formatted.problem, "Division by zero")
+        self.assertEqual(formatted.file, "file.i")
+        self.assertEqual(formatted.info, "file.i.info.txt")
+        self.assertEqual(formatted.stderr, "file.i.stderr.txt")
+
+    def test_format_crash_with_html_escaping(self):
+        crash = sut.Crash(
+            source="/path/to/source<test>.c",
+            problem="Error with & symbol",
+            file="/output/dir/file.i",
+            info="/output/dir/file.i.info.txt",
+            stderr="/output/dir/file.i.stderr.txt",
+        )
+
+        formatter = sut.CrashFormatter("/path", "/output/dir")
+        formatted = formatter.format(crash)
+
+        self.assertEqual(formatted.source, "to/source&lt;test&gt;.c")
+        self.assertEqual(formatted.problem, "Error with &amp; symbol")
+
+    def test_crash_vars(self):
+        crash = sut.Crash(
+            source="/path/to/source.c",
+            problem="Division by zero",
+            file="/output/dir/file.i",
+            info="/output/dir/file.i.info.txt",
+            stderr="/output/dir/file.i.stderr.txt",
+        )
+
+        crash_dict = vars(crash)
+
+        self.assertEqual(crash_dict["source"], "/path/to/source.c")
+        self.assertEqual(crash_dict["problem"], "Division by zero")
+        self.assertEqual(crash_dict["file"], "/output/dir/file.i")
+        self.assertEqual(crash_dict["info"], "/output/dir/file.i.info.txt")
+        self.assertEqual(crash_dict["stderr"], "/output/dir/file.i.stderr.txt")
+        self.assertIsInstance(crash_dict, dict)
+
+    def test_to_css_class_function(self):
+        # Test that to_css_class can be called as a module function
+        result = sut.to_css_class("Memory & Security")
+        self.assertEqual(result, "memory___security")
+
+        result = sut.to_css_class("Use after 'free'")
+        self.assertEqual(result, "use_after_free")
+
+        result = sut.to_css_class("Logic error")
+        self.assertEqual(result, "logic_error")
+
+
+class BugFormatterTest(unittest.TestCase):
+    def test_format_bug(self):
+        bug = sut.Bug(
+            file="/path/to/source.c",
+            line=42,
+            path_length=5,
+            category="Logic error",
+            type="Division by zero",
+            function="main",
+            report="/output/dir/report.html",
+        )
+
+        formatter = sut.BugFormatter("/path", "/output/dir")
+        formatted = formatter.format(bug)
+
+        self.assertEqual(formatted.file, "to/source.c")
+        self.assertEqual(formatted.line, 42)
+        self.assertEqual(formatted.path_length, 5)
+        self.assertEqual(formatted.category, "Logic error")
+        self.assertEqual(formatted.type, "Division by zero")
+        self.assertEqual(formatted.function, "main")
+        self.assertEqual(formatted.report, "report.html")
+        self.assertEqual(formatted.type_class, "bt_logic_error_division_by_zero")
+
+    def test_format_bug_with_html_escaping(self):
+        bug = sut.Bug(
+            file="/path/to/source<test>.c",
+            line=10,
+            path_length=3,
+            category="Memory & Security",
+            type="Use after 'free'",
+            function="test_function",
+            report="/output/dir/report.html",
+        )
+
+        formatter = sut.BugFormatter("/path", "/output/dir")
+        formatted = formatter.format(bug)
+
+        self.assertEqual(formatted.file, "to/source&lt;test&gt;.c")
+        self.assertEqual(formatted.category, "Memory &amp; Security")
+        self.assertEqual(formatted.type, "Use after &apos;free&apos;")
+        self.assertEqual(formatted.function, "test_function")
+        self.assertEqual(formatted.type_class, "bt_memory___security_use_after_free")
+
+    def test_bug_vars(self):
+        bug = sut.Bug(
+            file="/path/to/source.c",
+            line=42,
+            path_length=5,
+            category="Logic error",
+            type="Division by zero",
+            function="main",
+            report="/output/dir/report.html",
+        )
+
+        bug_dict = vars(bug)
+
+        self.assertEqual(bug_dict["file"], "/path/to/source.c")
+        self.assertEqual(bug_dict["line"], 42)
+        self.assertEqual(bug_dict["path_length"], 5)
+        self.assertEqual(bug_dict["category"], "Logic error")
+        self.assertEqual(bug_dict["type"], "Division by zero")
+        self.assertEqual(bug_dict["function"], "main")
+        self.assertEqual(bug_dict["report"], "/output/dir/report.html")
+        self.assertIsInstance(bug_dict, dict)

@@ -184,14 +184,14 @@ def report_directory(hint: str, keep: bool) -> Generator[str, None, None]:
         yield name
     finally:
         if os.listdir(name):
-            msg = "Run 'scan-view %s' to examine bug reports."
+            msg = f"Run 'scan-view {name}' to examine bug reports."
             keep = True
         else:
             if keep:
-                msg = "Report directory '%s' contains no report, but kept."
+                msg = f"Report directory '{name}' contains no report, but kept."
             else:
-                msg = "Removing directory '%s' because it contains no report."
-        logging.warning(msg, name)
+                msg = f"Removing directory '{name}' because it contains no report."
+        logging.warning(msg)
 
         if not keep:
             os.rmdir(name)
