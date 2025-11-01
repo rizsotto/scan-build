@@ -19,6 +19,7 @@ import socket
 import sys
 from collections.abc import Generator, Iterable, Iterator
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TextIO
 
 from clanganalyzer.clang import get_version
@@ -33,9 +34,10 @@ def document(args: argparse.Namespace) -> int:
     html_reports_available = args.output_format in {"html", "plist-html"}
 
     logging.debug("count crashes and bugs")
-    crash_count = sum(1 for _ in CrashReader.read(args.output))
+    output_dir = Path(args.output)
+    crash_count = sum(1 for _ in CrashReader.read(output_dir))
     bug_counter = BugCounter()
-    for bug in BugParser.read_bugs(args.output, html_reports_available):
+    for bug in BugParser.read_bugs(output_dir, html_reports_available):
         bug_counter(bug)
     result = crash_count + bug_counter.total
 
@@ -44,16 +46,16 @@ def document(args: argparse.Namespace) -> int:
         # common prefix for source files to have sorter path
         prefix = CompilationDatabase.file_commonprefix(args.cdb)
         # assemble the cover from multiple fragments
-        fragments: list[str] = []
+        fragments: list[Path] = []
         try:
             if bug_counter.total:
-                fragments.append(bug_summary(args.output, bug_counter))
-                fragments.append(bug_report(args.output, prefix))
+                fragments.append(bug_summary(output_dir, bug_counter))
+                fragments.append(bug_report(output_dir, prefix))
             if crash_count:
-                fragments.append(crash_report(args.output, prefix))
+                fragments.append(crash_report(output_dir, prefix))
             assemble_cover(args, prefix, fragments)
             # copy additional files to the report
-            copy_resource_files(args.output)
+            copy_resource_files(output_dir)
             shutil.copy(args.cdb, args.output)
         finally:
             for fragment in fragments:
@@ -61,10 +63,10 @@ def document(args: argparse.Namespace) -> int:
     return result
 
 
-def assemble_cover(args: argparse.Namespace, prefix: str, fragments: list[str]) -> None:
+def assemble_cover(args: argparse.Namespace, prefix: Path | None, fragments: list[Path]) -> None:
     """Put together the fragments into a final report."""
 
-    html_title = args.html_title if args.html_title else os.path.basename(prefix) + " - analyzer results"
+    html_title = args.html_title if args.html_title else (prefix.name if prefix else "analyzer") + " - analyzer results"
     user_name = getpass.getuser()
     host_name = socket.gethostname()
     cmd_args = " ".join(sys.argv)
@@ -79,7 +81,7 @@ def assemble_cover(args: argparse.Namespace, prefix: str, fragments: list[str]) 
         |<!DOCTYPE html>
         |<html>
         |  <head>
-        |    <title>{args.html_title}</title>
+        |    <title>{html_title}</title>
         |    <link type="text/css" rel="stylesheet" href="scanview.css"/>
         |    <script type='text/javascript' src="sorttable.js"></script>
         |    <script type='text/javascript' src='selectable.js'></script>
@@ -178,16 +180,16 @@ def _write_bug_summary(handle: TextIO, bug_counter: "BugCounter") -> None:
     _ = handle.write(comment("SUMMARYBUGEND"))
 
 
-def bug_summary(output_dir: str, bug_counter: "BugCounter") -> str:
+def bug_summary(output_dir: Path, bug_counter: "BugCounter") -> Path:
     """Bug summary is a HTML table to give a better overview of the bugs."""
 
-    name = os.path.join(output_dir, "summary.html.fragment")
+    name = output_dir / "summary.html.fragment"
     with open(name, "w") as handle:
         _write_bug_summary(handle, bug_counter)
     return name
 
 
-def _write_bug_report(handle: TextIO, prefix: str, output_dir: str, bugs: Iterable["Bug"]) -> None:
+def _write_bug_report(handle: TextIO, prefix: Path | None, output_dir: Path, bugs: Iterable["Bug"]) -> None:
     """Write bug report HTML table to a file-like object."""
     indent = 4
     _ = handle.write(
@@ -244,17 +246,17 @@ def _write_bug_report(handle: TextIO, prefix: str, output_dir: str, bugs: Iterab
     _ = handle.write(comment("REPORTBUGEND"))
 
 
-def bug_report(output_dir: str, prefix: str) -> str:
+def bug_report(output_dir: Path, prefix: Path | None) -> Path:
     """Creates a fragment from the analyzer reports."""
 
-    name = os.path.join(output_dir, "bugs.html.fragment")
+    name = output_dir / "bugs.html.fragment"
     bugs = BugParser.read_bugs(output_dir, True)
     with open(name, "w") as handle:
         _write_bug_report(handle, prefix, output_dir, bugs)
     return name
 
 
-def _write_crash_report(handle: TextIO, prefix: str, output_dir: str, crashes: Iterable["Crash"]) -> None:
+def _write_crash_report(handle: TextIO, prefix: Path | None, output_dir: Path, crashes: Iterable["Crash"]) -> None:
     """Write crash report HTML table to a file-like object."""
     indent = 4
     _ = handle.write(
@@ -302,10 +304,10 @@ def _write_crash_report(handle: TextIO, prefix: str, output_dir: str, crashes: I
     _ = handle.write(comment("REPORTCRASHES"))
 
 
-def crash_report(output_dir: str, prefix: str) -> str:
+def crash_report(output_dir: Path, prefix: Path | None) -> Path:
     """Creates a fragment from the compiler crashes."""
 
-    name = os.path.join(output_dir, "crashes.html.fragment")
+    name = output_dir / "crashes.html.fragment"
     crashes = CrashReader.read(output_dir)
     with open(name, "w") as handle:
         _write_crash_report(handle, prefix, output_dir, crashes)
@@ -337,10 +339,10 @@ class CrashReader:
             return None
 
     @classmethod
-    def read(cls, output_dir: str) -> Iterator[Crash]:
+    def read(cls, output_dir: Path) -> Iterator[Crash]:
         """Generate a unique sequence of crashes from given directory."""
 
-        pattern = os.path.join(output_dir, "failures", "*.info.txt")
+        pattern = str(output_dir / "failures" / "*.info.txt")
         for info_filename in glob.iglob(pattern):
             base_filename = info_filename[0 : -len(".info.txt")]
             stderr_filename = f"{base_filename}.stderr.txt"
@@ -359,10 +361,10 @@ class CrashReader:
 class CrashFormatter:
     """Formats Crash instances for safe HTML rendering."""
 
-    def __init__(self, prefix: str, output_dir: str):
+    def __init__(self, prefix: Path | None, output_dir: Path):
         """Initialize formatter with prefix and output directory."""
-        self.prefix: str = prefix
-        self.output_dir: str = output_dir
+        self.prefix: Path | None = prefix
+        self.output_dir: Path = output_dir
 
     def format(self, crash: Crash) -> Crash:
         """Create a new Crash instance with escaped and chopped attributes."""
@@ -467,7 +469,7 @@ class BugParser:
         yield BugParser.from_attributes(filename, bug)
 
     @staticmethod
-    def read_bugs(output_dir: str, html: bool) -> Generator[Bug, None, None]:
+    def read_bugs(output_dir: Path, html: bool) -> Generator[Bug, None, None]:
         """Generate a unique sequence of bugs from given output directory.
 
         Duplicates can be in a project if the same module was compiled multiple
@@ -480,7 +482,7 @@ class BugParser:
         # get the right parser for the job.
         parser = BugParser.parse_bug_html if html else BugParser.parse_bug_plist
         # get the input files, which are not empty.
-        pattern = os.path.join(output_dir, "*.html" if html else "*.plist")
+        pattern = str(output_dir / ("*.html" if html else "*.plist"))
         files = (file for file in glob.iglob(pattern) if not empty(file))
         # do the parsing job.
         return BugParser.unique_bugs(itertools.chain.from_iterable(parser(filename) for filename in files))
@@ -499,10 +501,10 @@ class BugParser:
 class BugFormatter:
     """Formats Bug instances for safe HTML rendering."""
 
-    def __init__(self, prefix: str, output_dir: str):
+    def __init__(self, prefix: Path | None, output_dir: Path):
         """Initialize formatter with prefix and output directory."""
-        self.prefix: str = prefix
-        self.output_dir: str = output_dir
+        self.prefix: Path | None = prefix
+        self.output_dir: Path = output_dir
 
     def format(self, bug: Bug) -> Bug:
         """Create a new Bug instance with escaped and chopped attributes."""
@@ -555,12 +557,12 @@ class BugCounter:
         self.total += 1
 
 
-def copy_resource_files(output_dir: str) -> None:
+def copy_resource_files(output_dir: Path) -> None:
     """Copy the javascript and css files to the report directory."""
 
     this_dir = os.path.dirname(os.path.realpath(__file__))
     for resource in os.listdir(os.path.join(this_dir, "resources")):
-        shutil.copy(os.path.join(this_dir, "resources", resource), output_dir)
+        shutil.copy(os.path.join(this_dir, "resources", resource), str(output_dir))
 
 
 def safe_readlines(filename: str) -> Iterator[str]:
@@ -572,12 +574,12 @@ def safe_readlines(filename: str) -> Iterator[str]:
             yield line.decode(errors="ignore").rstrip()
 
 
-def chop(prefix: str, filename: str) -> str:
+def chop(prefix: Path | None, filename: str) -> str:
     """Create 'filename' from '/prefix/filename'"""
     result: str = filename
     if prefix:
         try:
-            result = str(os.path.relpath(filename, prefix))
+            result = str(os.path.relpath(filename, str(prefix)))
         except ValueError:
             pass
     return result

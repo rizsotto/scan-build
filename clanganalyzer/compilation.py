@@ -5,6 +5,7 @@ import json
 import os
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from clanganalyzer import shell_split
@@ -113,17 +114,17 @@ class CompilationDatabase:
             yield Compilation.from_entry(entry)
 
     @staticmethod
-    def file_commonprefix(filename: str) -> str:
+    def file_commonprefix(filename: str) -> Path | None:
         """Create file prefix from a compilation database entries."""
         with open(filename) as handle:
             return _commonprefix(item["file"] for item in json.load(handle))
 
 
-def _commonprefix(files: Iterator[str]) -> str:
+def _commonprefix(files: Iterator[str]) -> Path | None:
     """Fixed version of os.path.commonprefix.
 
     :param files: list of file names.
-    :return: the longest path prefix that is a prefix of all files."""
+    :return: the longest path prefix that is a prefix of all files, or None if no common prefix."""
     result = None
     for current in files:
         if result is not None:
@@ -131,11 +132,11 @@ def _commonprefix(files: Iterator[str]) -> str:
         else:
             result = current
 
-    if result is None:
-        return ""
+    if result is None or result == "":
+        return None
     elif not os.path.isdir(result):
-        return os.path.dirname(result)
-    return os.path.abspath(result)
+        return Path(os.path.dirname(result))
+    return Path(os.path.abspath(result))
 
 
 def classify_source(filename: str, c_compiler: bool = True) -> str | None:

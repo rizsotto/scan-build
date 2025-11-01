@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 import clanganalyzer.compilation as sut
 
@@ -214,43 +215,43 @@ class SourceClassifierTest(unittest.TestCase):
 
 class CommonPrefixTest(unittest.TestCase):
     def test_empty(self):
-        self.assertEqual(sut._commonprefix([]), "")
+        self.assertEqual(sut._commonprefix([]), None)
 
     @unittest.skipIf(os.name == "nt", "windows has different path patterns")
     def test_with_different_filenames(self):
-        self.assertEqual(sut._commonprefix(["/tmp/a.c", "/tmp/b.c"]), "/tmp")
+        self.assertEqual(sut._commonprefix(["/tmp/a.c", "/tmp/b.c"]), Path("/tmp"))
 
     @unittest.skipIf(os.name == "nt", "windows has different path patterns")
     def test_with_different_dirnames(self):
-        self.assertEqual(sut._commonprefix(["/tmp/abs/a.c", "/tmp/ack/b.c"]), "/tmp")
+        self.assertEqual(sut._commonprefix(["/tmp/abs/a.c", "/tmp/ack/b.c"]), Path("/tmp"))
 
     @unittest.skipIf(os.name == "nt", "windows has different path patterns")
     def test_no_common_prefix(self):
-        self.assertEqual(sut._commonprefix(["/tmp/abs/a.c", "/usr/ack/b.c"]), "/")
+        self.assertEqual(sut._commonprefix(["/tmp/abs/a.c", "/usr/ack/b.c"]), Path("/"))
 
     @unittest.skipIf(os.name == "nt", "windows has different path patterns")
     def test_with_single_file(self):
-        self.assertEqual(sut._commonprefix(["/tmp/a.c"]), "/tmp")
+        self.assertEqual(sut._commonprefix(["/tmp/a.c"]), Path("/tmp"))
 
     @unittest.skipIf(os.name != "nt", "windows has different path patterns")
     def test_with_different_filenames_on_windows(self):
-        self.assertEqual(sut._commonprefix(["c:\\tmp\\a.c", "c:\\tmp\\b.c"]), "c:\\tmp")
+        self.assertEqual(sut._commonprefix(["c:\\tmp\\a.c", "c:\\tmp\\b.c"]), Path("c:\\tmp"))
 
     @unittest.skipIf(os.name != "nt", "windows has different path patterns")
     def test_with_different_dirnames_on_windows(self):
-        self.assertEqual(sut._commonprefix(["c:\\tmp\\abs\\a.c", "c:\\tmp\\ack\\b.c"]), "c:\\tmp")
+        self.assertEqual(sut._commonprefix(["c:\\tmp\\abs\\a.c", "c:\\tmp\\ack\\b.c"]), Path("c:\\tmp"))
 
     @unittest.skipIf(os.name != "nt", "windows has different path patterns")
     def test_no_common_prefix_on_windows(self):
-        self.assertEqual(sut._commonprefix(["z:\\tmp\\abs\\a.c", "z:\\usr\\ack\\b.c"]), "z:\\")
+        self.assertEqual(sut._commonprefix(["z:\\tmp\\abs\\a.c", "z:\\usr\\ack\\b.c"]), Path("z:\\"))
 
     @unittest.skipIf(os.name != "nt", "windows has different path patterns")
     def test_different_drive_on_windows(self):
-        self.assertEqual(sut._commonprefix(["c:\\tmp\\abs\\a.c", "z:\\usr\\ack\\b.c"]), "")
+        self.assertEqual(sut._commonprefix(["c:\\tmp\\abs\\a.c", "z:\\usr\\ack\\b.c"]), None)
 
     @unittest.skipIf(os.name != "nt", "windows has different path patterns")
     def test_with_single_file_on_windows(self):
-        self.assertEqual(sut._commonprefix(["z:\\tmp\\a.c"]), "z:\\tmp")
+        self.assertEqual(sut._commonprefix(["z:\\tmp\\a.c"]), Path("z:\\tmp"))
 
 
 class CommonPrefixFromTest(unittest.TestCase):
@@ -268,7 +269,7 @@ class CommonPrefixFromTest(unittest.TestCase):
 
         try:
             result = sut.CompilationDatabase.file_commonprefix(temp_path)
-            self.assertEqual(result, "/project")
+            self.assertEqual(result, Path("/project"))
         finally:
             os.unlink(temp_path)
 
@@ -280,6 +281,6 @@ class CommonPrefixFromTest(unittest.TestCase):
 
         try:
             result = sut.CompilationDatabase.file_commonprefix(temp_path)
-            self.assertEqual(result, "")
+            self.assertEqual(result, None)
         finally:
             os.unlink(temp_path)

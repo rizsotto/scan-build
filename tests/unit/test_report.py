@@ -4,6 +4,7 @@ import os
 import os.path
 import tempfile
 import unittest
+from pathlib import Path
 
 import clanganalyzer.report as sut
 
@@ -79,7 +80,7 @@ class ParseFileTest(unittest.TestCase):
             }
             sut2.report_failure(opts)
             # verify
-            crashes = list(sut.CrashReader.read(tmpdir))
+            crashes = list(sut.CrashReader.read(Path(tmpdir)))
             self.assertEqual(1, len(crashes))
             crash = crashes[0]
             self.assertEqual(filename, crash.source)
