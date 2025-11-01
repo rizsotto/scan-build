@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
@@ -12,7 +11,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from clanganalyzer import shell_split
-
 
 __all__ = ["classify_source", "Compilation", "CompilationDatabase"]
 

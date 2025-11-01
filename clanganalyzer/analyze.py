@@ -20,17 +20,60 @@ import os.path
 import platform
 import re
 import subprocess
+import sys
 import tempfile
 from collections.abc import Callable, Generator, Iterable
 from typing import Any
 
-from clanganalyzer import command_entry_point, run_command
+from clanganalyzer import run_command
 from clanganalyzer.arguments import parse_args_for_analyze_build
 from clanganalyzer.clang import get_arguments, get_version
 from clanganalyzer.compilation import Compilation, CompilationDatabase, classify_source
 from clanganalyzer.report import document
 
 __all__ = ["analyze_build"]
+
+
+def command_entry_point(function: Callable[[], int]) -> Callable[[], int]:
+    """Decorator for command line entry points.
+
+    Provides standard initialization, exception handling, and cleanup
+    for command line tools.
+
+    Args:
+        function: Entry point function that returns an exit code
+
+    Returns:
+        Wrapped function with error handling and logging setup
+    """
+
+    @functools.wraps(function)
+    def wrapper() -> int:
+        """Execute function with proper housekeeping."""
+        try:
+            # Initialize logging
+            logging.basicConfig(format="%(name)s: %(message)s", level=logging.WARNING, stream=sys.stdout)
+            # Set logger name to executable name
+            logging.getLogger().name = os.path.basename(sys.argv[0])
+
+            return function()
+
+        except KeyboardInterrupt:
+            logging.warning("Keyboard interrupt")
+            return 130  # Standard signal received exit code
+
+        except (OSError, subprocess.CalledProcessError):
+            logging.exception("Internal error.")
+            if logging.getLogger().isEnabledFor(logging.DEBUG):
+                logging.error("Please report this bug and attach the output to the bug report")
+            else:
+                logging.error("Please run this command again and turn on verbose mode (add '-vvvv' as argument).")
+            return 64  # Internal error exit code
+
+        finally:
+            logging.shutdown()
+
+    return wrapper
 
 
 @command_entry_point

@@ -18,8 +18,35 @@ import os
 import sys
 import tempfile
 
-from clanganalyzer import reconfigure_logging
 from clanganalyzer.clang import get_checkers
+
+
+def reconfigure_logging(verbose_level: int) -> None:
+    """Reconfigure logging level and format based on verbosity.
+
+    Args:
+        verbose_level: Number of `-v` flags received (0 means no change)
+    """
+    if verbose_level == 0:
+        return
+
+    root = logging.getLogger()
+
+    # Calculate log level: more verbose means lower level
+    level = max(logging.DEBUG, logging.WARNING - (10 * verbose_level))
+    root.setLevel(level)
+
+    # Choose format based on verbosity
+    if verbose_level <= 3:
+        fmt_string = "%(name)s: %(levelname)s: %(message)s"
+    else:
+        fmt_string = "%(name)s: %(levelname)s: %(funcName)s: %(message)s"
+
+    # Replace existing handlers
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter(fmt=fmt_string))
+    root.handlers = [handler]
+
 
 # Default values
 DEFAULT_OUTPUT_DIR = tempfile.gettempdir()
