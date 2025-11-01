@@ -8,6 +8,7 @@ Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper."""
 
 import re
+import subprocess
 from collections.abc import Callable, Iterable
 
 from clanganalyzer import run_command, shell_split
@@ -46,7 +47,15 @@ def get_arguments(command: list[str], cwd: str) -> list[str]:
     cmd = command[:]
     cmd.insert(1, "-###")
 
-    output = run_command(cmd, cwd=cwd)
+    try:
+        output = run_command(cmd, cwd=cwd)
+    except subprocess.CalledProcessError as ex:
+        # For clang -###, we expect the command might fail but still produce useful output
+        if ex.output:
+            output = ex.output
+        else:
+            raise ClangCompilationError("Clang failed without output") from ex
+
     # The relevant information is in the last line of the output.
     # Don't check if finding last line fails, would throw exception anyway.
     last_line = output[-1]

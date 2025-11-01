@@ -4,16 +4,17 @@
 # License. See LICENSE.TXT for details.
 """This module is responsible for parsing a compiler invocation."""
 
-import collections
 import json
 import logging
 import os
 import re
 import subprocess
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
-from clanganalyzer import Execution, run_command, shell_split
+from clanganalyzer import run_command, shell_split
+
 
 __all__ = ["classify_source", "Compilation", "CompilationDatabase"]
 
@@ -83,7 +84,33 @@ COMPILER_PATTERNS_CXX = (
     re.compile(r"^(g|)xl(C|c\+\+)$"),
 )
 
-CompilationCommand = collections.namedtuple("CompilationCommand", ["compiler", "flags", "files"])
+
+@dataclass(frozen=True)
+class Execution:
+    """Represents a command execution context.
+
+    Attributes:
+        cwd: Current working directory where command was/will be executed
+        cmd: Command as a list of arguments
+    """
+
+    cwd: str
+    cmd: list[str]
+
+
+@dataclass
+class CompilationCommand:
+    """Represents a parsed compilation command.
+
+    Attributes:
+        compiler: The compiler language ("c" or "c++")
+        flags: List of compiler flags
+        files: List of source files to compile
+    """
+
+    compiler: str
+    flags: list[str]
+    files: list[str]
 
 
 class Compilation:
@@ -124,7 +151,7 @@ class Compilation:
         return {"file": relative, "arguments": [compiler, "-c"] + self.flags + [relative], "directory": self.directory}
 
     @classmethod
-    def from_db_entry(cls, entry: dict[str, str]) -> Iterable["Compilation"]:
+    def from_db_entry(cls, entry: dict[str, Any]) -> Iterable["Compilation"]:
         """Parser method for compilation entry.
 
         From compilation database entry it creates the compilation object.
@@ -132,8 +159,13 @@ class Compilation:
         :param entry:   the compilation database entry
         :return: stream of CompilationDbEntry objects"""
 
-        command = shell_split(entry["command"]) if "command" in entry else entry["arguments"]
-        execution = Execution(cmd=command, cwd=entry["directory"], pid=0)
+        if "command" in entry:
+            command = shell_split(entry["command"])
+        else:
+            # arguments field should be a list already
+            arguments = entry["arguments"]
+            command = arguments if isinstance(arguments, list) else [arguments]
+        execution = Execution(cmd=command, cwd=entry["directory"])
         return cls.iter_from_execution(execution)
 
     @classmethod

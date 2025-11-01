@@ -4,7 +4,6 @@
 # License. See LICENSE.TXT for details.
 """This module is a collection of methods commonly used in this project."""
 
-import collections
 import functools
 import logging
 import os
@@ -16,98 +15,129 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-Execution = collections.namedtuple("Execution", ["pid", "cwd", "cmd"])
+
+def _unescape_shell_arg(arg: str) -> str:
+    """Remove escaping characters from a shell argument.
+
+    Handles both quoted strings and escaped characters in shell arguments.
+    """
+    if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] == '"':
+        return re.sub(r'\\(["\\])', r"\1", arg[1:-1])
+    return re.sub(r"\\([\\ $%&\(\)\[\]\{\}\*|<>@?!])", r"\1", arg)
 
 
 def shell_split(string: str) -> list[str]:
-    """Takes a command string and returns as a list."""
+    """Split a command string into arguments and unescape them.
 
-    def unescape(arg: str) -> str:
-        """Gets rid of the escaping characters."""
+    Args:
+        string: Command string to split
 
-        if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] == '"':
-            return re.sub(r'\\(["\\])', r"\1", arg[1:-1])
-        return re.sub(r"\\([\\ $%&\(\)\[\]\{\}\*|<>@?!])", r"\1", arg)
+    Returns:
+        List of unescaped command arguments
+    """
+    return [_unescape_shell_arg(token) for token in shlex.split(string)]
 
-    return [unescape(token) for token in shlex.split(string)]
+
+def _decode_subprocess_output(result: Any) -> str:
+    """Decode subprocess output to string if needed.
+
+    subprocess.check_output returns bytes or string depending on Python version.
+    """
+    if not isinstance(result, str):
+        return result.decode("utf-8")
+    return result
 
 
 def run_command(command: list[str], cwd: str | None = None) -> list[str]:
-    """Run a given command and report the execution.
+    """Run a command and return its output as lines.
 
-    :param command: array of tokens
-    :param cwd: the working directory where the command will be executed
-    :return: output of the command
+    Args:
+        command: Command as a list of arguments
+        cwd: Working directory for command execution (defaults to current directory)
+
+    Returns:
+        Command output split into lines
+
+    Raises:
+        subprocess.CalledProcessError: If command execution fails
     """
-
-    def decode_when_needed(result: Any) -> str:
-        """check_output returns bytes or string depend on python version"""
-        if not isinstance(result, str):
-            return result.decode("utf-8")
-        return result
-
     try:
         directory = os.path.abspath(cwd) if cwd else os.getcwd()
         logging.debug("exec command %s in %s", command, directory)
-        output = subprocess.check_output(command, cwd=directory, stderr=subprocess.STDOUT)
-        return decode_when_needed(output).splitlines()
+        output = subprocess.check_output(
+            command,
+            cwd=directory,
+            stderr=subprocess.STDOUT,
+        )
+        return _decode_subprocess_output(output).splitlines()
     except subprocess.CalledProcessError as ex:
-        ex.output = decode_when_needed(ex.output).splitlines()
-        raise ex
+        ex.output = _decode_subprocess_output(ex.output).splitlines()
+        raise
 
 
 def reconfigure_logging(verbose_level: int) -> None:
-    """Reconfigure logging level and format based on the verbose flag.
+    """Reconfigure logging level and format based on verbosity.
 
-    :param verbose_level: number of `-v` flags received by the command
-    :return: no return value
+    Args:
+        verbose_level: Number of `-v` flags received (0 means no change)
     """
-    # exit when nothing to do
     if verbose_level == 0:
         return
 
     root = logging.getLogger()
-    # tune level
-    level = logging.WARNING - min(logging.WARNING, (10 * verbose_level))
+
+    # Calculate log level: more verbose means lower level
+    level = max(logging.DEBUG, logging.WARNING - (10 * verbose_level))
     root.setLevel(level)
-    # be verbose with messages
+
+    # Choose format based on verbosity
     if verbose_level <= 3:
         fmt_string = "%(name)s: %(levelname)s: %(message)s"
     else:
         fmt_string = "%(name)s: %(levelname)s: %(funcName)s: %(message)s"
+
+    # Replace existing handlers
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(logging.Formatter(fmt=fmt_string))
     root.handlers = [handler]
 
 
 def command_entry_point(function: Callable[[], int]) -> Callable[[], int]:
-    """Decorator for command entry methods.
+    """Decorator for command line entry points.
 
-    The decorator initialize/shutdown logging and guard on programming
-    errors (catch exceptions).
+    Provides standard initialization, exception handling, and cleanup
+    for command line tools.
 
-    The decorated method can have arbitrary parameters, the return value will
-    be the exit code of the process."""
+    Args:
+        function: Entry point function that returns an exit code
+
+    Returns:
+        Wrapped function with error handling and logging setup
+    """
 
     @functools.wraps(function)
     def wrapper() -> int:
-        """Do housekeeping tasks and execute the wrapped method."""
-
+        """Execute function with proper housekeeping."""
         try:
+            # Initialize logging
             logging.basicConfig(format="%(name)s: %(message)s", level=logging.WARNING, stream=sys.stdout)
-            # this hack to get the executable name as %(name)
+            # Set logger name to executable name
             logging.getLogger().name = os.path.basename(sys.argv[0])
+
             return function()
+
         except KeyboardInterrupt:
             logging.warning("Keyboard interrupt")
-            return 130  # signal received exit code for bash
+            return 130  # Standard signal received exit code
+
         except (OSError, subprocess.CalledProcessError):
             logging.exception("Internal error.")
             if logging.getLogger().isEnabledFor(logging.DEBUG):
                 logging.error("Please report this bug and attach the output to the bug report")
             else:
                 logging.error("Please run this command again and turn on verbose mode (add '-vvvv' as argument).")
-            return 64  # some non used exit code for internal errors
+            return 64  # Internal error exit code
+
         finally:
             logging.shutdown()
 
