@@ -115,47 +115,6 @@ class ReportMethodTest(unittest.TestCase):
         self.assertEqual("..\\src\\file", sut.chop("z:\\prefix\\cwd", "z:\\prefix\\src\\file"))
 
 
-class GetPrefixFromCompilationDatabaseTest(unittest.TestCase):
-    def test_empty(self):
-        self.assertEqual(sut.commonprefix([]), "")
-
-    @unittest.skipIf(IS_WINDOWS, "windows has different path patterns")
-    def test_with_different_filenames(self):
-        self.assertEqual(sut.commonprefix(["/tmp/a.c", "/tmp/b.c"]), "/tmp")
-
-    @unittest.skipIf(IS_WINDOWS, "windows has different path patterns")
-    def test_with_different_dirnames(self):
-        self.assertEqual(sut.commonprefix(["/tmp/abs/a.c", "/tmp/ack/b.c"]), "/tmp")
-
-    @unittest.skipIf(IS_WINDOWS, "windows has different path patterns")
-    def test_no_common_prefix(self):
-        self.assertEqual(sut.commonprefix(["/tmp/abs/a.c", "/usr/ack/b.c"]), "/")
-
-    @unittest.skipIf(IS_WINDOWS, "windows has different path patterns")
-    def test_with_single_file(self):
-        self.assertEqual(sut.commonprefix(["/tmp/a.c"]), "/tmp")
-
-    @unittest.skipIf(not IS_WINDOWS, "windows has different path patterns")
-    def test_with_different_filenames_on_windows(self):
-        self.assertEqual(sut.commonprefix(["c:\\tmp\\a.c", "c:\\tmp\\b.c"]), "c:\\tmp")
-
-    @unittest.skipIf(not IS_WINDOWS, "windows has different path patterns")
-    def test_with_different_dirnames_on_windows(self):
-        self.assertEqual(sut.commonprefix(["c:\\tmp\\abs\\a.c", "c:\\tmp\\ack\\b.c"]), "c:\\tmp")
-
-    @unittest.skipIf(not IS_WINDOWS, "windows has different path patterns")
-    def test_no_common_prefix_on_windows(self):
-        self.assertEqual(sut.commonprefix(["z:\\tmp\\abs\\a.c", "z:\\usr\\ack\\b.c"]), "z:\\")
-
-    @unittest.skipIf(not IS_WINDOWS, "windows has different path patterns")
-    def test_different_drive_on_windows(self):
-        self.assertEqual(sut.commonprefix(["c:\\tmp\\abs\\a.c", "z:\\usr\\ack\\b.c"]), "")
-
-    @unittest.skipIf(not IS_WINDOWS, "windows has different path patterns")
-    def test_with_single_file_on_windows(self):
-        self.assertEqual(sut.commonprefix(["z:\\tmp\\a.c"]), "z:\\tmp")
-
-
 class CrashFormatterTest(unittest.TestCase):
     def test_format_crash(self):
         crash = sut.Crash(

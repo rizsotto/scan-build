@@ -9,7 +9,6 @@ import datetime
 import getpass
 import glob
 import itertools
-import json
 import logging
 import os
 import os.path
@@ -22,6 +21,7 @@ from collections.abc import Generator, Iterator
 from dataclasses import dataclass, field
 
 from clanganalyzer.clang import get_version
+from clanganalyzer.compilation import CompilationDatabase
 
 __all__ = ["document"]
 
@@ -39,11 +39,9 @@ def document(args: argparse.Namespace) -> int:
     result = crash_count + bug_counter.total
 
     if html_reports_available and result:
-        use_cdb = os.path.exists(args.cdb)
-
         logging.debug("generate index.html file")
         # common prefix for source files to have sorter path
-        prefix = commonprefix_from(args.cdb) if use_cdb else os.getcwd()
+        prefix = CompilationDatabase.file_commonprefix(args.cdb)
         # assemble the cover from multiple fragments
         fragments: list[str] = []
         try:
@@ -55,8 +53,7 @@ def document(args: argparse.Namespace) -> int:
             assemble_cover(args, prefix, fragments)
             # copy additional files to the report
             copy_resource_files(args.output)
-            if use_cdb:
-                shutil.copy(args.cdb, args.output)
+            shutil.copy(args.cdb, args.output)
         finally:
             for fragment in fragments:
                 os.remove(fragment)
@@ -594,29 +591,3 @@ def comment(name: str, opts: dict[str, str] | None = None) -> str:
         attributes = ""
 
     return f"<!-- {name}{attributes} -->{os.linesep}"
-
-
-def commonprefix_from(filename: str) -> str:
-    """Create file prefix from a compilation database entries."""
-
-    with open(filename) as handle:
-        return commonprefix(item["file"] for item in json.load(handle))
-
-
-def commonprefix(files: Iterator[str]) -> str:
-    """Fixed version of os.path.commonprefix.
-
-    :param files: list of file names.
-    :return: the longest path prefix that is a prefix of all files."""
-    result = None
-    for current in files:
-        if result is not None:
-            result = os.path.commonprefix([result, current])
-        else:
-            result = current
-
-    if result is None:
-        return ""
-    elif not os.path.isdir(result):
-        return os.path.dirname(result)
-    return os.path.abspath(result)

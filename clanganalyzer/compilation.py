@@ -3,7 +3,7 @@
 
 import json
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -111,6 +111,31 @@ class CompilationDatabase:
         for entry_data in entries:
             entry = CompilationEntry.from_db_entry(entry_data)
             yield Compilation.from_entry(entry)
+
+    @staticmethod
+    def file_commonprefix(filename: str) -> str:
+        """Create file prefix from a compilation database entries."""
+        with open(filename) as handle:
+            return _commonprefix(item["file"] for item in json.load(handle))
+
+
+def _commonprefix(files: Iterator[str]) -> str:
+    """Fixed version of os.path.commonprefix.
+
+    :param files: list of file names.
+    :return: the longest path prefix that is a prefix of all files."""
+    result = None
+    for current in files:
+        if result is not None:
+            result = os.path.commonprefix([result, current])
+        else:
+            result = current
+
+    if result is None:
+        return ""
+    elif not os.path.isdir(result):
+        return os.path.dirname(result)
+    return os.path.abspath(result)
 
 
 def classify_source(filename: str, c_compiler: bool = True) -> str | None:
