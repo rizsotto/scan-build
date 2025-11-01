@@ -1,11 +1,26 @@
 [run]
-branch=True
-parallel=True
-concurrency=
-    multiprocessing
-source=
-    libscanbuild
+branch = true
+parallel = true
+source = libscanbuild,libear
 
 [report]
-include=
+include =
     libscanbuild/*
+    libear/*
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml

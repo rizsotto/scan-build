@@ -1,6 +1,143 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scan-build"
+version = "2.0.20"
+description = "static code analyzer wrapper for Clang."
+readme = "README.rst"
+license = "NCSA"
+authors = [
+    { name = "László Nagy", email = "rizsotto@gmail.com" }
 ]
-build-backend = "setuptools.build_meta"
+keywords = ["Clang", "scan-build", "static analyzer"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
+    "Environment :: Console",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Intended Audience :: Developers",
+    "Programming Language :: C",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Quality Assurance"
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/rizsotto/scan-build"
+Repository = "https://github.com/rizsotto/scan-build"
+Issues = "https://github.com/rizsotto/scan-build/issues"
+
+[project.scripts]
+scan-build = "libscanbuild.analyze:scan_build"
+analyze-build = "libscanbuild.analyze:analyze_build"
+analyze-cc = "libscanbuild.analyze:analyze_compiler_wrapper"
+"analyze-c++" = "libscanbuild.analyze:analyze_compiler_wrapper"
+intercept-build = "libscanbuild.intercept:intercept_build"
+intercept-cc = "libscanbuild.intercept:intercept_compiler_wrapper"
+"intercept-c++" = "libscanbuild.intercept:intercept_compiler_wrapper"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "ty>=0.1.0",
+    "lit>=17.0",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "lit>=17.0",
+]
+lint = [
+    "ruff>=0.1.0",
+    "ty>=0.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["libscanbuild", "libear"]
+
+[tool.hatch.build.targets.wheel.sources]
+"libscanbuild" = "libscanbuild"
+"libear" = "libear"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/libscanbuild",
+    "/libear",
+    "/tests",
+    "/README.rst",
+    "/LICENSE.txt",
+    "/CHANGES.txt",
+    "/pyproject.toml",
+]
+
+[tool.ruff]
+line-length = 127
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["libscanbuild", "libear"]
+
+[tool.ty]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--verbose --cov=libscanbuild --cov=libear --cov-report=term-missing --cov-report=xml"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["libscanbuild", "libear"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
