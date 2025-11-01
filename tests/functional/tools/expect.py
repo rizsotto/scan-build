@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import os
-import os.path
 import argparse
 import json
+import os
+import os.path
 
 
 def main():
@@ -21,7 +20,7 @@ def main():
     # read existing content from target file
     entries = []
     if os.path.exists(args.cdb):
-        with open(args.cdb, "r") as handle:
+        with open(args.cdb) as handle:
             entries = json.load(handle)
     # update with the current invocation
     current = {"directory": os.getcwd(), "command": args.command, "file": args.file}

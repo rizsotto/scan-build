@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
@@ -10,33 +9,32 @@ To run the static analyzer against a project goes like this:
  -- Analyze:   run the analyzer against the compilation database,
  -- Report:    create a cover report from the analyzer outputs."""
 
-import re
-import os
-import os.path
-import json
-import logging
-import multiprocessing
-import tempfile
-import functools
-import subprocess
-import platform
+import argparse
 import contextlib
 import datetime
-import argparse  # noqa: ignore=F401
-from typing import Any, Dict, List, Callable, Iterable, Generator  # noqa: ignore=F401
+import functools
+import logging
+import multiprocessing
+import os
+import os.path
+import platform
+import re
+import subprocess
+import tempfile
+from collections.abc import Callable, Generator, Iterable
+from typing import Any
 
 from clanganalyzer import command_entry_point, run_command
 from clanganalyzer.arguments import parse_args_for_analyze_build
+from clanganalyzer.clang import get_arguments, get_version
+from clanganalyzer.compilation import Compilation, CompilationDatabase, classify_source
 from clanganalyzer.report import document
-from clanganalyzer.compilation import Compilation, classify_source, CompilationDatabase
-from clanganalyzer.clang import get_version, get_arguments
 
 __all__ = ["analyze_build"]
 
 
 @command_entry_point
-def analyze_build():
-    # type: () -> int
+def analyze_build() -> int:
     """Entry point for clanganalyzer command."""
 
     args = parse_args_for_analyze_build()
@@ -51,15 +49,13 @@ def analyze_build():
         return number_of_bugs if args.status_bugs else 0
 
 
-def analyze_parameters(args):
-    # type: (argparse.Namespace) -> Dict[str, Any]
+def analyze_parameters(args: argparse.Namespace) -> dict[str, Any]:
     """Mapping between the command line parameters and the analyzer run
     method. The run method works with a plain dictionary, while the command
     line parameters are in a named tuple.
     The keys are very similar, and some values are preprocessed."""
 
-    def prefix_with(constant, pieces):
-        # type: (Any, List[Any]) -> List[Any]
+    def prefix_with(constant: Any, pieces: list[Any]) -> list[Any]:
         """From a sequence create another sequence where every second element
         is from the original sequence and the odd elements are the prefix.
 
@@ -67,17 +63,16 @@ def analyze_parameters(args):
 
         return [elem for piece in pieces for elem in [constant, piece]]
 
-    def direct_args(args):
-        # type: (argparse.Namespace) -> List[str]
+    def direct_args(args: argparse.Namespace) -> list[str]:
         """A group of command line arguments can mapped to command
         line arguments of the analyzer."""
 
         result = []
 
         if args.store_model:
-            result.append("-analyzer-store={0}".format(args.store_model))
+            result.append(f"-analyzer-store={args.store_model}")
         if args.constraints_model:
-            result.append("-analyzer-constraints={0}".format(args.constraints_model))
+            result.append(f"-analyzer-constraints={args.constraints_model}")
         if args.internal_stats:
             result.append("-analyzer-stats")
         if args.analyze_headers:
@@ -87,7 +82,7 @@ def analyze_parameters(args):
         if args.maxloop:
             result.extend(["-analyzer-max-loop", str(args.maxloop)])
         if args.output_format:
-            result.append("-analyzer-output={0}".format(args.output_format))
+            result.append(f"-analyzer-output={args.output_format}")
         if args.analyzer_config:
             result.extend(["-analyzer-config", args.analyzer_config])
         if args.verbose >= 4:
@@ -115,8 +110,7 @@ def analyze_parameters(args):
     }
 
 
-def run_analyzer_parallel(compilations, args):
-    # type: (Iterable[Compilation], argparse.Namespace) -> None
+def run_analyzer_parallel(compilations: Iterable[Compilation], args: argparse.Namespace) -> None:
     """Runs the analyzer against the given compilations."""
 
     logging.debug("run analyzer against compilation database")
@@ -131,8 +125,7 @@ def run_analyzer_parallel(compilations, args):
 
 
 @contextlib.contextmanager
-def report_directory(hint, keep):
-    # type: (str, bool) -> Generator[str, None, None]
+def report_directory(hint: str, keep: bool) -> Generator[str, None, None]:
     """Responsible for the report directory.
 
     hint -- could specify the parent directory of the output directory.
@@ -164,18 +157,17 @@ def report_directory(hint, keep):
             os.rmdir(name)
 
 
-def require(required):
+def require(required: list[str]) -> Callable:
     """Decorator for checking the required values in state.
 
     It checks the required attributes in the passed state and stop when
     any of those is missing."""
 
-    def decorator(method):
+    def decorator(method: Callable) -> Callable:
         @functools.wraps(method)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             for key in required:
-                assert key in args[0], "{} is missing".format(key)
-
+                assert key in args[0], f"{key} is missing"
             return method(*args, **kwargs)
 
         return wrapper
@@ -199,8 +191,7 @@ def require(required):
         "output_failures",
     ]
 )  # generate crash reports or not
-def run(opts):
-    # type: (Dict[str, Any]) -> Dict[str, Any]
+def run(opts: dict[str, Any]) -> dict[str, Any]:
     """Entry point to run (or not) static analyzer against a single entry
     of the compilation database.
 
@@ -218,8 +209,7 @@ def run(opts):
     return exclude(opts)
 
 
-def logging_analyzer_output(opts):
-    # type: (Dict[str, Any]) -> None
+def logging_analyzer_output(opts: dict[str, Any] | None) -> None:
     """Display error message from analyzer."""
 
     if opts and "error_output" in opts:
@@ -228,24 +218,21 @@ def logging_analyzer_output(opts):
 
 
 @require(["clang", "directory", "flags", "source", "output_dir", "language", "error_output", "exit_code"])
-def report_failure(opts):
-    # type: (Dict[str, Any]) -> None
+def report_failure(opts: dict[str, Any]) -> None:
     """Create report when analyzer failed.
 
     The major report is the preprocessor output. The output filename generated
     randomly. The compiler output also captured into '.stderr.txt' file.
     And some more execution context also saved into '.info.txt' file."""
 
-    def extension():
-        # type: () -> str
+    def extension() -> str:
         """Generate preprocessor file extension."""
 
         mapping = {"objective-c++": ".mii", "objective-c": ".mi", "c++": ".ii"}
         return mapping.get(opts["language"], ".i")
 
-    def destination():
-        # type: () -> str
-        """Creates failures directory if not exits yet."""
+    def destination() -> str:
+        """Creates failures directory if not exits."""
 
         failures_dir = os.path.join(opts["output_dir"], "failures")
         if not os.path.isdir(failures_dir):
@@ -283,14 +270,12 @@ def report_failure(opts):
 
 
 @require(["clang", "directory", "flags", "direct_args", "source", "output_dir", "output_format"])
-def run_analyzer(opts, continuation=report_failure):
-    # type: (...) -> Dict[str, Any]
+def run_analyzer(opts: dict[str, Any], continuation: Callable[[dict[str, Any]], None] = report_failure) -> dict[str, Any]:
     """It assembles the analysis command line and executes it. Capture the
     output of the analysis and returns with it. If failure reports are
     requested, it calls the continuation to generate it."""
 
-    def target():
-        # type: () -> str
+    def target() -> str:
         """Creates output file name for reports."""
         if opts["output_format"].startswith("plist"):
             (handle, name) = tempfile.mkstemp(prefix="report-", suffix=".plist", dir=opts["output_dir"])
@@ -306,7 +291,7 @@ def run_analyzer(opts, continuation=report_failure):
         output = run_command(cmd, cwd=cwd)
         return {"error_output": output, "exit_code": 0}
     except OSError:
-        message = 'failed to execute "{0}"'.format(opts["clang"])
+        message = f'failed to execute "{opts["clang"]}"'
         return {"error_output": [message], "exit_code": 127}
     except subprocess.CalledProcessError as ex:
         logging.warning("analysis failed", exc_info=True)
@@ -318,8 +303,9 @@ def run_analyzer(opts, continuation=report_failure):
 
 
 @require(["flags", "force_debug"])
-def filter_debug_flags(opts, continuation=run_analyzer):
-    # type: (...) -> Dict[str, Any]
+def filter_debug_flags(
+    opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = run_analyzer
+) -> dict[str, Any]:
     """Filter out nondebug macros when requested."""
 
     if opts.pop("force_debug"):
@@ -330,8 +316,9 @@ def filter_debug_flags(opts, continuation=run_analyzer):
 
 
 @require(["language", "compiler", "source", "flags"])
-def language_check(opts, continuation=filter_debug_flags):
-    # type: (...) -> Dict[str, Any]
+def language_check(
+    opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = filter_debug_flags
+) -> dict[str, Any]:
     """Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation."""
 
@@ -359,8 +346,9 @@ def language_check(opts, continuation=filter_debug_flags):
 
 
 @require(["arch_list", "flags"])
-def arch_check(opts, continuation=language_check):
-    # type: (...) -> Dict[str, Any]
+def arch_check(
+    opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = language_check
+) -> dict[str, Any]:
     """Do run analyzer through one of the given architectures."""
 
     disabled = frozenset({"ppc", "ppc64"})
@@ -386,8 +374,9 @@ def arch_check(opts, continuation=language_check):
 
 
 @require(["analyzer_target", "flags"])
-def target_check(opts, continuation=arch_check):
-    # type: (...) -> Dict[str, Any]
+def target_check(
+    opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = arch_check
+) -> dict[str, Any]:
     """Do run analyzer through the given target triple"""
 
     target = opts.pop("analyzer_target")
@@ -422,21 +411,22 @@ IGNORED_FLAGS = {
     "-sectorder": 3,
     "--param": 1,
     "--serialize-diagnostics": 1,
-}  # type: Dict[str, int]
+}
 
 
 @require(["flags"])
-def classify_parameters(opts, continuation=target_check):
-    # type: (...) -> Dict[str, Any]
+def classify_parameters(
+    opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = target_check
+) -> dict[str, Any]:
     """Prepare compiler flags (filters some and add others) and take out
     language (-x) and architecture (-arch) flags for future processing."""
 
     # the result of the method
-    result = {
+    result: dict[str, Any] = {
         "flags": [],  # the filtered compiler flags
         "arch_list": [],  # list of architecture flags
         "language": None,  # compilation language, None, if not specified
-    }  # type: Dict[str, Any]
+    }
 
     # iterate on the compile options
     args = iter(opts["flags"])
@@ -465,13 +455,13 @@ def classify_parameters(opts, continuation=target_check):
 
 
 @require(["source", "excludes"])
-def exclude(opts, continuation=classify_parameters):
-    # type: (...) -> Dict[str, Any]
+def exclude(
+    opts: dict[str, Any], continuation: Callable[[dict[str, Any]], dict[str, Any]] = classify_parameters
+) -> dict[str, Any]:
     """Analysis might be skipped, when one of the requested excluded
     directory contains the file."""
 
-    def contains(directory, entry):
-        # type: (str, str) -> bool
+    def contains(directory: str, entry: str) -> bool:
         """Check is directory contains the given file."""
 
         # When a directory contains a file, then the relative path to the

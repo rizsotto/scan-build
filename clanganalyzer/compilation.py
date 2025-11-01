@@ -1,21 +1,19 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 """This module is responsible for parsing a compiler invocation."""
 
-import re
-import os
 import collections
-import logging
 import json
+import logging
+import os
+import re
 import subprocess
-from typing import List, Iterable, Dict, Tuple, Type, Any  # noqa: ignore=F401
-from typing import Optional  # noqa: ignore=F401
+from collections.abc import Iterable
+from typing import Any
 
-from clanganalyzer import Execution, shell_split, run_command
-
+from clanganalyzer import Execution, run_command, shell_split
 
 __all__ = ["classify_source", "Compilation", "CompilationDatabase"]
 
@@ -60,7 +58,7 @@ IGNORED_FLAGS = {
     "-nologo": 0,
     "-EHsc": 0,
     "-EHa": 0,
-}  # type: Dict[str, int]
+}
 
 # Known C/C++ compiler wrapper name patterns.
 COMPILER_PATTERN_WRAPPER = re.compile(r"^(distcc|ccache)$")
@@ -92,13 +90,12 @@ class Compilation:
     """Represents a compilation of a single module."""
 
     def __init__(
-        self,  # type: Compilation
-        compiler,  # type: str
-        flags,  # type: List[str]
-        source,  # type: str
-        directory,  # type: str
-    ):
-        # type: (...) -> None
+        self,
+        compiler: str,
+        flags: list[str],
+        source: str,
+        directory: str,
+    ) -> None:
         """Constructor for a single compilation.
 
         This method just normalize the paths and initialize values."""
@@ -108,22 +105,18 @@ class Compilation:
         self.directory = os.path.normpath(directory)
         self.source = source if os.path.isabs(source) else os.path.normpath(os.path.join(self.directory, source))
 
-    def __hash__(self):
-        # type: (Compilation) -> int
+    def __hash__(self) -> int:
         return hash(str(self.as_dict()))
 
-    def __eq__(self, other):
-        # type: (Compilation, object) -> bool
+    def __eq__(self, other: object) -> bool:
         return vars(self) == vars(other)
 
-    def as_dict(self):
-        # type: (Compilation) -> Dict[str, str]
+    def as_dict(self) -> dict[str, str]:
         """This method dumps the object attributes into a dictionary."""
 
         return vars(self)
 
-    def as_db_entry(self):
-        # type: (Compilation) -> Dict[str, Any]
+    def as_db_entry(self) -> dict[str, Any]:
         """This method creates a compilation database entry."""
 
         relative = os.path.relpath(self.source, self.directory)
@@ -131,8 +124,7 @@ class Compilation:
         return {"file": relative, "arguments": [compiler, "-c"] + self.flags + [relative], "directory": self.directory}
 
     @classmethod
-    def from_db_entry(cls, entry):
-        # type: (Type[Compilation], Dict[str, str]) -> Iterable[Compilation]
+    def from_db_entry(cls, entry: dict[str, str]) -> Iterable["Compilation"]:
         """Parser method for compilation entry.
 
         From compilation database entry it creates the compilation object.
@@ -146,12 +138,11 @@ class Compilation:
 
     @classmethod
     def iter_from_execution(
-        cls,  # type: Type[Compilation]
-        execution,  # type: Execution
-        cc="cc",  # type: str
-        cxx="c++",  # type: str
-    ):
-        # type: (...) -> Iterable[Compilation]
+        cls,
+        execution: Execution,
+        cc: str = "cc",
+        cxx: str = "c++",
+    ) -> Iterable["Compilation"]:
         """Generator method for compilation entries.
 
         From a single compiler call it can generate zero or more entries.
@@ -162,19 +153,21 @@ class Compilation:
         :return: stream of CompilationDbEntry objects"""
 
         candidate = cls._split_command(execution.cmd, cc, cxx)
-        for source in candidate.files if candidate else []:
-            result = Compilation(directory=execution.cwd, source=source, compiler=candidate.compiler, flags=candidate.flags)
-            if os.path.isfile(result.source):
-                yield result
+        if candidate is not None:
+            for source in candidate.files:
+                result = Compilation(
+                    directory=execution.cwd, source=source, compiler=candidate.compiler, flags=candidate.flags
+                )
+                if os.path.isfile(result.source):
+                    yield result
 
     @classmethod
     def _split_compiler(
-        cls,  # type: Type[Compilation]
-        command,  # type: List[str]
-        cc,  # type: str
-        cxx,  # type: str
-    ):
-        # type: (...) -> Optional[Tuple[str, List[str]]]
+        cls,
+        command: list[str],
+        cc: str,
+        cxx: str,
+    ) -> tuple[str, list[str]] | None:
         """A predicate to decide whether the command is a compiler call.
 
         :param command:     the command to classify
@@ -183,25 +176,21 @@ class Compilation:
         :return: None if the command is not a compilation, or a tuple
                 (compiler_language, rest of the command) otherwise"""
 
-        def is_wrapper(cmd):
-            # type: (str) -> bool
+        def is_wrapper(cmd: str) -> bool:
             return True if COMPILER_PATTERN_WRAPPER.match(cmd) else False
 
-        def is_mpi_wrapper(cmd):
-            # type: (str) -> bool
+        def is_mpi_wrapper(cmd: str) -> bool:
             return True if COMPILER_PATTERNS_MPI_WRAPPER.match(cmd) else False
 
-        def is_c_compiler(cmd):
-            # type: (str) -> bool
+        def is_c_compiler(cmd: str) -> bool:
             return os.path.basename(cc) == cmd or any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CC)
 
-        def is_cxx_compiler(cmd):
-            # type: (str) -> bool
+        def is_cxx_compiler(cmd: str) -> bool:
             return os.path.basename(cxx) == cmd or any(pattern.match(cmd) for pattern in COMPILER_PATTERNS_CXX)
 
         if command:  # not empty list will allow to index '0' and '1:'
-            executable = os.path.basename(command[0])  # type: str
-            parameters = command[1:]  # type: List[str]
+            executable: str = os.path.basename(command[0])
+            parameters: list[str] = command[1:]
             # 'wrapper' 'parameters' and
             # 'wrapper' 'compiler' 'parameters' are valid.
             # Additionally, a wrapper can wrap another wrapper.
@@ -213,7 +202,7 @@ class Compilation:
             elif is_mpi_wrapper(executable):
                 # Pass the executable with full path to avoid pick different
                 # executable from PATH.
-                mpi_call = get_mpi_call(command[0])  # type: List[str]
+                mpi_call: list[str] = get_mpi_call(command[0])
                 return cls._split_compiler(mpi_call + parameters, cc, cxx)
             # and 'compiler' 'parameters' is valid.
             elif is_c_compiler(executable):
@@ -223,7 +212,7 @@ class Compilation:
         return None
 
     @classmethod
-    def _split_command(cls, command, cc, cxx):
+    def _split_command(cls, command: list[str], cc: str, cxx: str) -> CompilationCommand | None:
         """Returns a value when the command is a compilation, None otherwise.
 
         :param command:     the command to classify
@@ -270,8 +259,7 @@ class CompilationDatabase:
     """Compilation Database persistence methods."""
 
     @staticmethod
-    def save(filename, iterator):
-        # type: (str, Iterable[Compilation]) -> None
+    def save(filename: str, iterator: Iterable[Compilation]) -> None:
         """Saves compilations to given file.
 
         :param filename: the destination file name
@@ -282,21 +270,19 @@ class CompilationDatabase:
             json.dump(entries, handle, sort_keys=True, indent=4)
 
     @staticmethod
-    def load(filename):
-        # type: (str) -> Iterable[Compilation]
+    def load(filename: str) -> Iterable[Compilation]:
         """Load compilations from file.
 
         :param filename: the file to read from
         :returns: iterator of Compilation objects."""
 
-        with open(filename, "r") as handle:
+        with open(filename) as handle:
             for entry in json.load(handle):
                 for compilation in Compilation.from_db_entry(entry):
                     yield compilation
 
 
-def classify_source(filename, c_compiler=True):
-    # type: (str, bool) -> Optional[str]
+def classify_source(filename: str, c_compiler: bool = True) -> str | None:
     """Classify source file names and returns the presumed language,
     based on the file name extension.
 
@@ -327,8 +313,7 @@ def classify_source(filename, c_compiler=True):
     return mapping.get(extension)
 
 
-def get_mpi_call(wrapper):
-    # type: (str) -> List[str]
+def get_mpi_call(wrapper: str) -> list[str]:
     """Provide information on how the underlying compiler would have been
     invoked without the MPI compiler wrapper."""
 

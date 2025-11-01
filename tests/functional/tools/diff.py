@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-from __future__ import print_function
 
 import argparse
 import json
@@ -17,10 +15,10 @@ def diff(lhs, rhs):
     right = {smooth(entry): entry for entry in rhs}
     for key in left.keys():
         if key not in right:
-            yield "> {}".format(left[key])
+            yield f"> {left[key]}"
     for key in right.keys():
         if key not in left:
-            yield "< {}".format(right[key])
+            yield f"< {right[key]}"
 
 
 def smooth(entry):

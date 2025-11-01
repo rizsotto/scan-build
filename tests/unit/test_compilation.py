@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import clanganalyzer.compilation as sut
 import unittest
+
+import clanganalyzer.compilation as sut
 
 
 class CompilerTest(unittest.TestCase):

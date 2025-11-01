@@ -1,21 +1,21 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import clanganalyzer.analyze as sut
-import tempfile
-import unittest
+import glob
 import os
 import os.path
-import glob
 import platform
+import tempfile
+import unittest
+
+import clanganalyzer.analyze as sut
 
 IS_WINDOWS = os.getenv("windows")
 
 
-class Spy(object):
+class Spy:
     def __init__(self):
         self.arg = None
         self.success = 0

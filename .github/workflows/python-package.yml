@@ -63,7 +63,7 @@ jobs:
 
       - name: Type check with ty
         run: |
-          uv run ty libscanbuild libear
+          uv run ty clanganalyzer
 
       - name: Test with pytest
         run: |

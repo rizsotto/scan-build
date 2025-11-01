@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import tempfile
-import clanganalyzer.clang as sut
-import unittest
 import os.path
+import tempfile
+import unittest
+
+import clanganalyzer.clang as sut
 
 
 class ClangGetVersion(unittest.TestCase):

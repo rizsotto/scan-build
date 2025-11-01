@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
@@ -9,10 +8,9 @@ Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper."""
 
 import re
-from typing import List, Set, FrozenSet, Callable  # noqa: ignore=F401
-from typing import Iterable, Tuple, Dict  # noqa: ignore=F401
+from collections.abc import Callable, Iterable
 
-from clanganalyzer import shell_split, run_command
+from clanganalyzer import run_command, shell_split
 
 __all__ = ["get_version", "get_arguments", "get_checkers"]
 
@@ -20,8 +18,7 @@ __all__ = ["get_version", "get_arguments", "get_checkers"]
 ACTIVE_CHECKER_PATTERN = re.compile(r"^-analyzer-checker=(.*)$")
 
 
-def get_version(clang):
-    # type: (str) -> str
+def get_version(clang: str) -> str:
     """Returns the compiler version as string.
 
     :param clang:   the compiler we are using
@@ -32,8 +29,7 @@ def get_version(clang):
     return output[0]
 
 
-def get_arguments(command, cwd):
-    # type: (List[str], str) -> List[str]
+def get_arguments(command: list[str], cwd: str) -> list[str]:
     """Capture Clang invocation.
 
     :param command: the compilation command
@@ -52,8 +48,7 @@ def get_arguments(command, cwd):
     return shell_split(last_line)
 
 
-def get_active_checkers(clang, plugins):
-    # type: (str, List[str]) -> FrozenSet[str]
+def get_active_checkers(clang: str, plugins: list[str]) -> frozenset[str]:
     """Get the active checker list.
 
     :param clang:   the compiler we are using
@@ -65,8 +60,7 @@ def get_active_checkers(clang, plugins):
     arguments. For input file we specify stdin and pass only language
     information."""
 
-    def get_active_checkers_for(language):
-        # type: (str) -> List[str]
+    def get_active_checkers_for(language: str) -> list[str]:
         """Returns a list of active checkers for the given language."""
 
         load_args = [arg for plugin in plugins for arg in ["-Xclang", "-load", "-Xclang", plugin]]
@@ -77,19 +71,17 @@ def get_active_checkers(clang, plugins):
             if candidate
         ]
 
-    result = set()  # type: Set[str]
+    result: set[str] = set()
     for language in ["c", "c++", "objective-c", "objective-c++"]:
         result.update(get_active_checkers_for(language))
     return frozenset(result)
 
 
-def is_active(checkers):
-    # type: (Iterable[str]) -> Callable[[str], bool]
+def is_active(checkers: Iterable[str]) -> Callable[[str], bool]:
     """Returns a method, which classifies the checker active or not,
     based on the received checker name list."""
 
-    def predicate(checker):
-        # type: (str) -> bool
+    def predicate(checker: str) -> bool:
         """Returns True if the given checker is active."""
 
         return any(pattern.match(checker) for pattern in patterns)
@@ -98,8 +90,7 @@ def is_active(checkers):
     return predicate
 
 
-def parse_checkers(stream):
-    # type: (List[str]) -> Iterable[Tuple[str, str]]
+def parse_checkers(stream: list[str]) -> Iterable[tuple[str, str]]:
     """Parse clang -analyzer-checker-help output.
 
     Below the line 'CHECKERS:' are there the name description pairs.
@@ -137,8 +128,7 @@ def parse_checkers(stream):
                 yield (current["key"], current["value"])
 
 
-def get_checkers(clang, plugins):
-    # type: (str, List[str]) -> Dict[str, Tuple[str, bool]]
+def get_checkers(clang: str, plugins: list[str]) -> dict[str, tuple[str, bool]]:
     """Get all the available checkers from default and from the plugins.
 
     :param clang:   the compiler we are using

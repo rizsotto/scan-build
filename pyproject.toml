@@ -108,7 +108,7 @@ show_error_codes = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--verbose --cov=libscanbuild --cov=libear --cov-report=term-missing --cov-report=xml"
+addopts = "--verbose --cov=clanganalyzer --cov-report=term-missing --cov-report=xml"
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

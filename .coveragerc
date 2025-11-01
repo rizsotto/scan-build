@@ -1,12 +1,11 @@
 [run]
 branch = true
 parallel = true
-source = libscanbuild,libear
+source = clanganalyzer
 
 [report]
 include =
-    libscanbuild/*
-    libear/*
+    clanganalyzer/*
 exclude_lines =
     pragma: no cover
     def __repr__

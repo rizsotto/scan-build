@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
@@ -13,24 +12,20 @@ It also implements basic validation methods, related to the command.
 Validations are mostly calling specific help methods, or mangling values.
 """
 
-from __future__ import absolute_import, division, print_function
 
-import os
-import sys
 import argparse
 import logging
+import os
+import sys
 import tempfile
-from typing import Tuple, Dict  # noqa: ignore=F401
 
 from clanganalyzer import reconfigure_logging
 from clanganalyzer.clang import get_checkers
 
-
 __all__ = ["parse_args_for_analyze_build"]
 
 
-def parse_args_for_analyze_build():
-    # type: () -> argparse.Namespace
+def parse_args_for_analyze_build() -> argparse.Namespace:
     """Parse and validate command-line arguments for clanganalyzer."""
 
     from_build_command = False
@@ -46,8 +41,7 @@ def parse_args_for_analyze_build():
     return args
 
 
-def normalize_args_for_analyze(args, from_build_command):
-    # type: (argparse.Namespace, bool) -> None
+def normalize_args_for_analyze(args: argparse.Namespace, from_build_command: bool) -> None:
     """Normalize parsed arguments for clanganalyzer.
 
     :param args: Parsed argument object. (Will be mutated.)
@@ -72,8 +66,7 @@ def normalize_args_for_analyze(args, from_build_command):
         args.cdb = "compile_commands.json"
 
 
-def validate_args_for_analyze(parser, args, from_build_command):
-    # type: (argparse.ArgumentParser, argparse.Namespace, bool) -> None
+def validate_args_for_analyze(parser: argparse.ArgumentParser, args: argparse.Namespace, from_build_command: bool) -> None:
     """Command line parsing is done by the argparse module, but semantic
     validation still needs to be done. This method is doing it for
     clanganalyzer commands.
@@ -95,8 +88,7 @@ def validate_args_for_analyze(parser, args, from_build_command):
         parser.error(message="compilation database is missing")
 
 
-def create_analyze_parser(from_build_command):
-    # type: (bool) -> argparse.ArgumentParser
+def create_analyze_parser(from_build_command: bool) -> argparse.ArgumentParser:
     """Creates a parser for command-line arguments to 'analyze'."""
 
     parser = create_default_parser()
@@ -307,8 +299,7 @@ def create_analyze_parser(from_build_command):
     return parser
 
 
-def create_default_parser():
-    # type: () -> argparse.ArgumentParser
+def create_default_parser() -> argparse.ArgumentParser:
     """Creates command line parser for all build wrapper commands."""
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -324,8 +315,7 @@ def create_default_parser():
     return parser
 
 
-def parser_add_cdb(parser):
-    # type: (argparse.ArgumentParser) -> None
+def parser_add_cdb(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cdb", metavar="<file>", default="compile_commands.json", help="""The JSON compilation database.""")
 
 
@@ -342,16 +332,14 @@ class AppendCommaSeparated(argparse.Action):
         setattr(namespace, self.dest, actual)
 
 
-def print_active_checkers(checkers):
-    # type: (Dict[str, Tuple[str, bool]]) -> None
+def print_active_checkers(checkers: dict[str, tuple[str, bool]]) -> None:
     """Print active checkers to stdout."""
 
     for name in sorted(name for name, (_, active) in checkers.items() if active):
         print(name)
 
 
-def print_checkers(checkers):
-    # type: (Dict[str, Tuple[str, bool]]) -> None
+def print_checkers(checkers: dict[str, tuple[str, bool]]) -> None:
     """Print verbose checker help to stdout."""
 
     print("")
@@ -361,10 +349,10 @@ def print_checkers(checkers):
         description, active = checkers[name]
         prefix = "+" if active else " "
         if len(name) > 30:
-            print(" {0} {1}".format(prefix, name))
+            print(f" {prefix} {name}")
             print(" " * 35 + description)
         else:
-            print(" {0} {1: <30}  {2}".format(prefix, name, description))
+            print(f" {prefix} {name: <30}  {description}")
     print("")
     print('NOTE: "+" indicates that an analysis is enabled by default.')
     print("")

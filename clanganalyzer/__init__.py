@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
@@ -14,18 +13,16 @@ import re
 import shlex
 import subprocess
 import sys
-
-from typing import List, Any, Dict, Callable  # noqa: ignore=F401
+from collections.abc import Callable
+from typing import Any
 
 Execution = collections.namedtuple("Execution", ["pid", "cwd", "cmd"])
 
 
-def shell_split(string):
-    # type: (str) -> List[str]
+def shell_split(string: str) -> list[str]:
     """Takes a command string and returns as a list."""
 
-    def unescape(arg):
-        # type: (str) -> str
+    def unescape(arg: str) -> str:
         """Gets rid of the escaping characters."""
 
         if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] == '"':
@@ -35,8 +32,7 @@ def shell_split(string):
     return [unescape(token) for token in shlex.split(string)]
 
 
-def run_command(command, cwd=None):
-    # type: (List[str], str) -> List[str]
+def run_command(command: list[str], cwd: str | None = None) -> list[str]:
     """Run a given command and report the execution.
 
     :param command: array of tokens
@@ -44,8 +40,7 @@ def run_command(command, cwd=None):
     :return: output of the command
     """
 
-    def decode_when_needed(result):
-        # type: (Any) -> str
+    def decode_when_needed(result: Any) -> str:
         """check_output returns bytes or string depend on python version"""
         if not isinstance(result, str):
             return result.decode("utf-8")
@@ -61,7 +56,7 @@ def run_command(command, cwd=None):
         raise ex
 
 
-def reconfigure_logging(verbose_level):
+def reconfigure_logging(verbose_level: int) -> None:
     """Reconfigure logging level and format based on the verbose flag.
 
     :param verbose_level: number of `-v` flags received by the command
@@ -85,8 +80,7 @@ def reconfigure_logging(verbose_level):
     root.handlers = [handler]
 
 
-def command_entry_point(function):
-    # type: (Callable[[], int]) -> Callable[[], int]
+def command_entry_point(function: Callable[[], int]) -> Callable[[], int]:
     """Decorator for command entry methods.
 
     The decorator initialize/shutdown logging and guard on programming
@@ -96,8 +90,7 @@ def command_entry_point(function):
     be the exit code of the process."""
 
     @functools.wraps(function)
-    def wrapper():
-        # type: () -> int
+    def wrapper() -> int:
         """Do housekeeping tasks and execute the wrapped method."""
 
         try:

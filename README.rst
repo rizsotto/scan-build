@@ -103,7 +103,7 @@ To run linting and type checking::
 
     $ uv run ruff check .
     $ uv run ruff format .
-    $ uv run ty libscanbuild libear
+    $ uv run ty clanganalyzer
 
 Problem reports
 ---------------

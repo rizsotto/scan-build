@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
@@ -8,28 +7,29 @@
 The input for this step is the output directory, where individual reports
 could be found. It parses those reports and generates 'index.html'."""
 
-import re
-import os
-import os.path
-import sys
-import shutil
-import plistlib
+import argparse
+import datetime
+import getpass
 import glob
 import itertools
 import json
 import logging
-import datetime
-import getpass
+import os
+import os.path
+import plistlib
+import re
+import shutil
 import socket
-import argparse  # noqa: ignore=F401
-from typing import Dict, List, Tuple, Any, Set, Generator, Iterator, Optional  # noqa: ignore=F401
+import sys
+from collections.abc import Generator, Iterator
+from typing import Any
+
 from clanganalyzer.clang import get_version
 
 __all__ = ["document"]
 
 
-def document(args):
-    # type: (argparse.Namespace) -> int
+def document(args: argparse.Namespace) -> int:
     """Generates cover report and returns the number of bugs/crashes."""
 
     html_reports_available = args.output_format in {"html", "plist-html"}
@@ -66,8 +66,7 @@ def document(args):
     return result
 
 
-def assemble_cover(args, prefix, fragments):
-    # type: (argparse.Namespace, str, List[str]) -> None
+def assemble_cover(args: argparse.Namespace, prefix: str, fragments: list[str]) -> None:
     """Put together the fragments into a final report."""
 
     if args.html_title is None:
@@ -115,7 +114,7 @@ def assemble_cover(args, prefix, fragments):
         )
         for fragment in fragments:
             # copy the content of fragments
-            with open(fragment, "r") as input_handle:
+            with open(fragment) as input_handle:
                 shutil.copyfileobj(input_handle, handle)
         handle.write(
             reindent(
@@ -204,8 +203,7 @@ def bug_summary(output_dir, bug_counter):
     return name
 
 
-def bug_report(output_dir, prefix):
-    # type: (str, str) -> str
+def bug_report(output_dir: str, prefix: str) -> str:
     """Creates a fragment from the analyzer reports."""
 
     # pretty = prettify_bug(prefix, output_dir)
@@ -268,8 +266,7 @@ def bug_report(output_dir, prefix):
     return name
 
 
-def crash_report(output_dir, prefix):
-    # type: (str, str) -> str
+def crash_report(output_dir: str, prefix: str) -> str:
     """Creates a fragment from the compiler crashes."""
 
     name = os.path.join(output_dir, "crashes.html.fragment")
@@ -323,21 +320,19 @@ def crash_report(output_dir, prefix):
 class Crash:
     def __init__(
         self,
-        source,  # type: str
-        problem,  # type: str
-        file,  # type: str
-        info,  # type: str
-        stderr,  # type: str
-    ):
-        # type: (...) -> None
+        source: str,
+        problem: str,
+        file: str,
+        info: str,
+        stderr: str,
+    ) -> None:
         self.source = source
         self.problem = problem
         self.file = file
         self.info = info
         self.stderr = stderr
 
-    def pretty(self, prefix, output_dir):
-        # type: (Crash, str, str) -> Dict[str, str]
+    def pretty(self, prefix: str, output_dir: str) -> dict[str, str]:
         """Make safe this values to embed into HTML."""
 
         return {
@@ -349,22 +344,20 @@ class Crash:
         }
 
     @classmethod
-    def _parse_info_file(cls, filename):
-        # type: (str) -> Optional[Tuple[str, str]]
+    def _parse_info_file(cls, filename: str) -> tuple[str, str] | None:
         """Parse out the crash information from the report file."""
 
         lines = list(safe_readlines(filename))
         return None if len(lines) < 2 else (lines[0], lines[1])
 
     @classmethod
-    def read(cls, output_dir):
-        # type: (str) -> Iterator[Crash]
+    def read(cls, output_dir: str) -> Iterator["Crash"]:
         """Generate a unique sequence of crashes from given directory."""
 
         pattern = os.path.join(output_dir, "failures", "*.info.txt")
         for info_filename in glob.iglob(pattern):
             base_filename = info_filename[0 : -len(".info.txt")]
-            stderr_filename = "{}.stderr.txt".format(base_filename)
+            stderr_filename = f"{base_filename}.stderr.txt"
 
             source_and_problem = cls._parse_info_file(info_filename)
             if source_and_problem is not None:
@@ -380,11 +373,9 @@ class Crash:
 class Bug:
     def __init__(
         self,
-        report,  # type: str
-        attributes,  # type: Dict[str, str]
-    ):
-        # type: (...) -> None
-
+        report: str,
+        attributes: dict[str, str],
+    ) -> None:
         self.file = attributes.get("bug_file", "")
         self.line = int(attributes.get("bug_line", "0"))
         self.path_length = int(attributes.get("bug_path_length", "1"))
@@ -393,9 +384,7 @@ class Bug:
         self.function = attributes.get("bug_function", "n/a")
         self.report = report
 
-    def __eq__(self, o):
-        # type: (Bug, object) -> bool
-
+    def __eq__(self, o: object) -> bool:
         return (
             isinstance(o, Bug)
             and o.line == self.line
@@ -404,24 +393,18 @@ class Bug:
             and o.file == self.file
         )
 
-    def __hash__(self):
-        # type: (Bug) -> int
-
+    def __hash__(self) -> int:
         return hash(self.line) + hash(self.path_length) + hash(self.type) + hash(self.file)
 
-    def type_class(self):
-        # type: (Bug) -> str
-
-        def smash(key):
-            # type: (str) -> str
+    def type_class(self) -> str:
+        def smash(key: str) -> str:
             """Make value ready to be HTML attribute value."""
 
             return key.lower().replace(" ", "_").replace("'", "")
 
         return "_".join(["bt", smash(self.category), smash(self.type)])
 
-    def pretty(self, prefix, output_dir):
-        # type: (Bug, str, str) -> Dict[str, str]
+    def pretty(self, prefix: str, output_dir: str) -> dict[str, str]:
         """Make safe this values to embed into HTML."""
 
         return {
@@ -436,8 +419,7 @@ class Bug:
         }
 
 
-def read_bugs(output_dir, html):
-    # type: (str, bool) -> Generator[Bug, None, None]
+def read_bugs(output_dir: str, html: bool) -> Generator[Bug, None, None]:
     """Generate a unique sequence of bugs from given output directory.
 
     Duplicates can be in a project if the same module was compiled multiple
@@ -456,19 +438,17 @@ def read_bugs(output_dir, html):
     return unique_bugs(itertools.chain.from_iterable(bug_generators))
 
 
-def unique_bugs(generator):
-    # type: (Iterator[Bug]) -> Generator[Bug, None, None]
+def unique_bugs(generator: Iterator[Bug]) -> Generator[Bug, None, None]:
     """Remove duplicates from bug stream"""
 
-    state = set()  # type: Set[Bug]
+    state: set[Bug] = set()
     for item in generator:
         if item not in state:
             state.add(item)
             yield item
 
 
-def parse_bug_plist(filename):
-    # type: (str) -> Generator[Bug, None, None]
+def parse_bug_plist(filename: str) -> Generator[Bug, None, None]:
     """Returns the generator of bugs from a single .plist file."""
 
     with open(filename, "rb") as handle:
@@ -491,8 +471,7 @@ def parse_bug_plist(filename):
             )
 
 
-def parse_bug_html(filename):
-    # type: (str) -> Generator[Bug, None, None]
+def parse_bug_html(filename: str) -> Generator[Bug, None, None]:
     """Parse out the bug information from HTML output."""
 
     patterns = [
@@ -520,8 +499,25 @@ def parse_bug_html(filename):
     yield Bug(filename, bug)
 
 
-def create_counters():
-    # type () -> Callable[[Bug], None]
+class BugCounter:
+    """Counters for bug statistics."""
+
+    def __init__(self) -> None:
+        self.total = 0
+        self.categories: dict[str, Any] = {}
+
+    def __call__(self, bug: Bug) -> None:
+        current_category = self.categories.get(bug.category, dict())
+        current_type = current_category.get(
+            bug.type, {"bug_type": bug.type, "bug_type_class": bug.type_class(), "bug_count": 0}
+        )
+        current_type.update({"bug_count": current_type["bug_count"] + 1})
+        current_category.update({bug.type: current_type})
+        self.categories.update({bug.category: current_category})
+        self.total += 1
+
+
+def create_counters() -> BugCounter:
     """Create counters for bug statistics.
 
     Two entries are maintained: 'total' is an integer, represents the
@@ -530,24 +526,10 @@ def create_counters():
     Each entry in this classification is a dictionary of 'count', 'type'
     and 'label'."""
 
-    def predicate(bug):
-        # type (Bug) -> None
-        current_category = predicate.categories.get(bug.category, dict())
-        current_type = current_category.get(
-            bug.type, {"bug_type": bug.type, "bug_type_class": bug.type_class(), "bug_count": 0}
-        )
-        current_type.update({"bug_count": current_type["bug_count"] + 1})
-        current_category.update({bug.type: current_type})
-        predicate.categories.update({bug.category: current_category})
-        predicate.total += 1
-
-    predicate.total = 0  # type: int
-    predicate.categories = dict()  # type: Dict[str, Any]
-    return predicate
+    return BugCounter()
 
 
-def copy_resource_files(output_dir):
-    # type: (str) -> None
+def copy_resource_files(output_dir: str) -> None:
     """Copy the javascript and css files to the report directory."""
 
     this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -555,8 +537,7 @@ def copy_resource_files(output_dir):
         shutil.copy(os.path.join(this_dir, "resources", resource), output_dir)
 
 
-def safe_readlines(filename):
-    # type: (str) -> Iterator[str]
+def safe_readlines(filename: str) -> Iterator[str]:
     """Read and return an iterator of lines from file."""
 
     with open(filename, mode="rb") as handler:
@@ -565,8 +546,7 @@ def safe_readlines(filename):
             yield line.decode(errors="ignore").rstrip()
 
 
-def chop(prefix, filename):
-    # type: (str, str) -> str
+def chop(prefix: str, filename: str) -> str:
     """Create 'filename' from '/prefix/filename'"""
     result = filename
     if prefix:
@@ -577,16 +557,14 @@ def chop(prefix, filename):
     return result
 
 
-def escape(text):
-    # type: (str) -> str
-    """Paranoid HTML escape method. (Python version independent)"""
+def escape(text: str) -> str:
+    """Paranoid HTML escape method."""
 
     escape_table = {"&": "&amp;", '"': "&quot;", "'": "&apos;", ">": "&gt;", "<": "&lt;"}
     return "".join(escape_table.get(c, c) for c in text)
 
 
-def reindent(text, indent):
-    # type: (str, int) -> str
+def reindent(text: str, indent: int) -> str:
     """Utility function to format html output and keep indentation."""
 
     result = ""
@@ -596,28 +574,25 @@ def reindent(text, indent):
     return result
 
 
-def comment(name, opts=None):
-    # type: (str, Dict[str, str]) -> str
+def comment(name: str, opts: dict[str, str] | None = None) -> str:
     """Utility function to format meta information as comment."""
 
     attributes = ""
     if opts:
         for key, value in opts.items():
-            attributes += ' {0}="{1}"'.format(key, value)
+            attributes += f' {key}="{value}"'
 
-    return "<!-- {0}{1} -->{2}".format(name, attributes, os.linesep)
+    return f"<!-- {name}{attributes} -->{os.linesep}"
 
 
-def commonprefix_from(filename):
-    # type: (str) -> str
+def commonprefix_from(filename: str) -> str:
     """Create file prefix from a compilation database entries."""
 
-    with open(filename, "r") as handle:
+    with open(filename) as handle:
         return commonprefix(item["file"] for item in json.load(handle))
 
 
-def commonprefix(files):
-    # type: (Iterator[str]) -> str
+def commonprefix(files: Iterator[str]) -> str:
     """Fixed version of os.path.commonprefix.
 
     :param files: list of file names.
