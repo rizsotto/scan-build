@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libear
+import tempfile
 import libscanbuild.report as sut
 import unittest
 import os
@@ -14,8 +14,8 @@ IS_WINDOWS = os.getenv("windows")
 
 
 def run_bug_parse(content):
-    with libear.temporary_directory() as tmp_dir:
-        file_name = os.path.join(tmp_dir, "test.html")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        file_name = os.path.join(tmpdir, "test.html")
         with open(file_name, "w") as handle:
             lines = (line + os.linesep for line in content)
             handle.writelines(lines)
@@ -54,8 +54,8 @@ class ParseFileTest(unittest.TestCase):
 
     def test_parse_crash(self):
         content = ["/some/path/file.c", "Some very serious Error", "bla", "bla-bla"]
-        with libear.temporary_directory() as tmp_dir:
-            file_name = os.path.join(tmp_dir, "file.i.info.txt")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_name = os.path.join(tmpdir, "file.i.info.txt")
             with open(file_name, "w") as handle:
                 handle.write(os.linesep.join(content))
             source, problem = sut.Crash._parse_info_file(file_name)
@@ -65,8 +65,8 @@ class ParseFileTest(unittest.TestCase):
     def test_parse_real_crash(self):
         import libscanbuild.analyze as sut2
 
-        with libear.temporary_directory() as tmp_dir:
-            filename = os.path.join(tmp_dir, "test.c")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = os.path.join(tmpdir, "test.c")
             with open(filename, "w") as handle:
                 handle.write("int main() { return 0")
             # produce failure report
@@ -75,14 +75,14 @@ class ParseFileTest(unittest.TestCase):
                 "directory": os.getcwd(),
                 "flags": [],
                 "source": filename,
-                "output_dir": tmp_dir,
+                "output_dir": tmpdir,
                 "language": "c",
                 "error_output": "some output",
                 "exit_code": 13,
             }
             sut2.report_failure(opts)
             # verify
-            crashes = list(sut.Crash.read(tmp_dir))
+            crashes = list(sut.Crash.read(tmpdir))
             self.assertEqual(1, len(crashes))
             crash = crashes[0]
             self.assertEqual(filename, crash.source)

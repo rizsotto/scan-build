@@ -17,11 +17,9 @@
 scan-build
 ==========
 
-A package designed to wrap a build so that all calls to gcc/clang are
-intercepted and logged into a `compilation database`_ and/or piped to
-the clang static analyzer. Includes intercept-build tool, which logs
-the build, as well as scan-build tool, which logs the build and runs
-the clang static analyzer on it.
+A package designed to run the clang static analyzer against projects
+with existing compilation databases. The analyze-build tool runs the
+clang static analyzer against a compilation database.
 
 
 How to get
@@ -58,83 +56,33 @@ Prerequisites
 How to use
 ----------
 
-To run the Clang static analyzer against a project goes like this::
-
-    $ scan-build <your build command>
-
-To generate a compilation database file goes like this::
-
-    $ intercept-build <your build command>
-
-To run the Clang static analyzer against a project with compilation database
-goes like this::
+To run the Clang static analyzer against a project with an existing
+compilation database goes like this::
 
     $ analyze-build
 
-Use ``--help`` to know more about the commands.
+Use ``--help`` to know more about the command.
 
 
-Limitations
------------
+Prerequisites
+-------------
 
-Generally speaking, the ``intercept-build`` and ``analyze-build`` tools
-together does the same job as ``scan-build`` does. So, you can expect the
-same output from this line as simple ``scan-build`` would do::
+The ``analyze-build`` tool requires:
 
-    $ intercept-build <your build command> && analyze-build
+1. An existing compilation database (``compile_commands.json``) for your project
+2. The clang static analyzer to be available on your system
 
-The major difference is how and when the analyzer is run. The ``scan-build``
-tool has three distinct models to run the analyzer:
-
-1.  Use compiler wrappers to make actions.
-    The compiler wrappers does run the real compiler and the analyzer.
-    This is the default behaviour, can be enforced with ``--override-compiler``
-    flag.
-
-2.  Use special library to intercept compiler calls during the build process.
-    The analyzer run against each modules after the build finished.
-    Use ``--intercept-first`` flag to get this model.
-
-3.  Use compiler wrappers to intercept compiler calls during the build process.
-    The analyzer run against each modules after the build finished.
-    Use ``--intercept-first`` and ``--override-compiler`` flags together to get
-    this model.
-
-The 1. and 3. are using compiler wrappers, which works only if the build
-process respects the ``CC`` and ``CXX`` environment variables. (Some build
-process can override these variable as command line parameter only. This case
-you need to pass the compiler wrappers manually. eg.: ``intercept-build
---override-compiler make CC=intercept-cc CXX=intercept-c++ all`` where the
-original build command would have been ``make all`` only.)
-
-The 1. runs the analyzer right after the real compilation. So, if the build
-process removes removes intermediate modules (generated sources) the analyzer
-output still kept.
-
-The 2. and 3. generate the compilation database first, and filters out those
-modules which are not exists. So, it's suitable for incremental analysis during
-the development.
-
-The 2. mode is available only on FreeBSD, Linux and OSX. Where library preload
-is available from the dynamic loader. Security extension/modes on different
-operating systems might disable library preload. This case the build behaves
-normally, but the result compilation database will be empty. (Notable examples
-for enabled security modes are: SIP on OS X Captain and SELinux on Fedora,
-RHEL and CentOS.) The program checks the security modes for SIP, and falls
-back to 3. mode.
-
-``intercept-build`` command uses only the 2. and 3. mode to generate the
-compilation database. ``analyze-build`` does only run the analyzer against the
-captured compiler calls.
+You can generate a compilation database using various tools like CMake
+(with ``-DCMAKE_EXPORT_COMPILE_COMMANDS=ON``), Bear, or other build systems
+that support compilation database generation.
 
 
 Known problems
 --------------
 
-Because it uses ``LD_PRELOAD`` or ``DYLD_INSERT_LIBRARIES`` environment variables,
-it does not append to it, but overrides it. So builds which are using these
-variables might not work. (I don't know any build tool which does that, but
-please let me know if you do.)
+The tool requires a valid compilation database to function. If your project
+doesn't have one, you'll need to generate it first using your build system
+or tools like Bear.
 
 
 Development

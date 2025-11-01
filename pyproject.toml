@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "scan-build"
 version = "2.0.20"
-description = "static code analyzer wrapper for Clang."
+description = "static code analyzer tool for Clang with compilation database support."
 readme = "README.rst"
 license = "NCSA"
 authors = [
@@ -37,13 +37,7 @@ Repository = "https://github.com/rizsotto/scan-build"
 Issues = "https://github.com/rizsotto/scan-build/issues"
 
 [project.scripts]
-scan-build = "libscanbuild.analyze:scan_build"
 analyze-build = "libscanbuild.analyze:analyze_build"
-analyze-cc = "libscanbuild.analyze:analyze_compiler_wrapper"
-"analyze-c++" = "libscanbuild.analyze:analyze_compiler_wrapper"
-intercept-build = "libscanbuild.intercept:intercept_build"
-intercept-cc = "libscanbuild.intercept:intercept_compiler_wrapper"
-"intercept-c++" = "libscanbuild.intercept:intercept_compiler_wrapper"
 
 [project.optional-dependencies]
 dev = [
@@ -64,16 +58,14 @@ lint = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["libscanbuild", "libear"]
+packages = ["libscanbuild"]
 
 [tool.hatch.build.targets.wheel.sources]
 "libscanbuild" = "libscanbuild"
-"libear" = "libear"
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/libscanbuild",
-    "/libear",
     "/tests",
     "/README.rst",
     "/LICENSE.txt",
@@ -100,7 +92,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["libscanbuild", "libear"]
+known-first-party = ["libscanbuild"]
 
 [tool.ty]
 python_version = "3.10"
@@ -122,7 +114,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.coverage.run]
-source = ["libscanbuild", "libear"]
+source = ["libscanbuild"]
 omit = [
     "*/tests/*",
     "*/test_*",

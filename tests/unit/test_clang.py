@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libear
+import tempfile
 import libscanbuild.clang as sut
 import unittest
 import os.path
@@ -21,7 +21,7 @@ class ClangGetVersion(unittest.TestCase):
 
 class ClangGetArgumentsTest(unittest.TestCase):
     def test_get_clang_arguments(self):
-        with libear.temporary_directory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
             filename = os.path.join(tmpdir, "test.c")
             with open(filename, "w") as handle:
                 handle.write("")

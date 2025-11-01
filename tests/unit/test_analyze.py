@@ -4,8 +4,8 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libear
 import libscanbuild.analyze as sut
+import tempfile
 import unittest
 import os
 import os.path
@@ -117,7 +117,7 @@ class FilteringFlagsTest(unittest.TestCase):
 class RunAnalyzerTest(unittest.TestCase):
     @staticmethod
     def run_analyzer(content, failures_report):
-        with libear.temporary_directory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
             filename = os.path.join(tmpdir, "test.cpp")
             with open(filename, "w") as handle:
                 handle.write(content)
@@ -160,7 +160,7 @@ class ReportFailureTest(unittest.TestCase):
         self.assertEqual("failures", os.path.basename(os.path.dirname(path)))
 
     def test_report_failure_create_files(self):
-        with libear.temporary_directory() as tmp_dir:
+        with tempfile.TemporaryDirectory() as tmp_dir:
             # create input file
             filename = os.path.join(tmp_dir, "test.c")
             with open(filename, "w") as handle:
@@ -309,11 +309,11 @@ class RequireDecoratorTest(unittest.TestCase):
 class ReportDirectoryTest(unittest.TestCase):
     # Test that successive report directory names ascend in lexicographic
     # order. This is required so that report directories from two runs of
-    # scan-build can be easily matched up to compare results.
+    # analyze-build can be easily matched up to compare results.
     @unittest.skipIf(IS_WINDOWS, "windows has low resolution timer")
     def test_directory_name_comparison(self):
         with (
-            libear.temporary_directory() as tmp_dir,
+            tempfile.TemporaryDirectory() as tmp_dir,
             sut.report_directory(tmp_dir, False) as report_dir1,
             sut.report_directory(tmp_dir, False) as report_dir2,
             sut.report_directory(tmp_dir, False) as report_dir3,

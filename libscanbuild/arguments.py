@@ -26,25 +26,7 @@ from libscanbuild import reconfigure_logging
 from libscanbuild.clang import get_checkers
 
 
-__all__ = ["parse_args_for_intercept_build", "parse_args_for_analyze_build", "parse_args_for_scan_build"]
-
-
-def parse_args_for_intercept_build():
-    # type: () -> argparse.Namespace
-    """Parse and validate command-line arguments for intercept-build."""
-
-    parser = create_intercept_parser()
-    args = parser.parse_args()
-
-    reconfigure_logging(args.verbose)
-    logging.debug("Raw arguments %s", sys.argv)
-
-    # short validation logic
-    if not args.build:
-        parser.error(message="missing build command")
-
-    logging.debug("Parsed arguments: %s", args)
-    return args
+__all__ = ["parse_args_for_analyze_build"]
 
 
 def parse_args_for_analyze_build():
@@ -64,26 +46,9 @@ def parse_args_for_analyze_build():
     return args
 
 
-def parse_args_for_scan_build():
-    # type: () -> argparse.Namespace
-    """Parse and validate command-line arguments for scan-build."""
-
-    from_build_command = True
-    parser = create_analyze_parser(from_build_command)
-    args = parser.parse_args()
-
-    reconfigure_logging(args.verbose)
-    logging.debug("Raw arguments %s", sys.argv)
-
-    normalize_args_for_analyze(args, from_build_command)
-    validate_args_for_analyze(parser, args, from_build_command)
-    logging.debug("Parsed arguments: %s", args)
-    return args
-
-
 def normalize_args_for_analyze(args, from_build_command):
     # type: (argparse.Namespace, bool) -> None
-    """Normalize parsed arguments for analyze-build and scan-build.
+    """Normalize parsed arguments for analyze-build.
 
     :param args: Parsed argument object. (Will be mutated.)
     :param from_build_command: Boolean value tells is the command suppose
@@ -111,7 +76,7 @@ def validate_args_for_analyze(parser, args, from_build_command):
     # type: (argparse.ArgumentParser, argparse.Namespace, bool) -> None
     """Command line parsing is done by the argparse module, but semantic
     validation still needs to be done. This method is doing it for
-    analyze-build and scan-build commands.
+    analyze-build commands.
 
     :param parser: The command line parser object.
     :param args: Parsed argument object.
@@ -126,34 +91,8 @@ def validate_args_for_analyze(parser, args, from_build_command):
     elif args.help_checkers:
         print_active_checkers(get_checkers(args.clang, args.plugins))
         parser.exit(status=0)
-    elif from_build_command and not args.build:
-        parser.error(message="missing build command")
     elif not from_build_command and not os.path.exists(args.cdb):
         parser.error(message="compilation database is missing")
-
-
-def create_intercept_parser():
-    # type: () -> argparse.ArgumentParser
-    """Creates a parser for command-line arguments to 'intercept'."""
-
-    parser = create_default_parser()
-    parser_add_cdb(parser)
-
-    parser_add_prefer_wrapper(parser)
-    parser_add_compilers(parser)
-
-    advanced = parser.add_argument_group("advanced options")
-    advanced.add_argument(
-        "--append",
-        action="store_true",
-        help="""Extend existing compilation database with new entries.
-        Duplicate entries are detected and not present in the final output.
-        The output is not continuously updated, it's done when the build
-        command finished. """,
-    )
-
-    parser.add_argument(dest="build", nargs=argparse.REMAINDER, help="""Command to run.""")
-    return parser
 
 
 def create_analyze_parser(from_build_command):
@@ -163,18 +102,8 @@ def create_analyze_parser(from_build_command):
     parser = create_default_parser()
 
     if from_build_command:
-        parser_add_prefer_wrapper(parser)
-        parser_add_compilers(parser)
-
-        parser.add_argument(
-            "--intercept-first",
-            action="store_true",
-            help="""Run the build commands first, intercept compiler
-            calls and then run the static analyzer afterwards.
-            Generally speaking it has better coverage on build commands.
-            With '--override-compiler' it use compiler wrapper, but does
-            not run the analyzer till the build is finished.""",
-        )
+        # from_build_command mode is no longer supported
+        parser.error("Build command mode is not supported. Use analyze-build with a compilation database instead.")
     else:
         parser_add_cdb(parser)
 
@@ -398,47 +327,6 @@ def create_default_parser():
 def parser_add_cdb(parser):
     # type: (argparse.ArgumentParser) -> None
     parser.add_argument("--cdb", metavar="<file>", default="compile_commands.json", help="""The JSON compilation database.""")
-
-
-def parser_add_prefer_wrapper(parser):
-    # type: (argparse.ArgumentParser) -> None
-    parser.add_argument(
-        "--override-compiler",
-        action="store_true",
-        help="""Always resort to the compiler wrapper even when better
-        intercept methods are available.""",
-    )
-
-
-def parser_add_compilers(parser):
-    # type: (argparse.ArgumentParser) -> None
-    parser.add_argument(
-        "--use-cc",
-        metavar="<path>",
-        dest="cc",
-        default=os.getenv("CC", "cc"),
-        help="""When '%(prog)s' analyzes a project by interposing a compiler
-        wrapper, which executes a real compiler for compilation and do other
-        tasks (record the compiler invocation). Because of this interposing,
-        '%(prog)s' does not know what compiler your project normally uses.
-        Instead, it simply overrides the CC environment variable, and guesses
-        your default compiler.
-
-        If you need '%(prog)s' to use a specific compiler for *compilation*
-        then you can use this option to specify a path to that compiler.
-
-        If the given compiler is a cross compiler, you may also need to provide
-        --analyzer-target option to properly analyze the source code because
-        static analyzer runs as if the code is compiled for the host machine by
-        default.""",
-    )
-    parser.add_argument(
-        "--use-c++",
-        metavar="<path>",
-        dest="cxx",
-        default=os.getenv("CXX", "c++"),
-        help="""This is the same as "--use-cc" but for C++ code.""",
-    )
 
 
 class AppendCommaSeparated(argparse.Action):
