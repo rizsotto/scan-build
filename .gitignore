@@ -179,3 +179,4 @@ Thumbs.db
 *.tmp
 *.temp
 *~
+tests/functional/.lit_test_times.txt

@@ -3,4 +3,5 @@
 import sys
 from clanganalyzer.analyze import analyze_build as main
 
-sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())

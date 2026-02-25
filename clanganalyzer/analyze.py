@@ -151,6 +151,18 @@ def analyze_parameters(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _pool_initializer(verbose: int) -> None:
+    """Initialize logging in pool worker processes.
+
+    With the 'forkserver' multiprocessing start method (default on Python 3.12+),
+    worker processes do not inherit the parent's logging configuration. This
+    initializer reconfigures logging so that debug output from workers is visible.
+    """
+    from clanganalyzer.arguments import reconfigure_logging
+
+    reconfigure_logging(verbose)
+
+
 def run_analyzer_parallel(compilations: Iterable[Compilation], args: argparse.Namespace) -> None:
     """Runs the analyzer against the given compilations."""
 
@@ -158,7 +170,11 @@ def run_analyzer_parallel(compilations: Iterable[Compilation], args: argparse.Na
     consts = analyze_parameters(args)
     parameters = (dict(compilation.as_dict(), **consts) for compilation in compilations)
     # when verbose output requested execute sequentially
-    pool = multiprocessing.Pool(1 if args.verbose > 2 else None)
+    pool = multiprocessing.Pool(
+        1 if args.verbose > 2 else None,
+        initializer=_pool_initializer,
+        initargs=(args.verbose,),
+    )
     for current in pool.imap_unordered(run, parameters):
         logging_analyzer_output(current)
     pool.close()

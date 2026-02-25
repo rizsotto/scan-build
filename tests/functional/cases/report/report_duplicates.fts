@@ -50,7 +50,7 @@ then
     echo "output directory should exists"
     false
 else
-    count=\$(grep broken "\$out_dir/index.html" | wc -l)
+    count=\$(grep "<td>broken" "\$out_dir/index.html" | wc -l)
     if [ \$((\$count)) -ne 1 ]
     then
         echo "\$out_dir does not contains 1 report entry";
