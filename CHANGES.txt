@@ -52,7 +52,7 @@ v2.0.19 2020-02-23 -- Bug fix: 3.5.0 python needs typing as dependency
 
 v2.0.20 2021-05-11 -- Bug fix: 3.9.0 python has no plistlib.readPlist
 
-v3.0.0 2025-11-01 -- Modernization release:
+v3.0.0 2026-02-25 -- Modernization release:
   - Minimum Python version upgraded to 3.10 (dropped support for 3.6-3.9)
   - Migrated from setup.py to modern pyproject.toml configuration
   - Replaced setuptools with hatchling build backend
@@ -64,4 +64,4 @@ v3.0.0 2025-11-01 -- Modernization release:
   - Improved CI/CD with trusted publishing and better artifact handling
   - Enhanced test coverage configuration
   - Added migration guide for upgrading to modern tooling
-  - Added support for Python 3.10, 3.11, 3.12, and 3.13
+  - Added support for Python 3.10, 3.11, 3.12, 3.13 and 3.14
