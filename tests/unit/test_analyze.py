@@ -280,15 +280,13 @@ def method_with_expecteds(opts):
     return 0
 
 
-class TestException(Exception):
+class AnalyzerTestException(Exception):
     """Test-specific exception for testing exception handling."""
-
-    pass
 
 
 @sut.require([])
 def method_exception_from_inside(opts):
-    raise TestException("here is one")
+    raise AnalyzerTestException("here is one")
 
 
 class RequireDecoratorTest(unittest.TestCase):
@@ -306,7 +304,7 @@ class RequireDecoratorTest(unittest.TestCase):
         self.assertEqual(method_with_expecteds({"this": 0, "that": 3}), 0)
 
     def test_method_exception_not_caught(self):
-        self.assertRaises(TestException, method_exception_from_inside, {})
+        self.assertRaises(AnalyzerTestException, method_exception_from_inside, {})
 
 
 class ReportDirectoryTest(unittest.TestCase):
