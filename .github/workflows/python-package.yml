@@ -104,7 +104,7 @@ jobs:
       - name: Check build artifacts
         run: |
           ls -la dist/
-          uv run twine check dist/*
+          uv run --with twine twine check dist/*
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
