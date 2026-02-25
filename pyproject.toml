@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "clanganalyzer"
+name = "scan-build"
 version = "2.0.20"
 description = "static code analyzer tool for Clang with compilation database support."
 readme = "README.rst"
