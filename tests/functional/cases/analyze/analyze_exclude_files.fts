@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/exclude_files
 # RUN: cd %T/exclude_files; %{analyze-build} -o . --exclude src/ignore --cdb input.json | ./check.sh
 

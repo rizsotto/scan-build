@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/report_file_format
 # RUN: cd %T/report_file_format; %{analyze-build} --output . --keep-empty --cdb input.json | ./check_html.sh
 # RUN: cd %T/report_file_format; %{analyze-build} --output . --keep-empty --plist --cdb input.json | ./check_plist.sh

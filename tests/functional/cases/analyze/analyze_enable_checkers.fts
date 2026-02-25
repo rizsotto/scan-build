@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/enable_checkers
 # RUN: cd %T/enable_checkers; %{analyze-build} -o . --enable-checker debug.ConfigDumper --cdb input.json | ./check.sh
 

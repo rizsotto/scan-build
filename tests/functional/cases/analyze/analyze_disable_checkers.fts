@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/disable_checkers
 # RUN: cd %T/disable_checkers; %{analyze-build} -o . --status-bugs --disable-checker core.NullDereference --cdb input.json
 

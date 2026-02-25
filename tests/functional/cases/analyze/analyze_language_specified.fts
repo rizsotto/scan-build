@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/language_specified
 # RUN: cd %T/language_specified; %{analyze-build} -o . --cdb input.json | ./check.sh
 

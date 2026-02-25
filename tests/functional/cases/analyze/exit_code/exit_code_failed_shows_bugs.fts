@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # XFAIL: *
 # RUN: bash %s %T/exit_code_failed_shows_bugs
 # RUN: cd %T/exit_code_failed_shows_bugs; %{analyze-build} -o . --status-bugs --cdb input.json

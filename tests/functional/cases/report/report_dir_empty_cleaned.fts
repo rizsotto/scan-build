@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/output_dir_clean_when_empty
 # RUN: cd %T/output_dir_clean_when_empty; %{analyze-build} --output . --cdb input.json | bash %s check
 # RUN: cd %T/output_dir_clean_when_empty; %{analyze-build} --output . --status-bugs --cdb input.json | bash %s check

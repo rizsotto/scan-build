@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/output_dir_kept
 # RUN: cd %T/output_dir_kept; %{analyze-build} --output . --cdb input.json | ./check.sh
 # RUN: cd %T/output_dir_kept; %{analyze-build} --output . --plist --cdb input.json | ./check.sh

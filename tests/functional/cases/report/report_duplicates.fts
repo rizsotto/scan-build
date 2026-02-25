@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/report_duplicates
 # RUN: cd %T/report_duplicates; %{analyze-build} --output . --keep-empty --cdb input.json | ./check_exists.sh
 

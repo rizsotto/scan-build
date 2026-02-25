@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # XFAIL: *
 # RUN: bash %s %T/exit_code_failed_shows_bugs_on_plist
 # RUN: cd %T/exit_code_failed_shows_bugs_on_plist; %{analyze-build} -o . --status-bugs --plist --cdb input.json

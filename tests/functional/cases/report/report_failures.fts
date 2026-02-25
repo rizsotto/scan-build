@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/report_failures
 # RUN: cd %T/report_failures; %{analyze-build} --output . --keep-empty --cdb input.json | ./check_exists.sh
 # RUN: cd %T/report_failures; %{analyze-build} --no-failure-reports --output . --keep-empty --cdb input.json | ./check_not_exists.sh

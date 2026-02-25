@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # RUN: bash %s %T/exit_code_for_success
 # RUN: cd %T/exit_code_for_success; %{analyze-build} --cdb input.json
 # RUN: cd %T/exit_code_for_success; %{analyze-build} --status-bugs --cdb input.json

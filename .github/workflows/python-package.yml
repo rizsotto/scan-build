@@ -77,16 +77,9 @@ jobs:
         run: |
           uv run pytest tests/unit --verbose
 
-      - name: Test with lit (Unix)
-        if: runner.os != 'Windows'
+      - name: Test with lit
         run: |
           uv run lit -v tests/functional
-
-      - name: Test with lit (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          uv pip install .
-          uv run lit -DUSE_INSTALLED=true -v tests/functional
 
   build:
     runs-on: ubuntu-latest

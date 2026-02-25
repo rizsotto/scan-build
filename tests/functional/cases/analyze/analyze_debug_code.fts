@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# REQUIRES: shell
 # XFAIL: *
 # RUN: bash %s %T/debug_code
 # RUN: cd %T/debug_code; %{analyze-build} -o . --status-bugs --force-analyze-debug-code --cdb input.json
