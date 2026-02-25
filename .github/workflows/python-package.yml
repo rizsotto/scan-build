@@ -72,13 +72,13 @@ jobs:
       - name: Test with lit (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv run lit -v tests
+          uv run lit -v tests/functional
 
       - name: Test with lit (Windows)
         if: runner.os == 'Windows'
         run: |
           uv pip install .
-          uv run lit -DUSE_INSTALLED=true -v tests
+          uv run lit -DUSE_INSTALLED=true -v tests/functional
 
       - name: Upload coverage reports
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
