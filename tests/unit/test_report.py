@@ -8,7 +8,7 @@ from pathlib import Path
 
 import clanganalyzer.report as sut
 
-IS_WINDOWS = os.getenv("windows")
+IS_WINDOWS = os.name == "nt"
 
 
 def run_bug_parse(content):
@@ -129,7 +129,7 @@ class CrashFormatterTest(unittest.TestCase):
         formatter = sut.CrashFormatter("/path", "/output/dir")
         formatted = formatter.format(crash)
 
-        self.assertEqual(formatted.source, "to/source.c")
+        self.assertEqual(formatted.source, os.path.join("to", "source.c"))
         self.assertEqual(formatted.problem, "Division by zero")
         self.assertEqual(formatted.file, "file.i")
         self.assertEqual(formatted.info, "file.i.info.txt")
@@ -147,7 +147,7 @@ class CrashFormatterTest(unittest.TestCase):
         formatter = sut.CrashFormatter("/path", "/output/dir")
         formatted = formatter.format(crash)
 
-        self.assertEqual(formatted.source, "to/source&lt;test&gt;.c")
+        self.assertEqual(formatted.source, os.path.join("to", "source&lt;test&gt;.c"))
         self.assertEqual(formatted.problem, "Error with &amp; symbol")
 
     def test_crash_vars(self):
@@ -195,7 +195,7 @@ class BugFormatterTest(unittest.TestCase):
         formatter = sut.BugFormatter("/path", "/output/dir")
         formatted = formatter.format(bug)
 
-        self.assertEqual(formatted.file, "to/source.c")
+        self.assertEqual(formatted.file, os.path.join("to", "source.c"))
         self.assertEqual(formatted.line, 42)
         self.assertEqual(formatted.path_length, 5)
         self.assertEqual(formatted.category, "Logic error")
@@ -218,7 +218,7 @@ class BugFormatterTest(unittest.TestCase):
         formatter = sut.BugFormatter("/path", "/output/dir")
         formatted = formatter.format(bug)
 
-        self.assertEqual(formatted.file, "to/source&lt;test&gt;.c")
+        self.assertEqual(formatted.file, os.path.join("to", "source&lt;test&gt;.c"))
         self.assertEqual(formatted.category, "Memory &amp; Security")
         self.assertEqual(formatted.type, "Use after &apos;free&apos;")
         self.assertEqual(formatted.function, "test_function")
@@ -460,9 +460,11 @@ class RefactoredMethodsTest(unittest.TestCase):
         # Verify each crash appears (note: content is transformed by CrashFormatter)
         for crash in self.mock_crashes:
             # Check that core information is present
-            self.assertIn(crash.source, content)
             self.assertIn(crash.problem, content)
-            # File paths are transformed, so check for filename parts
+            # File paths are transformed by CrashFormatter (chop + escape),
+            # so check for filename parts only (path separators vary by OS)
+            source_filename = os.path.basename(crash.source)
+            self.assertIn(source_filename, content)
             crash_filename = crash.file.split("/")[-1]
             stderr_filename = crash.stderr.split("/")[-1]
             self.assertIn(crash_filename, content)

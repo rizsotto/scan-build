@@ -58,8 +58,8 @@ class CompilationTest(unittest.TestCase):
 
         self.assertEqual(compilation.compiler, "c")
         self.assertEqual(compilation.flags, ["-Wall", "-O2", "main.c"])
-        self.assertEqual(compilation.directory, "/project")
-        self.assertEqual(compilation.source, "/project/main.c")
+        self.assertEqual(compilation.directory, os.path.normpath("/project"))
+        self.assertEqual(compilation.source, os.path.normpath("/project/main.c"))
 
     def test_cpp_compilation(self):
         """Test creation of C++ compilation from entry."""
@@ -71,8 +71,8 @@ class CompilationTest(unittest.TestCase):
 
         self.assertEqual(compilation.compiler, "c++")
         self.assertEqual(compilation.flags, ["-std=c++17", "-Wall", "main.cpp"])
-        self.assertEqual(compilation.directory, "/project")
-        self.assertEqual(compilation.source, "/project/main.cpp")
+        self.assertEqual(compilation.directory, os.path.normpath("/project"))
+        self.assertEqual(compilation.source, os.path.normpath("/project/main.cpp"))
 
     def test_clang_cpp_compilation(self):
         """Test C++ detection with clang++."""
@@ -89,7 +89,7 @@ class CompilationTest(unittest.TestCase):
 
         compilation = sut.Compilation.from_entry(entry)
 
-        self.assertEqual(compilation.source, "/absolute/path/to/file.c")
+        self.assertEqual(compilation.source, os.path.normpath("/absolute/path/to/file.c"))
 
     def test_empty_arguments(self):
         """Test handling of empty arguments list."""
@@ -121,7 +121,12 @@ class CompilationTest(unittest.TestCase):
         compilation = sut.Compilation.from_entry(entry)
         result = compilation.as_dict()
 
-        expected = {"source": "/project/main.c", "directory": "/project", "compiler": "c", "flags": ["-Wall", "main.c"]}
+        expected = {
+            "source": os.path.normpath("/project/main.c"),
+            "directory": os.path.normpath("/project"),
+            "compiler": "c",
+            "flags": ["-Wall", "main.c"],
+        }
 
         self.assertEqual(result, expected)
 
@@ -146,13 +151,13 @@ class CompilationDatabaseTest(unittest.TestCase):
             # Check first compilation (C)
             comp1 = compilations[0]
             self.assertEqual(comp1.compiler, "c")
-            self.assertEqual(comp1.source, "/project/main.c")
+            self.assertEqual(comp1.source, os.path.normpath("/project/main.c"))
             self.assertEqual(comp1.flags, ["-c", "main.c"])
 
             # Check second compilation (C++)
             comp2 = compilations[1]
             self.assertEqual(comp2.compiler, "c++")
-            self.assertEqual(comp2.source, "/project/utils.cpp")
+            self.assertEqual(comp2.source, os.path.normpath("/project/utils.cpp"))
             self.assertEqual(comp2.flags, ["-std=c++11", "-c", "utils.cpp"])
 
         finally:
