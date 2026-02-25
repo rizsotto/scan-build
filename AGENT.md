@@ -155,7 +155,7 @@ uv run ty clanganalyzer
 
 # Run tests
 uv run pytest tests/unit
-uv run lit -v tests
+uv run lit -v tests/functional
 ```
 
 ### Pre-commit Checklist

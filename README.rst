@@ -27,11 +27,11 @@ How to get
 
 It's available from `the Python Package Index`_ and can be installed using pip or uv::
 
-    $ pip install clanganalyzer
+    $ pip install scan-build
 
 Or using uv (recommended)::
 
-    $ uv add clanganalyzer
+    $ uv add scan-build
 
 For development::
 
@@ -91,13 +91,13 @@ Development
 To set up a development environment::
 
     $ git clone https://github.com/rizsotto/scan-build.git
-    $ cd clanganalyzer
+    $ cd scan-build
     $ uv sync --all-extras
 
 To run tests::
 
     $ uv run pytest tests/unit
-    $ uv run lit -v tests
+    $ uv run lit -v tests/functional
 
 To run linting and type checking::
 
@@ -122,5 +122,5 @@ See LICENSE.TXT for details.
 
 
 .. _compilation database: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-.. _the Python Package Index: https://pypi.python.org/pypi/clanganalyzer
+.. _the Python Package Index: https://pypi.python.org/pypi/scan-build
 .. _issue tracker: https://github.com/rizsotto/scan-build/issues
