@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+# RUN: bash %s %T/exclude_files
+# RUN: cd %T/exclude_files; %{analyze-build} -o . --exclude src/ignore --cdb input.json | ./check.sh
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── input.json
+# ├── check.sh
+# └── src
+#     ├── empty.c
+#     └── ignore
+#         └── empty.c
+
+root_dir=$1
+mkdir -p "${root_dir}/src/ignore"
+
+touch "${root_dir}/src/empty.c"
+touch "${root_dir}/src/ignore/empty.c"
+
+cat > "${root_dir}/input.json" << EOF
+[
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/empty.c",
+        "command": "cc -c ./src/empty.c -o ./src/empty.o -Dver=1"
+    },
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/empty.c",
+        "command": "cc -c ${root_dir}/src/empty.c -o ./src/empty.o -Dver=2"
+    },
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/ignore/empty.c",
+        "command": "cc -c ./src/ignore/empty.c -o ./src/ignore/empty.o -Dver=3"
+    },
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/ignore/empty.c",
+        "command": "cc -c ${root_dir}/src/ignore/empty.c -o ./src/ignore/empty.o -Dver=4"
+    }
+]
+EOF
+
+checker_file="${root_dir}/check.sh"
+cat > ${checker_file} << EOF
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+runs=\$(grep "exec command" | sort | uniq)
+
+assert_present() {
+    local pattern="\$1";
+    local message="\$2";
+
+    if [ \$(echo "\$runs" | grep -- "\$pattern" | wc -l) -eq 0 ]; then
+        echo "\$message" && false;
+    fi
+}
+
+assert_not_present() {
+    local pattern="\$1";
+    local message="\$2";
+
+    if [ \$(echo "\$runs" | grep -- "\$pattern" | wc -l) -gt 0 ]; then
+        echo "\$message" && false;
+    fi
+}
+
+assert_present     "ver=1" "analyzer shall run against ver=1"
+assert_present     "ver=2" "analyzer shall run against ver=2"
+assert_not_present "ver=3" "analyzer shall not run against ver=3"
+assert_not_present "ver=4" "analyzer shall not run against ver=4"
+EOF
+chmod +x ${checker_file}

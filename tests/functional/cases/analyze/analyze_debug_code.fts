@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# XFAIL: *
+# RUN: bash %s %T/debug_code
+# RUN: cd %T/debug_code; %{analyze-build} -o . --status-bugs --force-analyze-debug-code --cdb input.json
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── input.json
+# └── src
+#    └── broken.c
+
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+cat > "${root_dir}/src/broken.c" << EOF
+#if NDEBUG
+#else
+EOF
+cat >> "${root_dir}/src/broken.c" < "${test_input_dir}/div_zero.c"
+cat >> "${root_dir}/src/broken.c" << EOF
+#endif
+EOF
+
+cat > "${root_dir}/input.json" << EOF
+[
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/broken.c",
+        "command": "cc -c ./src/broken.c -o ./src/broken.o -DNDEBUG"
+    }
+]
+EOF

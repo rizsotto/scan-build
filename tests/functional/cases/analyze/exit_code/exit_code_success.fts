@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# RUN: bash %s %T/exit_code_for_success
+# RUN: cd %T/exit_code_for_success; %{analyze-build} --cdb input.json
+# RUN: cd %T/exit_code_for_success; %{analyze-build} --status-bugs --cdb input.json
+# RUN: cd %T/exit_code_for_success; %{analyze-build} --status-bugs --plist --cdb input.json
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+cp "${test_input_dir}/main.c" "${root_dir}/src/clean.c"
+
+cat > "${root_dir}/input.json" << EOF
+[
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/clean.c",
+        "command": "cc -c -o src/clean.o src/clean.c"
+    }
+]
+EOF

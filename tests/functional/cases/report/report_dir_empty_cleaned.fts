@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# RUN: bash %s %T/output_dir_clean_when_empty
+# RUN: cd %T/output_dir_clean_when_empty; %{analyze-build} --output . --cdb input.json | bash %s check
+# RUN: cd %T/output_dir_clean_when_empty; %{analyze-build} --output . --status-bugs --cdb input.json | bash %s check
+
+set -o errexit
+set -o nounset
+set -o xtrace
+
+# when invoked as a checker (second argument is "check"), verify that
+# the report directory was cleaned up because no bugs were found.
+if [ "${1:-}" = "check" ]; then
+    out_dir=$(sed -n 's/\(.*\) Report directory created: \(.*\)/\2/p')
+    if [ -d "$out_dir" ]
+    then
+        echo "output directory should not exist"
+        false
+    fi
+    exit 0
+fi
+
+# the test creates a subdirectory inside output dir.
+#
+# ${root_dir}
+# ├── input.json
+# └── src
+#    └── clean.c
+
+root_dir=$1
+mkdir -p "${root_dir}/src"
+
+cp "${test_input_dir}/main.c" "${root_dir}/src/clean.c"
+
+cat > "${root_dir}/input.json" << EOF
+[
+    {
+        "directory": "${root_dir}",
+        "file": "${root_dir}/src/clean.c",
+        "command": "cc -c -o src/clean.o src/clean.c"
+    }
+]
+EOF
