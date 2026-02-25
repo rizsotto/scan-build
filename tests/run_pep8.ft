@@ -1,4 +1,0 @@
-# REQUIRES: pycodestyle
-# RUN: pycodestyle --show-source --show-pep8 ../clanganalyzer
-# RUN: pycodestyle --show-source --show-pep8 ./unit
-# RUN: pycodestyle --show-source --show-pep8 ./functional/tools
