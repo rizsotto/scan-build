@@ -52,7 +52,9 @@ def run_command(command: list[str], cwd: str | None = None) -> list[str]:
             cwd=directory,
             stderr=subprocess.STDOUT,
         )
-        return output.decode("utf-8").splitlines()
+        # the output is not necessarily valid UTF-8 (localized diagnostics,
+        # source lines echoed in another encoding); never fail on decoding
+        return output.decode("utf-8", errors="replace").splitlines()
     except subprocess.CalledProcessError as ex:
-        ex.output = ex.output.decode("utf-8").splitlines()
+        ex.output = ex.output.decode("utf-8", errors="replace").splitlines()
         raise
