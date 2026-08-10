@@ -170,15 +170,15 @@ def run_analyzer_parallel(compilations: Iterable[Compilation], args: argparse.Na
     consts = analyze_parameters(args)
     parameters = (dict(compilation.as_dict(), **consts) for compilation in compilations)
     # when verbose output requested execute sequentially
-    pool = multiprocessing.Pool(
+    with multiprocessing.Pool(
         1 if args.verbose > 2 else None,
         initializer=_pool_initializer,
         initargs=(args.verbose,),
-    )
-    for current in pool.imap_unordered(run, parameters):
-        logging_analyzer_output(current)
-    pool.close()
-    pool.join()
+    ) as pool:
+        for current in pool.imap_unordered(run, parameters):
+            logging_analyzer_output(current)
+        pool.close()
+        pool.join()
 
 
 @contextlib.contextmanager
