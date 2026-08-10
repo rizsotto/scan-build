@@ -10,79 +10,88 @@
 .. image:: https://img.shields.io/pypi/pyversions/scan-build.svg
        :target: https://pypi.python.org/pypi/scan-build
 
-.. image:: https://badges.gitter.im/rizsotto/scan-build.svg
-        :target: https://gitter.im/rizsotto/scan-build?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-
 
 clanganalyzer
 =============
 
-A package designed to run the clang static analyzer against projects
-with existing compilation databases. The clanganalyzer tool runs the
-clang static analyzer against a compilation database.
+``clanganalyzer`` runs the Clang static analyzer against a project using
+its `compilation database`_, and generates a report of the potential bugs
+it found. It lets you analyze an existing code base without modifying the
+build.
+
+
+History
+-------
+
+This project started as a Python rewrite of the ``scan-build`` Perl scripts
+shipped with Clang. An earlier version was contributed to the Clang
+repository as ``scan-build-py``, and this project has been published on PyPI
+under the name `scan-build`_ ever since — which is why the package name and
+the command name differ.
+
+Up to version 2.x the package also provided ``intercept-build``, a tool to
+capture compiler calls and produce a compilation database. That
+functionality was removed in version 3.0: the `Bear`_ project now covers
+all targeted platforms (including Windows, which was the original reason
+for the Python implementation), so this package focuses solely on running
+the analyzer. To create a compilation database, use Bear or your build
+system's native support.
 
 
 How to get
 ----------
 
-It's available from `the Python Package Index`_ and can be installed using pip or uv::
+The package is on PyPI under the name `scan-build`_. Install it with pip::
 
     $ pip install scan-build
 
-Or using uv (recommended)::
+Or as a standalone tool with uv::
 
-    $ uv add scan-build
-
-For development::
-
-    $ uv sync --all-extras
-
-
-Portability
------------
-
-Should be working on UNIX operating systems.
-
-- It has been tested on FreeBSD, GNU/Linux, OS X and Windows.
+    $ uv tool install scan-build
 
 
 Prerequisites
 -------------
 
-1. **clang compiler**, to compile the sources and have the static analyzer.
-2. **python** interpreter (version 3.10 or later). Supported versions: 3.10, 3.11, 3.12, 3.13.
+1. **clang**, to compile the sources and to run the static analyzer.
+2. **python** interpreter (version 3.10 or later).
+3. A **compilation database** (``compile_commands.json``) for your project.
+   CMake can generate one with ``-DCMAKE_EXPORT_COMPILE_COMMANDS=ON``; for
+   other build systems, use `Bear`_.
 
 
 How to use
 ----------
 
-To run the Clang static analyzer against a project with an existing
-compilation database goes like this::
+A typical workflow with a CMake project::
 
-    $ clanganalyzer
+    $ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    $ clanganalyzer --cdb build/compile_commands.json --output report
 
-Use ``--help`` to know more about the command.
+This runs the analyzer against every entry of the compilation database and
+writes an HTML report into a subdirectory of the output directory. By
+default the compilation database is read from ``compile_commands.json`` in
+the current directory, and reports are written under the system temp
+directory.
+
+Some commonly used options:
+
+- ``--output <path>`` — where to put the analyzer reports.
+- ``--status-bugs`` — exit with a non-zero status if potential bugs were
+  found; useful in CI.
+- ``--exclude <directory>`` — skip files in the given directory (e.g.
+  third-party code); can be repeated.
+- ``--plist``, ``--plist-html`` — emit machine-readable plist output
+  instead of (or along with) HTML.
+
+Use ``--help`` for the full list of options. The tool is also installed
+under the alias ``analyze-build``, the name it had in earlier releases.
 
 
-Prerequisites
--------------
+Portability
+-----------
 
-The ``clanganalyzer`` tool requires:
-
-1. An existing compilation database (``compile_commands.json``) for your project
-2. The clang static analyzer to be available on your system
-
-You can generate a compilation database using various tools like CMake
-(with ``-DCMAKE_EXPORT_COMPILE_COMMANDS=ON``), Bear, or other build systems
-that support compilation database generation.
-
-
-Known problems
---------------
-
-The tool requires a valid compilation database to function. If your project
-doesn't have one, you'll need to generate it first using your build system
-or tools like Bear.
+It has been tested on FreeBSD, GNU/Linux, macOS and Windows.
 
 
 Development
@@ -103,7 +112,8 @@ To run linting and type checking::
 
     $ uv run ruff check .
     $ uv run ruff format .
-    $ uv run ty clanganalyzer
+    $ uv run ty check clanganalyzer
+
 
 Problem reports
 ---------------
@@ -118,9 +128,10 @@ License
 -------
 
 The project is licensed under University of Illinois/NCSA Open Source License.
-See LICENSE.TXT for details.
+See LICENSE.txt for details.
 
 
-.. _compilation database: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-.. _the Python Package Index: https://pypi.python.org/pypi/scan-build
+.. _compilation database: https://clang.llvm.org/docs/JSONCompilationDatabase.html
+.. _scan-build: https://pypi.python.org/pypi/scan-build
+.. _Bear: https://github.com/rizsotto/Bear
 .. _issue tracker: https://github.com/rizsotto/scan-build/issues
