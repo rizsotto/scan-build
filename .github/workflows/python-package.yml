@@ -57,12 +57,9 @@ jobs:
         run: |
           choco install llvm
 
-      - name: Create virtual environment
-        run: uv venv --python ${{ matrix.python-version }}
-
       - name: Install dependencies
         run: |
-          uv pip install -e ".[dev]"
+          uv sync --python ${{ matrix.python-version }} --group dev
 
       - name: Lint with ruff
         run: |
@@ -75,7 +72,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          uv run pytest tests/unit --verbose
+          uv run pytest tests/unit --cov=clanganalyzer --cov-report=term-missing
 
       - name: Test with lit
         run: |

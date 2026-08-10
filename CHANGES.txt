@@ -65,3 +65,11 @@ v3.0.0 2026-02-25 -- Modernization release:
   - Enhanced test coverage configuration
   - Added migration guide for upgrading to modern tooling
   - Added support for Python 3.10, 3.11, 3.12, 3.13 and 3.14
+
+v3.1.0 2026-08-10 -- License and packaging cleanup:
+  - License changed from University of Illinois/NCSA to MIT; packaging
+    metadata and documentation now consistently declare MIT
+  - Rewrote README with project history and current usage
+  - Moved development dependencies to PEP 735 dependency groups
+  - Updated packaging metadata (PEP 639 license expression, classifiers)
+  - Added py.typed marker for downstream type checkers

@@ -101,7 +101,7 @@ To set up a development environment::
 
     $ git clone https://github.com/rizsotto/scan-build.git
     $ cd scan-build
-    $ uv sync --all-extras
+    $ uv sync
 
 To run tests::
 
@@ -127,7 +127,7 @@ how to fix it, include that as well. Patches are also welcome.
 License
 -------
 
-The project is licensed under University of Illinois/NCSA Open Source License.
+The project is licensed under the MIT License.
 See LICENSE.txt for details.
 
 

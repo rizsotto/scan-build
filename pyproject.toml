@@ -4,20 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scan-build"
-version = "3.0.0"
-description = "static code analyzer tool for Clang with compilation database support."
+version = "3.1.0"
+description = "Run the Clang static analyzer on projects with a compilation database."
 readme = "README.rst"
-license = "NCSA"
+license = "MIT"
+license-files = ["LICENSE.txt"]
 authors = [
     { name = "László Nagy", email = "rizsotto@gmail.com" }
 ]
 keywords = ["Clang", "scan-build", "static analyzer"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: University of Illinois/NCSA Open Source License",
     "Environment :: Console",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
     "Intended Audience :: Developers",
     "Programming Language :: C",
     "Programming Language :: Python :: 3",
@@ -27,7 +28,8 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Compilers",
-    "Topic :: Software Development :: Quality Assurance"
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed"
 ]
 requires-python = ">=3.10"
 dependencies = []
@@ -41,29 +43,23 @@ Issues = "https://github.com/rizsotto/scan-build/issues"
 clanganalyzer = "clanganalyzer.analyze:analyze_build"
 analyze-build = "clanganalyzer.analyze:analyze_build"
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "ruff>=0.1.0",
-    "ty>=0.0",
-    "lit>=17.0",
-]
+[dependency-groups]
 test = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "lit>=17.0",
+    "pytest>=8.0",
+    "pytest-cov>=6.0",
+    "lit>=18.0",
 ]
 lint = [
-    "ruff>=0.1.0",
-    "ty>=0.0",
+    "ruff>=0.14",
+    "ty>=0.0.69,<0.1",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["clanganalyzer"]
-
-[tool.hatch.build.targets.wheel.sources]
-"clanganalyzer" = "clanganalyzer"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -97,8 +93,8 @@ ignore = [
 known-first-party = ["clanganalyzer"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "--verbose --cov=clanganalyzer --cov-report=term-missing --cov-report=xml"
+testpaths = ["tests/unit"]
+addopts = "--verbose"
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -114,11 +110,8 @@ omit = [
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if 0:",
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
