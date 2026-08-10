@@ -86,8 +86,9 @@ def analyze_build() -> int:
         run_analyzer_parallel(compilations, args)
         # cover report generation and bug counting
         number_of_bugs = document(args)
-        # set exit status as it was requested
-        return number_of_bugs if args.status_bugs else 0
+        # set exit status as it was requested. (do not return the raw bug
+        # count: exit codes wrap modulo 256, so 256 bugs would report clean)
+        return 1 if args.status_bugs and number_of_bugs else 0
 
 
 def analyze_parameters(args: argparse.Namespace) -> dict[str, Any]:
