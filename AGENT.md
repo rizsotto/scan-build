@@ -106,7 +106,7 @@ uv run pytest tests/unit/test_compilation.py
 ### Command Processing Chain
 The analyzer uses a functional chain pattern for processing compilation commands:
 ```python
-@require(['source', 'flags'])
+@require(["source", "flags"])
 def process_step(opts, continuation=next_step):
     # Process opts
     return continuation(opts)
@@ -126,7 +126,7 @@ logging.error("An error occurred")
 ### File Operations
 Use context managers for file operations:
 ```python
-with open(filename, 'r') as handle:
+with open(filename, "r") as handle:
     content = handle.read()
 ```
 
