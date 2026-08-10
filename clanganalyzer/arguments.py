@@ -78,23 +78,11 @@ def normalize_args(args: argparse.Namespace) -> None:
     args.excludes = list(uniq_excludes)
 
     # flatten comma-separated lists for checker options
-    if hasattr(args, "enable_checker") and args.enable_checker:
-        flattened = []
-        for item in args.enable_checker:
-            if isinstance(item, list):
-                flattened.extend(item)
-            else:
-                flattened.extend(item.split(","))
-        args.enable_checker = flattened
+    if args.enable_checker:
+        args.enable_checker = [checker for item in args.enable_checker for checker in item.split(",")]
 
-    if hasattr(args, "disable_checker") and args.disable_checker:
-        flattened = []
-        for item in args.disable_checker:
-            if isinstance(item, list):
-                flattened.extend(item)
-            else:
-                flattened.extend(item.split(","))
-        args.disable_checker = flattened
+    if args.disable_checker:
+        args.disable_checker = [checker for item in args.disable_checker for checker in item.split(",")]
 
 
 def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
