@@ -66,12 +66,15 @@ def document(args: argparse.Namespace) -> int:
 def assemble_cover(args: argparse.Namespace, prefix: Path | None, fragments: list[Path]) -> None:
     """Put together the fragments into a final report."""
 
-    html_title = args.html_title if args.html_title else (prefix.name if prefix else "analyzer") + " - analyzer results"
-    user_name = getpass.getuser()
-    host_name = socket.gethostname()
-    cmd_args = " ".join(sys.argv)
-    clang_version = get_version(args.clang)
-    date = datetime.datetime.today().strftime("%c")
+    title = args.html_title if args.html_title else (prefix.name if prefix else "analyzer") + " - analyzer results"
+    # none of these values are under our control, escape them all
+    html_title = escape(title)
+    working_dir = escape(str(prefix))
+    user_name = escape(getpass.getuser())
+    host_name = escape(socket.gethostname())
+    cmd_args = escape(" ".join(sys.argv))
+    clang_version = escape(get_version(args.clang))
+    date = escape(datetime.datetime.today().strftime("%c"))
 
     with open(os.path.join(args.output, "index.html"), "w") as handle:
         indent = 0
@@ -91,7 +94,7 @@ def assemble_cover(args: argparse.Namespace, prefix: Path | None, fragments: lis
         |    <h1>{html_title}</h1>
         |    <table>
         |      <tr><th>User:</th><td>{user_name}@{host_name}</td></tr>
-        |      <tr><th>Working Directory:</th><td>{prefix}</td></tr>
+        |      <tr><th>Working Directory:</th><td>{working_dir}</td></tr>
         |      <tr><th>Command Line:</th><td>{cmd_args}</td></tr>
         |      <tr><th>Clang Version:</th><td>{clang_version}</td></tr>
         |      <tr><th>Date:</th><td>{date}</td></tr>

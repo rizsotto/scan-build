@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: MIT
 
+import argparse
 import os
 import os.path
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import clanganalyzer.report as sut
 
@@ -557,3 +559,21 @@ class RefactoredMethodsTest(unittest.TestCase):
         self.assertIn("Logic", content)  # Part of the category should be there
         self.assertIn("Buffer Overflow", content)  # Part of the type should be there
         self.assertIn("dangerous", content)  # Part of the function should be there
+
+
+class AssembleCoverTest(unittest.TestCase):
+    def test_metadata_is_html_escaped(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = argparse.Namespace(
+                output=tmpdir,
+                html_title='<script>alert("title")</script>',
+                clang="clang",
+            )
+            with mock.patch.object(sut, "get_version", return_value="clang version <9 & up>"):
+                sut.assemble_cover(args, None, [])
+            with open(os.path.join(tmpdir, "index.html")) as handle:
+                content = handle.read()
+        self.assertNotIn("<script>alert", content)
+        self.assertIn("&lt;script&gt;", content)
+        self.assertNotIn("<9 & up>", content)
+        self.assertIn("&lt;9 &amp; up&gt;", content)
