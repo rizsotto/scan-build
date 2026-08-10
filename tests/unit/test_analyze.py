@@ -195,7 +195,7 @@ class ReportFailureTest(unittest.TestCase):
             with open(filename, "w") as handle:
                 handle.write("int main() { return 0")
             uname_msg = " ".join(platform.uname()).strip()
-            error_msg = "this is my error output"
+            error_lines = ["error: this is my error output", "note: with a second line"]
             # execute test
             opts = {
                 "clang": "clang",
@@ -204,7 +204,7 @@ class ReportFailureTest(unittest.TestCase):
                 "source": filename,
                 "output_dir": tmp_dir,
                 "language": "c",
-                "error_output": [error_msg],
+                "error_output": error_lines,
                 "exit_code": 13,
             }
             sut.report_failure(opts)
@@ -223,7 +223,8 @@ class ReportFailureTest(unittest.TestCase):
             error_file = pp_file + ".stderr.txt"
             self.assertTrue(os.path.exists(error_file))
             with open(error_file) as error_handle:
-                self.assertEqual([error_msg], error_handle.readlines())
+                # each captured output line shall be a line in the file
+                self.assertEqual([line + "\n" for line in error_lines], error_handle.readlines())
 
 
 class AnalyzerTest(unittest.TestCase):

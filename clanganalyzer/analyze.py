@@ -310,19 +310,19 @@ def report_failure(opts: dict[str, Any]) -> None:
         cwd = opts["directory"]
         cmd = get_arguments([opts["clang"], "-fsyntax-only", "-E"] + opts["flags"] + [opts["source"], "-o", name], cwd)
         run_command(cmd, cwd=cwd)
-        # write general information about the crash
+        # write general information about the crash. (write "\n" instead of
+        # os.linesep: the text mode handle translates it on windows, while
+        # os.linesep would end up as "\r\r\n".)
         with open(name + ".info.txt", "w") as handle:
-            handle.write(opts["source"] + os.linesep)
-            handle.write(error.title().replace("_", " ") + os.linesep)
-            handle.write(" ".join(cmd) + os.linesep)
-            handle.write(" ".join(platform.uname()) + os.linesep)
+            handle.write(opts["source"] + "\n")
+            handle.write(error.title().replace("_", " ") + "\n")
+            handle.write(" ".join(cmd) + "\n")
+            handle.write(" ".join(platform.uname()) + "\n")
             handle.write(get_version(opts["clang"]))
-            handle.close()
         # write the captured output too
         with open(name + ".stderr.txt", "w") as handle:
             for line in opts["error_output"]:
-                handle.write(line)
-            handle.close()
+                handle.write(line + "\n")
     except (OSError, subprocess.CalledProcessError, ClangCompilationError):
         logging.warning("failed to report failure", exc_info=True)
 
