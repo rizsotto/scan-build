@@ -24,7 +24,7 @@ from typing import Any
 
 from clanganalyzer import run_command
 from clanganalyzer.arguments import parse_args
-from clanganalyzer.clang import get_arguments, get_version
+from clanganalyzer.clang import ClangCompilationError, get_arguments, get_version
 from clanganalyzer.compilation import Compilation, CompilationDatabase, classify_source
 from clanganalyzer.config import get_disabled_architectures, get_ignored_flags, get_supported_languages
 from clanganalyzer.report import document
@@ -322,7 +322,7 @@ def report_failure(opts: dict[str, Any]) -> None:
             for line in opts["error_output"]:
                 handle.write(line)
             handle.close()
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, ClangCompilationError):
         logging.warning("failed to report failure", exc_info=True)
 
 
@@ -350,6 +350,11 @@ def run_analyzer(opts: dict[str, Any], continuation: Callable[[dict[str, Any]], 
     except OSError:
         message = f'failed to execute "{opts["clang"]}"'
         return {"error_output": [message], "exit_code": 127}
+    except ClangCompilationError as ex:
+        # Clang rejected the flags of this entry (e.g. a GCC-only flag in
+        # the compilation database). Report it and let the run continue.
+        logging.warning("analysis failed: %s", ex)
+        return {"error_output": [str(ex)], "exit_code": 1}
     except subprocess.CalledProcessError as ex:
         logging.warning("analysis failed", exc_info=True)
         result = {"error_output": ex.output, "exit_code": ex.returncode}

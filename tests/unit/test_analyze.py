@@ -6,8 +6,10 @@ import os.path
 import platform
 import tempfile
 import unittest
+from unittest import mock
 
 import clanganalyzer.analyze as sut
+from clanganalyzer.clang import ClangCompilationError
 
 IS_WINDOWS = os.getenv("windows")
 
@@ -150,6 +152,27 @@ class RunAnalyzerTest(unittest.TestCase):
         (_, fwds) = RunAnalyzerTest.run_analyzer(content, True)
         self.assertEqual(1, fwds["exit_code"])
         self.assertTrue(len(fwds["error_output"]) > 0)
+
+    def test_run_analyzer_rejected_flags_reported_not_raised(self):
+        # a compilation database entry with flags clang rejects shall not
+        # blow up the run, but be reported as a failed analysis
+        opts = {
+            "clang": "clang",
+            "directory": os.getcwd(),
+            "flags": ["-fno-reorder-functions"],
+            "direct_args": [],
+            "source": "test.c",
+            "output_dir": tempfile.gettempdir(),
+            "output_format": "html",
+            "output_failures": False,
+        }
+        spy = Spy()
+        error = ClangCompilationError("clang: error: unknown argument: '-fno-reorder-functions'")
+        with mock.patch.object(sut, "get_arguments", side_effect=error):
+            result = sut.run_analyzer(opts, spy.call)
+        self.assertEqual(None, spy.arg)
+        self.assertEqual(1, result["exit_code"])
+        self.assertTrue(len(result["error_output"]) > 0)
 
 
 class ReportFailureTest(unittest.TestCase):
