@@ -112,6 +112,15 @@ class FilteringFlagsTest(unittest.TestCase):
         self.assertFlagsFiltered(["-init", "my_init"])
         self.assertFlagsFiltered(["-sectorder", "a", "b", "c"])
 
+    def test_truncated_flag_list_does_not_raise(self):
+        # a flag expecting an argument at the end of the list shall not
+        # raise StopIteration (which imap_unordered would swallow silently)
+        self.assertFlagsFiltered(["-o"])
+        self.assertFlagsChanged(["-I."], ["-I.", "-o"])
+        self.assertArch([], ["-arch"])
+        self.assertLanguage(None, ["-x"])
+        self.assertFlagsFiltered(["-sectorder", "a"])
+
 
 class RunAnalyzerTest(unittest.TestCase):
     @staticmethod

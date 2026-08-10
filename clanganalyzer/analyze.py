@@ -463,19 +463,25 @@ def classify_parameters(
     }
 
     # iterate on the compile options
+    # NOTE: next() calls must have a default: a bare StopIteration from a
+    # truncated flag list would escape the pool worker and be mistaken for
+    # normal end of iteration by imap_unordered in the parent process,
+    # silently dropping the remaining results.
     args = iter(opts["flags"])
     for arg in args:
         # take arch flags into a separate basket
         if arg == "-arch":
-            result["arch_list"].append(next(args))
+            arch = next(args, None)
+            if arch is not None:
+                result["arch_list"].append(arch)
         # take language
         elif arg == "-x":
-            result["language"] = next(args)
+            result["language"] = next(args, None)
         # ignore some flags
         elif arg in get_ignored_flags():
             count = get_ignored_flags()[arg]
             for _ in range(count):
-                next(args)
+                next(args, None)
         # we don't care about extra warnings, but we should suppress ones
         # that we don't want to see.
         elif re.match(r"^-W.+", arg) and not re.match(r"^-Wno-.+", arg):
